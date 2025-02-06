@@ -56,7 +56,7 @@ all = [
 ]
 [project.urls]
 Homepage = "https://scholarqa.allen.ai/"
-Documentation = "https://github.com/allenai/nora-corpusqa-demo"
+Documentation = "https://github.com/allenai/ai2-scholarqa-lib"
 
 [tool.setuptools.packages.find]
 exclude = ["internal"]

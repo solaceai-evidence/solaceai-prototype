@@ -28,7 +28,7 @@ class ToolRequest(BaseModel):
         "status and possibly its result."
     ))
     query: str = Field(default=None, description=(
-        "A scientific query posed to nora by a user"
+        "A scientific query posed to scholar qa by a user"
     ))
     opt_in: Optional[bool] = Field(default=True, description=(
         "Flag to indicate whether to include the query and response in public release"))

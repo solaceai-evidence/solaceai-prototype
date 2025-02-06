@@ -221,7 +221,7 @@ class ScholarQA:
         def call_tables_api(didx: int, payload: Dict[str, Any]):
             res = None
             if not res or res.status_code != 200:
-                logger.warning(f"Error calling Nora Tables API with payload: {payload}, received: {res.status_code}")
+                logger.warning(f"Error calling Tables API with payload: {payload}, received: {res.status_code}")
                 tlist[didx] = None
             else:
                 tlist[didx] = res.json()["table"]
@@ -232,7 +232,7 @@ class ScholarQA:
             "section_title": dim["name"],
             "corpus_ids": cit_ids,
         }
-        logger.info(f"Calling Nora Tables API with payload: {payload}")
+        logger.info(f"Calling Tables API with payload: {payload}")
         tthread = Thread(target=call_tables_api, args=(dim["idx"], payload,))
         tthread.start()
         return tthread
@@ -252,7 +252,7 @@ class ScholarQA:
                 their inline citations and include them with the quotes.
                 5) Generate the summarized output using the quotes and outline in (3) and (4)
 
-                :param req: A scientific query posed to nora by a user, consists of the string query, task id and user id
+                :param req: A scientific query posed to scholar qa by a user, consists of the string query, task id and user id
                 :return: A response to the query
         """
         self.update_task_state("Processing user query", task_estimated_time="~3 minutes", step_estimated_time=5)
