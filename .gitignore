@@ -21,3 +21,4 @@ async-state/**
 open_access/**
 api/*.lock
 local_skiff_files/**
+api/logs/

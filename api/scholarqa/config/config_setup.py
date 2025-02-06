@@ -5,7 +5,7 @@ from typing import Callable, Literal
 from pydantic import BaseModel, Field
 
 from scholarqa.state_mgmt.local_state_mgr import AbsStateMgrClient
-from utils import TaskIdAwareLogFormatter, init_settings
+from scholarqa.utils import TaskIdAwareLogFormatter, init_settings
 
 logger = logging.getLogger(__name__)
 
