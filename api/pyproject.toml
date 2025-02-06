@@ -11,7 +11,7 @@ name = "ai2-scholar-qa"
 version = "0.1.0"
 
 dependencies = [
-    "fastapi==0.103.2",
+    "fastapi==0.115.8",
     "gunicorn==21.2.0",
     "httpx",
     "pydantic==2.*",

@@ -97,9 +97,6 @@ def create_app() -> FastAPI:
     def root(request: Request):
         return {"message": "Hello World", "root_path": request.scope.get("root_path")}
 
-    # This tells the machinery that powers Skiff (Kubernetes) that your application
-    # is ready to receive traffic. Returning a non 200 response code will prevent the
-    # application from receiving live requests.
     @app.get("/health", status_code=204)
     def health():
         return "OK"
