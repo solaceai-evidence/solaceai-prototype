@@ -1,7 +1,8 @@
 import uvicorn
 import argparse
 
-if __name__ == "__main__":
+
+def main():
     uvicorn_parser = argparse.ArgumentParser(description='Run the ScholarQA API with uvicorn args')
     uvicorn_parser.add_argument('--target', type=str, default="scholarqa.app:create_app",
                                 help='The target ASGI app to run. Default is scholarqa.app:create_app')
@@ -16,3 +17,7 @@ if __name__ == "__main__":
     uvicorn.run(uvicorn_args.target, reload=uvicorn_args.reload, log_level=uvicorn_args.log_level,
                 host=uvicorn_args.host, port=uvicorn_args.port,
                 workers=uvicorn_args.workers, timeout_keep_alive=uvicorn_args.timeout_keep_alive)
+
+
+if __name__ == "__main__":
+    main()

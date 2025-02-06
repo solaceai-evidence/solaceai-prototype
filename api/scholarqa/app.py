@@ -6,7 +6,7 @@ from time import time
 from typing import Union
 from uuid import uuid4, uuid5, UUID
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from nora_lib.tasks.models import TASK_STATUSES, AsyncTaskState
 from nora_lib.tasks.state import NoSuchTaskException
 
@@ -94,8 +94,8 @@ def create_app() -> FastAPI:
     app = FastAPI(root_path="/api")
 
     @app.get("/")
-    def root():
-        return "nothing to see here :)"
+    def root(request: Request):
+        return {"message": "Hello World", "root_path": request.scope.get("root_path")}
 
     # This tells the machinery that powers Skiff (Kubernetes) that your application
     # is ready to receive traffic. Returning a non 200 response code will prevent the

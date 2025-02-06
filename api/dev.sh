@@ -1,5 +1,5 @@
 #!/bin/bash
-exec python scholarqa/run.py \
+exec python -m scholarqa.run \
   --target "scholarqa.app:create_app" \
     --workers 1 \
     --timeout-keep-alive 0 \
