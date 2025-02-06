@@ -1,0 +1,71 @@
+[tool.pyright]
+pythonVersion = "3.11.3"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+#Help generate the rest of the file
+name = "ai2-scholar-qa"
+version = "0.1.0"
+
+dependencies = [
+    "fastapi==0.103.2",
+    "gunicorn==21.2.0",
+    "httpx",
+    "pydantic==2.*",
+    "python-json-logger==2.0.4",
+    "uvicorn[standard]",
+    "nora_lib==0.5.12",
+    "modal==0.67.40",
+    "pandas",
+    "jsonlines",
+    "googlesearch-python",
+    "backoff",
+    "numpy",
+    "pandas",
+    "requests",
+    "bs4",
+    "fuzzy-match",
+    "googlesearch-python",
+    "tqdm",
+    "google-cloud-storage==2.18.2",
+    "filelock==3.16.1",
+    "litellm==1.51.3",
+    "pandas==2.2.2",
+    "diskcache==5.6.3",
+]
+[project.optional-dependencies]
+dev = [
+    "black",
+    "mypy",
+    "wheel",
+]
+all = [
+    "torch==2.3.1",
+    "transformers==4.44.1",
+    "sentencepiece",
+    "hf-transfer==0.1.6",
+    "huggingface_hub==0.23.4",
+    "sentence-transformers==3.0.1",
+    "peft",
+    "black",
+    "mypy",
+    "wheel",
+]
+[project.urls]
+Homepage = "https://scholarqa.allen.ai/"
+Documentation = "https://github.com/allenai/nora-corpusqa-demo"
+
+[tool.setuptools.packages.find]
+exclude = ["internal"]
+include = ["scholarqa*"]
+
+[tool.black]
+preview = true
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+

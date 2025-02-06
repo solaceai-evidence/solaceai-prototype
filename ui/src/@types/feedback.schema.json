@@ -1,0 +1,80 @@
+{
+  "$defs": {
+    "SectionFeedbackMetadata": {
+      "properties": {
+        "name": {
+          "description": "The name of the section",
+          "title": "Name",
+          "type": "string"
+        },
+        "idx": {
+          "description": "The index of the section",
+          "title": "Idx",
+          "type": "integer"
+        },
+        "fb_type": {
+          "$ref": "#/$defs/SectionFeedbackType",
+          "default": "text",
+          "description": "The text of the section"
+        }
+      },
+      "required": [
+        "name",
+        "idx"
+      ],
+      "title": "SectionFeedbackMetadata",
+      "type": "object"
+    },
+    "SectionFeedbackType": {
+      "enum": [
+        "text",
+        "table"
+      ],
+      "title": "SectionFeedbackType",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "msg_id": {
+      "description": "Unique identifiers for the message or the thread.",
+      "title": "Msg Id",
+      "type": "string"
+    },
+    "user_id": {
+      "description": "The query that was posed to the tool.",
+      "title": "User Id",
+      "type": "string"
+    },
+    "section": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SectionFeedbackMetadata"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Section metadata the feedback is for"
+    },
+    "feedback": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The feedback provided by the user",
+      "title": "Feedback"
+    }
+  },
+  "required": [
+    "msg_id",
+    "user_id",
+    "feedback"
+  ],
+  "title": "Feedback",
+  "type": "object"
+}

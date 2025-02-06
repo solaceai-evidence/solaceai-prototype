@@ -1,0 +1,232 @@
+{
+  "$defs": {
+    "Author": {
+      "properties": {
+        "name": {
+          "description": "The name of the author",
+          "title": "Name",
+          "type": "string"
+        },
+        "authorId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The Semantic Scholar id of the author",
+          "title": "Authorid"
+        }
+      },
+      "required": [
+        "name",
+        "authorId"
+      ],
+      "title": "Author",
+      "type": "object"
+    },
+    "CitationSrc": {
+      "properties": {
+        "id": {
+          "default": null,
+          "description": "The id of the citation which is of the format (index, author_ref_string, year)",
+          "title": "Id",
+          "type": "string"
+        },
+        "paper": {
+          "$ref": "#/$defs/PaperDetails",
+          "description": "Metadata of the cited paper"
+        },
+        "snippets": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": [],
+          "description": "A list of all the relevant snippets from the cited paper",
+          "title": "Snippets"
+        },
+        "score": {
+          "description": "Relevance score of the snippet for the query",
+          "title": "Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "paper",
+        "score"
+      ],
+      "title": "CitationSrc",
+      "type": "object"
+    },
+    "GeneratedSection": {
+      "properties": {
+        "title": {
+          "default": null,
+          "description": "header for the generated section text",
+          "title": "Title",
+          "type": "string"
+        },
+        "tldr": {
+          "default": null,
+          "description": "A short summary of the generated section",
+          "title": "Tldr",
+          "type": "string"
+        },
+        "text": {
+          "default": null,
+          "description": "The generated section text",
+          "title": "Text",
+          "type": "string"
+        },
+        "citations": {
+          "default": null,
+          "description": "The citations used in the generated section",
+          "items": {
+            "$ref": "#/$defs/CitationSrc"
+          },
+          "title": "Citations",
+          "type": "array"
+        }
+      },
+      "title": "GeneratedSection",
+      "type": "object"
+    },
+    "PaperDetails": {
+      "properties": {
+        "corpus_id": {
+          "allow_none": false,
+          "description": "The Semantic Scholar id of the cited paper",
+          "title": "Corpus Id",
+          "type": "integer"
+        },
+        "title": {
+          "description": "Title of the paper",
+          "title": "Title",
+          "type": "string"
+        },
+        "year": {
+          "description": "Year of publication",
+          "title": "Year",
+          "type": "integer"
+        },
+        "venue": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Venue of publication",
+          "title": "Venue"
+        },
+        "authors": {
+          "description": "Authors of the paper",
+          "items": {
+            "$ref": "#/$defs/Author"
+          },
+          "title": "Authors",
+          "type": "array"
+        },
+        "n_citations": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 0,
+          "description": "The number of times the source paper has been cited",
+          "title": "N Citations"
+        }
+      },
+      "required": [
+        "corpus_id",
+        "title",
+        "year",
+        "venue",
+        "authors"
+      ],
+      "title": "PaperDetails",
+      "type": "object"
+    },
+    "TaskResult": {
+      "description": "The outcome of running a Task to completion",
+      "properties": {
+        "sections": {
+          "description": "The generated iterations of the answer",
+          "items": {
+            "$ref": "#/$defs/GeneratedSection"
+          },
+          "title": "Sections",
+          "type": "array"
+        }
+      },
+      "required": [
+        "sections"
+      ],
+      "title": "TaskResult",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "task_id": {
+      "default": "Identifies the long-running task so that its status and eventual resultcan be checked in follow-up calls.",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "estimated_time": {
+      "description": "How long we expect this task to take from start to finish.",
+      "title": "Estimated Time",
+      "type": "string"
+    },
+    "task_status": {
+      "description": "Current human-readable status of the task.",
+      "title": "Task Status",
+      "type": "string"
+    },
+    "task_result": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TaskResult"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Final result of the task."
+    },
+    "extra_state": {
+      "description": "Any extra task-specific state can go in here as free-form JSON-serializable dictionary.",
+      "title": "Extra State",
+      "type": "object"
+    },
+    "query": {
+      "description": "The query that was posed to the tool.",
+      "title": "Query",
+      "type": "string"
+    }
+  },
+  "required": [
+    "estimated_time",
+    "task_status",
+    "task_result",
+    "extra_state",
+    "query"
+  ],
+  "title": "AsyncTaskState",
+  "type": "object"
+}

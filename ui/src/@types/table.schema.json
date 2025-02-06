@@ -1,0 +1,235 @@
+{
+  "$defs": {
+    "TableCell": {
+      "properties": {
+        "id": {
+          "description": "Unique identifier for the cell. In the format ${row.id}-${column.id}",
+          "title": "Id",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Value of the cell",
+          "title": "Value"
+        },
+        "display_value": {
+          "description": "Display value of the cell",
+          "title": "Display Value",
+          "type": "string"
+        },
+        "is_loading": {
+          "default": false,
+          "description": "Whether the cell is still loading",
+          "title": "Is Loading",
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Error message if any",
+          "title": "Error"
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Metadata of the cell",
+          "title": "Metadata"
+        },
+        "edited_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "overridden cell value by a user, nora, or other 3rd party",
+          "title": "Edited Value"
+        },
+        "edited_by_uuid": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Who last edited the table cell",
+          "title": "Edited By Uuid"
+        }
+      },
+      "required": [
+        "id",
+        "display_value"
+      ],
+      "title": "TableCell",
+      "type": "object"
+    },
+    "TableColumn": {
+      "properties": {
+        "id": {
+          "description": "Unique identifier for the column",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name of the column",
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of the column",
+          "title": "Description",
+          "type": "string"
+        },
+        "is_metadata": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": false,
+          "description": "Flag indicating whether the column to be populated is a metadata column or not",
+          "title": "Is Metadata"
+        },
+        "tools": {
+          "description": "List of tools used to generate the column values",
+          "items": {
+            "type": "string"
+          },
+          "title": "Tools",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "tools"
+      ],
+      "title": "TableColumn",
+      "type": "object"
+    },
+    "TableRow": {
+      "properties": {
+        "id": {
+          "description": "Unique identifier for the row",
+          "title": "Id",
+          "type": "string"
+        },
+        "display_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Display value of the row",
+          "title": "Display Value"
+        },
+        "paper_corpus_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Corpus id of a paper",
+          "title": "Paper Corpus Id"
+        }
+      },
+      "required": [
+        "id",
+        "paper_corpus_id"
+      ],
+      "title": "TableRow",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "id": {
+      "description": "Unique identifier for the table widget",
+      "title": "Id",
+      "type": "string"
+    },
+    "rows": {
+      "description": "List of rows in the table",
+      "items": {
+        "$ref": "#/$defs/TableRow"
+      },
+      "title": "Rows",
+      "type": "array"
+    },
+    "columns": {
+      "description": "List of columns in the table",
+      "items": {
+        "$ref": "#/$defs/TableColumn"
+      },
+      "title": "Columns",
+      "type": "array"
+    },
+    "cells": {
+      "additionalProperties": {
+        "$ref": "#/$defs/TableCell"
+      },
+      "description": "Dictionary of cells in the table. Key is in the format ${row.id}-${column.id}",
+      "title": "Cells",
+      "type": "object"
+    },
+    "title": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Title for table generated",
+      "title": "Title"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "title": "TableWidget",
+  "type": "object"
+}
