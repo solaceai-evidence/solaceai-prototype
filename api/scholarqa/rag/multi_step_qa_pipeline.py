@@ -121,7 +121,7 @@ class MultiStepQAPipeline:
             # filter the quotes according to the plan
             reqd_paper_summaries = {k: v for k, v in per_paper_summaries.items() if k in req_ref_strs}
             # filter the dataframe according to the plan
-            reqd_ref_df = retrieval_df[retrieval_df["reference_string"].apply(lambda x: x in req_ref_strs)]
+            reqd_ref_df = retrieval_df[retrieval_df["reference_string"].apply(lambda x: x in req_ref_strs)].copy()
             reqd_ref_df["sentence_alpha"] = reqd_ref_df["sentences"].apply(
                 lambda x: [re.sub(r'[^a-zA-Z]', '', sentence["text"]).lower() for sentence in x])
             # iterate over the reqd_ref_df and get the snippets for each row from reqd_paper_summaries
