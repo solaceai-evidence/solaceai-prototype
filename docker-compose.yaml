@@ -18,7 +18,7 @@ services:
       - LOG_LEVEL=INFO
       - LITELLM_LOG=WARNING
       - RETRIEVAL_SERVICE=public_api
-      - CONFIG_PATH=run_configs/default_config.json
+      - CONFIG_PATH=run_configs/default.json
     ports:
       - 8000:8000
     env_file:

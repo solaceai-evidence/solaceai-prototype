@@ -49,6 +49,8 @@ class ScholarQA:
         self.paper_finder = paper_finder
         self.llm_model = llm_model
         self.validate = kwargs.get("validate", True)
+        if not self.validate or not os.getenv("OPENAI_API_KEY"):
+            logger.warning("Validation of the query for harmful content is turned off")
         self.decomposer_llm = kwargs.get("decomposer_llm", self.llm_model)
         self.state_mgr = state_mgr if state_mgr else LocalStateMgrClient(self.logs_config.log_dir)
         self.llm_caller = CostAwareLLMCaller(self.state_mgr)

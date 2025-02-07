@@ -19,10 +19,11 @@ from scholarqa.models import (
     TaskStep
 )
 from scholarqa.rag.reranker.modal_engine import ModalReranker
-from scholarqa.rag.retrieval import PaperFinderWithReranker
+from scholarqa.rag.retrieval import PaperFinderWithReranker, PaperFinder
 from scholarqa.rag.retriever_base import FullTextRetriever
 from scholarqa.scholar_qa import ScholarQA
 from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
+from typing import Type, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -32,21 +33,27 @@ async_context = multiprocessing.get_context("fork")
 
 started_task_step = None
 
+T = TypeVar("T", bound=ScholarQA)
+
 
 def lazy_load_state_mgr_client():
     return LocalStateMgrClient(logs_config.log_dir, "async_state")
 
 
-def lazy_load_scholarqa(task_id: str) -> ScholarQA:
+def lazy_load_scholarqa(task_id: str, sqa_class: Type[T] = ScholarQA, **sqa_args) -> T:
     retriever = FullTextRetriever(**run_config.retriever_args)
-    reranker = ModalReranker(**run_config.reranker_args)
-    paper_finder = PaperFinderWithReranker(retriever, reranker, **run_config.paper_finder_args)
-    return ScholarQA(paper_finder=paper_finder, task_id=task_id, state_mgr=app_config.state_mgr_client,
-                     logs_config=logs_config, **run_config.pipeline_args)
+    if run_config.reranker_args:
+        reranker = ModalReranker(**run_config.reranker_args)
+        paper_finder = PaperFinderWithReranker(retriever, reranker, **run_config.paper_finder_args)
+    else:
+        paper_finder = PaperFinder(retriever, **run_config.paper_finder_args)
+
+    return sqa_class(paper_finder=paper_finder, task_id=task_id, state_mgr=app_config.state_mgr_client,
+                     logs_config=logs_config, **run_config.pipeline_args, **sqa_args)
 
 
 # setup logging config and local litellm cache
-CONFIG_PATH = os.environ.get("CONFIG_PATH", "run_configs/default_config.json")
+CONFIG_PATH = os.environ.get("CONFIG_PATH", "run_configs/default.json")
 UUID_NAMESPACE = os.getenv("UUID_ENCODER_KEY", "ai2-scholar-qa")
 
 app_config = read_json_config(CONFIG_PATH)
