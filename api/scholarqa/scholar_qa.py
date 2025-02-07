@@ -338,12 +338,12 @@ class ScholarQA:
                     f"Iteratively generating section: {(idx + 1)} of {len(plan_json)} - {section_json.get('title', '')}",
                     curr_response=generated_sections, step_estimated_time=15)
                 json_summary.append(section_json)
-                if cluster_json.result["dimensions"][idx]["format"] == "list" and section_json["citations"]:
-                    cluster_json.result["dimensions"][idx]["idx"] = idx
-                    cit_ids = [int(c["paper"]["corpus_id"]) for c in section_json["citations"]]
-                    tthread = self.gen_table_thread(req.user_id, query, cluster_json.result["dimensions"][idx], cit_ids,
-                                                    tables)
-                    table_threads.append(tthread)
+                # if cluster_json.result["dimensions"][idx]["format"] == "list" and section_json["citations"]:
+                #     cluster_json.result["dimensions"][idx]["idx"] = idx
+                #     cit_ids = [int(c["paper"]["corpus_id"]) for c in section_json["citations"]]
+                #     tthread = self.gen_table_thread(req.user_id, query, cluster_json.result["dimensions"][idx], cit_ids,
+                #                                     tables)
+                #     table_threads.append(tthread)
                 gen_sec = self.get_gen_sections_from_json(section_json)
                 generated_sections.append(gen_sec)
         except StopIteration as e:

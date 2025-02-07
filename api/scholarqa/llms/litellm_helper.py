@@ -11,9 +11,6 @@ from scholarqa.state_mgmt.local_state_mgr import AbsStateMgrClient
 
 logger = logging.getLogger(__name__)
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-
 
 class CostAwareLLMCaller:
     def __init__(self, state_mgr: AbsStateMgrClient):
