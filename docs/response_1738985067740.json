@@ -1,0 +1,991 @@
+{
+  "task_id": "fd845d8c-22bf-411a-9d9f-9846e85d1cc0",
+  "query": "Trace the journey of the transformer architecture from its inception to BERT and GPT-4",
+  "task_result": {
+    "sections": [
+      {
+        "title": "Introduction: The Transformer Innovation",
+        "tldr": "The Transformer architecture revolutionized natural language processing by introducing a powerful attention mechanism that replaced traditional sequential processing methods. This innovation enabled parallel processing of language data and became the foundation for modern language models like BERT and GPT. (5 sources)",
+        "text": "\nThe Transformer architecture, introduced in 2017, marked a revolutionary shift in how machines process language  (Vaswani et al., 2017). Its key innovation was the attention mechanism, which allowed the model to weigh and process different parts of an input sequence simultaneously, rather than sequentially like previous approaches  (Kepel et al., 2024). This departure from traditional recurrent neural networks (RNNs) and convolutional neural networks (CNNs) proved transformative, as it enabled the model to better capture long-range dependencies and contextual relationships in text  (Zhang et al., 2023).\n\nThe architecture's ability to support extensive parallelization during training represented a significant practical advantage over previous methods  (Biswas et al., 2021). By dispensing with the need to process sequential data in order, Transformers could be trained much more efficiently on larger datasets than their predecessors  (Flynn et al., 2022). The architecture's versatility became evident through its successful application in various sequence-to-sequence tasks, particularly achieving breakthrough results in machine translation tasks  (Vaswani et al., 2017).\n\nThe Transformer's architecture proved so effective that it spawned two distinct approaches to language processing: encoder-only models (like BERT) that excel at understanding context bidirectionally, and decoder-only models (like GPT) that focus on unidirectional text generation  (Zhang et al., 2023). This flexibility in architectural design has enabled the development of increasingly sophisticated language models tailored to specific tasks while maintaining the core benefits of the attention mechanism <Model name=\"Anthropic\" version=\"claude-3-5-sonnet-20241022\">.",
+        "citations": [
+          {
+            "id": "(Vaswani et al., 2017)",
+            "paper": {
+              "corpus_id": 13756489,
+              "title": "Attention is All you Need",
+              "year": 2017,
+              "venue": "Neural Information Processing Systems",
+              "authors": [
+                {
+                  "name": "Ashish Vaswani",
+                  "authorId": "40348417"
+                },
+                {
+                  "name": "Noam M. Shazeer",
+                  "authorId": "1846258"
+                },
+                {
+                  "name": "Niki Parmar",
+                  "authorId": "3877127"
+                },
+                {
+                  "name": "Jakob Uszkoreit",
+                  "authorId": "39328010"
+                },
+                {
+                  "name": "Llion Jones",
+                  "authorId": "145024664"
+                },
+                {
+                  "name": "Aidan N. Gomez",
+                  "authorId": "19177000"
+                },
+                {
+                  "name": "Lukasz Kaiser",
+                  "authorId": "40527594"
+                },
+                {
+                  "name": "Illia Polosukhin",
+                  "authorId": "3443442"
+                }
+              ],
+              "n_citations": 115265
+            },
+            "snippets": [
+              "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks in an encoder-decoder configuration. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely. Experiments on two machine translation tasks show these models to be superior in quality while being more parallelizable and requiring significantly less time to train. Our model achieves 28.4 BLEU on the WMT 2014 English-to-German translation task, improving over the existing best results, including ensembles by over 2 BLEU. On the WMT 2014 English-to-French translation task, our model establishes a new single-model state-of-the-art BLEU score of 41.8 after training for 3.5 days on eight GPUs, a small fraction of the training costs of the best models from the literature. We show that the Transformer generalizes well to other tasks by applying it successfully to English constituency parsing both with large and limited training data."
+            ],
+            "score": 0
+          },
+          {
+            "id": "(Kepel et al., 2024)",
+            "paper": {
+              "corpus_id": 271218437,
+              "title": "Autonomous Prompt Engineering in Large Language Models",
+              "year": 2024,
+              "venue": "arXiv.org",
+              "authors": [
+                {
+                  "name": "Daan Kepel",
+                  "authorId": "2311507951"
+                },
+                {
+                  "name": "Konstantina Valogianni",
+                  "authorId": "3220467"
+                }
+              ],
+              "n_citations": 2
+            },
+            "snippets": [
+              "At the heart of this evolution is the Transformer model, introduced by Vaswani et al. in 2017.This model marked a significant departure from previous approaches in natural language processing (NLP) through its unique use of the 'attention mechanism', which was first introduced by Bahdanau et al. (2015).Unlike earlier models that processed input sequences in a linear or sequential manner, the Transformer could focus on different parts of the input sequence, determining which parts were most relevant for a given task",
+              "Following the Transformer, OpenAI developed the Generative Pre-training Transformer (GPT) series, starting with GPT-1 (Radford et al., 2018).This model leveraged the Transformer architecture to generate coherent text, demonstrating the potential of scaling up models for improved performance",
+              "BERT, introduced by Google, added another dimension to this landscape with its bidirectional training approach (Devlin et al., 2019).Unlike the unidirectional approach of GPT models, where the context is understood based on preceding text, BERT analyzes text in both directionsforwards and backwards",
+              "The release of GPT-3 by OpenAI took these advancements further, scaling up the model to unprecedented levels (Brown et al., 2020)."
+            ],
+            "score": 0.9609375
+          },
+          {
+            "id": "(Zhang et al., 2023)",
+            "paper": {
+              "corpus_id": 263310443,
+              "title": "Benchmarking and In-depth Performance Study of Large Language Models on Habana Gaudi Processors",
+              "year": 2023,
+              "venue": "SC Workshops",
+              "authors": [
+                {
+                  "name": "Chengming Zhang",
+                  "authorId": "2155988523"
+                },
+                {
+                  "name": "Baixi Sun",
+                  "authorId": "2189423368"
+                },
+                {
+                  "name": "Xiaodong Yu",
+                  "authorId": "2249766451"
+                },
+                {
+                  "name": "Zhen Xie",
+                  "authorId": "2251530025"
+                },
+                {
+                  "name": "Weijian Zheng",
+                  "authorId": "2249726854"
+                },
+                {
+                  "name": "K. Iskra",
+                  "authorId": "1700811"
+                },
+                {
+                  "name": "Pete Beckman",
+                  "authorId": "2266333392"
+                },
+                {
+                  "name": "Dingwen Tao",
+                  "authorId": "3058378"
+                }
+              ],
+              "n_citations": 2
+            },
+            "snippets": [
+              "The Transformer architecture was first introduced by Vaswani et al. [16] as a novel approach to sequence-to-sequence learning tasks, particularly in natural language processing. Transformers have since become a popular choice for various machine-learning applications, including language modeling, machine translation, and computer vision. The key innovation of the Transformer architecture is the self-attention mechanism, which allows the model to weigh different parts of the input sequence differently when making predictions. This mechanism enables Transformers to capture long-range dependencies and contextual information more effectively compared to traditional recurrent neural networks (RNNs) and convolutional neural networks (CNNs)",
+              "Many widely-received DNN models are based on Transformers. For example, the Bidirectional Encoder Representations from Transformers (BERT) [4] and the Generative Pre-trained Transformer (GPT) [14]. BERT is primarily an encoder from the Transformer architecture. GPT is both an encoder and a decoder, but during training, only the decoder portion is utilized. BERT is bidirectional, trying to understand the context on both sides of a word. GPT is unidirectional, predicting words based on the preceding context."
+            ],
+            "score": 0.97607421875
+          },
+          {
+            "id": "(Biswas et al., 2021)",
+            "paper": {
+              "corpus_id": 232290601,
+              "title": "Extractive Summarization of Call Transcripts",
+              "year": 2021,
+              "venue": "IEEE Access",
+              "authors": [
+                {
+                  "name": "Pratik K. Biswas",
+                  "authorId": "35161174"
+                },
+                {
+                  "name": "Aleksandr Iakubovich",
+                  "authorId": "2056069656"
+                }
+              ],
+              "n_citations": 8
+            },
+            "snippets": [
+              "Transformers in NLP provide general-purpose architectures for Natural Language Understanding (NLU) and Natural Language Generation (NLG) with over 32+ pre-trained models. They were first introduced in [44]. Transformers are Seq2Seq deep learning models that transform sequential inputs to sequential outputs. However, they are based solely on attention mechanisms, dispensing entirely with recurrence and convolutions of the earlier deep learning architectures. Transformers do not require that the sequential data be processed in order, which allows for much more parallelization than Recurrent Neural Networks (RNNs) and therefore reduced training times [44]. Since their introduction, transformers have become the model of choice for tackling many problems in NLP, replacing older recurrent neural network models such as the Long Short-term Memory (LSTM). Transformer models can train on much larger datasets than before, as they can support more parallelization during training. This has resulted in the development of pre-trained systems such as Bidirectional Encoder Representations from Transformers (BERT), which have been trained with huge general language datasets, and can be fine-tuned to specific linguistic tasks [9]. BERT is a bidirectional transformer pre-trained using a combination of masked language modeling objective and next sentence prediction on a large corpus comprising the Toronto Book Corpus and Wikipedia, by jointly conditioning on both left and right contexts in all layers. Consequently, a pre-trained BERT model can be fine-tuned with just one additional output layer to create state-of-the-art models for a wide range of NLP tasks."
+            ],
+            "score": 0.9091796875
+          },
+          {
+            "id": "(Flynn et al., 2022)",
+            "paper": {
+              "corpus_id": 251492844,
+              "title": "Finding Reusable Machine Learning Components to Build Programming Language Processing Pipelines",
+              "year": 2022,
+              "venue": "European Conference on Software Architecture",
+              "authors": [
+                {
+                  "name": "Patrick Flynn",
+                  "authorId": "2162803325"
+                },
+                {
+                  "name": "T. Vanderbruggen",
+                  "authorId": "1922222"
+                },
+                {
+                  "name": "C. Liao",
+                  "authorId": "7604095"
+                },
+                {
+                  "name": "Pei-Hung Lin",
+                  "authorId": "1905021"
+                },
+                {
+                  "name": "M. Emani",
+                  "authorId": "2157261"
+                },
+                {
+                  "name": "Xipeng Shen",
+                  "authorId": "37914192"
+                }
+              ],
+              "n_citations": 4
+            },
+            "snippets": [
+              "Initially the attention mechanism, which is the base of the transformer architecture, was used as part of RNN architectures. However, since its introduction in the aptly named \"Attention is All You Need\" paper in 2017 [45], Transformers have replaced RNNs for language modeling tasks",
+              "The Transformer architecture uses attention, a deep-learning mechanism, whereas the dot-product of keys and queries measures the attention that should be given to a value. The nature of the attention mechanism makes transformers a set-to-set architecture. However, by simply adding a positional embedding to each token's embedding, Transformers act as sequence-to-sequence architectures",
+              "In the original Transformers [46], both an encoder stack and a decoder stack are used to produce the output as depicted in Fig- ure 3d. However, the architecture can be split as shown in Figure 3b. Following this realization, both encoder-only and decoder-only transformers have been devised. Bidirectional Encoder Representations from Transformers (BERT) [14], and Generative Pretrained Transformer (GPT) [40] are respective examples of the Encoder and the Decoder architecture."
+            ],
+            "score": 0.93603515625
+          }
+        ],
+        "table": null
+      },
+      {
+        "title": "Original Transformer Architecture",
+        "tldr": "The original Transformer architecture introduced in 2017 consisted of an encoder-decoder structure built around the multi-head attention mechanism. This design enabled parallel processing of input sequences and established new state-of-the-art results in machine translation tasks. (5 sources)",
+        "text": "\nThe original Transformer architecture was introduced as a solution for neural machine translation tasks, featuring a novel design that completely eliminated the need for recurrent or convolutional neural networks  (Vaswani et al., 2017). At its core, the architecture consists of two main components: an encoder that processes the input sequence and a decoder that generates the output sequence, with both components utilizing multiple layers of processing  (Andriopoulos et al., 2023).\n\nThe architecture's defining feature is its multi-head attention mechanism, which allows the model to simultaneously process and weigh different parts of the input sequence  (Aspillaga et al., 2020). This mechanism operates on mathematical sets, with positional encodings added to provide sequential structure to the input data  (Broberg et al., 2022). This approach proved highly effective, as the model achieved breakthrough performance on the WMT 2014 English-to-German translation task with a BLEU score of 28.4 and English-to-French translation with a score of 41.8  (Vaswani et al., 2017).\n\nThe architecture's versatility became apparent as researchers began exploring its potential by using its components separately (Romero-Romero et al., 2023). The encoder could be used independently for tasks like sequence classification and representation learning, while the decoder proved effective for generative tasks  (Broberg et al., 2022). This flexibility laid the groundwork for the development of specialized architectures like BERT and GPT, which would build upon these individual components to create more targeted solutions for specific NLP tasks  (Andriopoulos et al., 2023).",
+        "citations": [
+          {
+            "id": "(Vaswani et al., 2017)",
+            "paper": {
+              "corpus_id": 13756489,
+              "title": "Attention is All you Need",
+              "year": 2017,
+              "venue": "Neural Information Processing Systems",
+              "authors": [
+                {
+                  "name": "Ashish Vaswani",
+                  "authorId": "40348417"
+                },
+                {
+                  "name": "Noam M. Shazeer",
+                  "authorId": "1846258"
+                },
+                {
+                  "name": "Niki Parmar",
+                  "authorId": "3877127"
+                },
+                {
+                  "name": "Jakob Uszkoreit",
+                  "authorId": "39328010"
+                },
+                {
+                  "name": "Llion Jones",
+                  "authorId": "145024664"
+                },
+                {
+                  "name": "Aidan N. Gomez",
+                  "authorId": "19177000"
+                },
+                {
+                  "name": "Lukasz Kaiser",
+                  "authorId": "40527594"
+                },
+                {
+                  "name": "Illia Polosukhin",
+                  "authorId": "3443442"
+                }
+              ],
+              "n_citations": 115265
+            },
+            "snippets": [
+              "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks in an encoder-decoder configuration. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely. Experiments on two machine translation tasks show these models to be superior in quality while being more parallelizable and requiring significantly less time to train. Our model achieves 28.4 BLEU on the WMT 2014 English-to-German translation task, improving over the existing best results, including ensembles by over 2 BLEU. On the WMT 2014 English-to-French translation task, our model establishes a new single-model state-of-the-art BLEU score of 41.8 after training for 3.5 days on eight GPUs, a small fraction of the training costs of the best models from the literature. We show that the Transformer generalizes well to other tasks by applying it successfully to English constituency parsing both with large and limited training data."
+            ],
+            "score": 0
+          },
+          {
+            "id": "(Andriopoulos et al., 2023)",
+            "paper": {
+              "corpus_id": 263134374,
+              "title": "Augmenting LLMs with Knowledge: A survey on hallucination prevention",
+              "year": 2023,
+              "venue": "arXiv.org",
+              "authors": [
+                {
+                  "name": "Konstantinos Andriopoulos",
+                  "authorId": "2248161377"
+                },
+                {
+                  "name": "J. Pouwelse",
+                  "authorId": "1800677"
+                }
+              ],
+              "n_citations": 15
+            },
+            "snippets": [
+              "The Transformer architecture [19] marked a groundbreaking advancement in the field of NLP. Since its inception, Transformers have become the backbone of various state-ofthe-art language models, underpinning many of the recent developments in the realm of augmented language models",
+              "The architecture consists of two main components: the encoder and the decoder. The encoder processes the input sequence, while the decoder generates the output sequence. Each component comprises multiple layers, with each layer containing a multi-head self-attention mechanism and feedforward neural networks",
+              "Since the introduction of the Transformer architecture, numerous variants and extensions have emerged, each tailored to address specific challenges in NLP. These variants include models such as BERT (Bidirectional Encoder Representations from Transformers) [24], GPT (Generative Pre-trained Transformer) [18] [2], and T5 (Text-to-Text Transfer Transformer) [25], among others."
+            ],
+            "score": 0.962890625
+          },
+          {
+            "id": "(Aspillaga et al., 2020)",
+            "paper": {
+              "corpus_id": 211132427,
+              "title": "Stress Test Evaluation of Transformer-based Models in Natural Language Understanding Tasks",
+              "year": 2020,
+              "venue": "International Conference on Language Resources and Evaluation",
+              "authors": [
+                {
+                  "name": "C. Aspillaga",
+                  "authorId": "13213628"
+                },
+                {
+                  "name": "Andrés Carvallo",
+                  "authorId": "1415740470"
+                },
+                {
+                  "name": "Vladimir Araujo",
+                  "authorId": "88988180"
+                }
+              ],
+              "n_citations": 31
+            },
+            "snippets": [
+              "The Transformer (Vaswani et al., 2017) is a deep learning architecture originally proposed for neural machine translation applications. The main idea behind this model is the multi-head self-attention, the ability to attend to different parts and aspects of the input sequence to compute a contextual representation of it, at increasing levels of abstraction (layers). This architecture allows surpassing long-term dependency problems that are common on Recurrent Neural Networks (RNN) models, and adding the possibility of being highly parallelizable",
+              "Early works such as GPT (Radford and Sutskever, 2018) and BERT (Devlin et al., 2018) proposed variants of the Transformer architecture for language modeling (Bengio et al., 2003). These works show that the representations learned on large-scale language modeling datasets are effective for downstream sentence-level tasks (i.e. NLI) and token-level tasks (i.e. QA) via fine-tuning."
+            ],
+            "score": 0.9091796875
+          },
+          {
+            "id": "(Broberg et al., 2022)",
+            "paper": {
+              "corpus_id": 250311273,
+              "title": "Pre-training Transformers for Molecular Property Prediction Using Reaction Prediction",
+              "year": 2022,
+              "venue": "arXiv.org",
+              "authors": [
+                {
+                  "name": "J. Broberg",
+                  "authorId": "48507843"
+                },
+                {
+                  "name": "Maria Bånkestad",
+                  "authorId": "41152849"
+                },
+                {
+                  "name": "Erik Ylipää",
+                  "authorId": "66901190"
+                }
+              ],
+              "n_citations": 5
+            },
+            "snippets": [
+              "The Transformer is an architecture operating on mathematical sets and was introduced by (Vaswani et al., 2017) in the context of neural machine translation. It has been widely used for sequential data such as natural language. A positional encoding is then added to the input data to provide the sequential structure to the model. The original (full) Transformer consists of an encoder and a decoder and is typically used for translation tasks. On its own, the Transformer encoder can be used for sequence classification/regression/representation tasks (Devlin et al., 2018)",
+              "The key component of the architecture is the multi-head attention mechanism which enables the model to attend to all elements of its input at once."
+            ],
+            "score": 0.923828125
+          },
+          {
+            "id": "(Romero-Romero et al., 2023)",
+            "paper": {
+              "corpus_id": 258461497,
+              "title": "Exploring the Protein Sequence Space with Global Generative Models",
+              "year": 2023,
+              "venue": "Cold Spring Harbor Perspectives in Biology",
+              "authors": [
+                {
+                  "name": "S. Romero-Romero",
+                  "authorId": "1384379337"
+                },
+                {
+                  "name": "Sebastian Lindner",
+                  "authorId": "2950396"
+                },
+                {
+                  "name": "Noelia Ferruz",
+                  "authorId": "2275079001"
+                }
+              ],
+              "n_citations": 3
+            },
+            "snippets": [
+              "The Transformer has emerged as the most critical development in AI in the last years (Vaswani et al. 2017), enabling the implementation of a myriad of language models. Its success is mainly attributable to the attention mechanism (Bahdanau et al. 2014), which originated as a solution to traditional sequence-to-sequence (seq2seq) models",
+              "The attention mechanism provided a solution to these problems since it allows the decoder to analyze the whole input and focus on specific parts, a notion similar to attention in the human mind",
+              "Following these advances, researchers soon started exploring the modules' performance separately. In this direction, Devlin et al. pre-trained Bidirectional Encoder Representations from Transformers (BERT) (Devlin et al. 2018). BERT is also inspired by the Transformer architecture. Still, given that in this case, the interest lies in creating representations of text input, it only uses the encoder module",
+              "Soon after, OpenAI released GPT (Generative Pretrained Transformer), the first of a series of highly performing generative models, the most recent being ChatGPT and GPT4."
+            ],
+            "score": 0.93115234375
+          }
+        ],
+        "table": null
+      },
+      {
+        "title": "First Major Applications: BERT and GPT-1",
+        "tldr": "The year 2018 saw two groundbreaking applications of the Transformer architecture: BERT and GPT-1. BERT introduced bidirectional contextual understanding through its encoder-based design, while GPT-1 demonstrated the potential of decoder-based generative models. (5 sources)",
+        "text": "\nThe Transformer architecture quickly spawned two distinct and influential approaches to language modeling in 2018: BERT (Bidirectional Encoder Representations from Transformers) and GPT (Generative Pre-trained Transformer)  (Pallaprolu et al., 2020)  (Zhang et al., 2023). These models represented different philosophical approaches to language processing: BERT focused on understanding through bidirectional context, while GPT emphasized generative capabilities through unidirectional processing.\n\nBERT, developed by Google, marked a significant advancement by using only the encoder components of the Transformer architecture stacked together  (Biswas et al., 2021). Its innovation lay in its training approach, which combined masked language modeling with next sentence prediction, allowing it to develop deep bidirectional representations by jointly conditioning on both left and right contexts  (Agrawal et al., 2023). BERT was pre-trained on a massive corpus comprising Wikipedia and the Toronto Book Corpus, and could be fine-tuned with just one additional output layer for various NLP tasks  (Biswas et al., 2021).\n\nIn parallel, OpenAI's GPT-1 took a different approach by utilizing the decoder portion of the Transformer architecture. With 117 million parameters, GPT-1 was trained to predict the next word in a sequence, demonstrating strong capabilities in generating coherent text  (Agrawal et al., 2023). Unlike BERT's bidirectional approach, GPT-1 used constrained self-attention where tokens could only attend to context to their left, making it inherently unidirectional  (Devlin et al., 2019). This auto-regressive nature, where each generated token was added to the input for the next prediction, established a foundation for increasingly powerful generative models  (Pallaprolu et al., 2020).",
+        "citations": [
+          {
+            "id": "(Pallaprolu et al., 2020)",
+            "paper": {
+              "corpus_id": 219530435,
+              "title": "Challenges and Thrills of Legal Arguments",
+              "year": 2020,
+              "venue": "arXiv.org",
+              "authors": [
+                {
+                  "name": "Anurag Pallaprolu",
+                  "authorId": "102970831"
+                },
+                {
+                  "name": "Radha Vaidya",
+                  "authorId": "2211428912"
+                },
+                {
+                  "name": "Aditya Swaroop Attawar",
+                  "authorId": "1739550548"
+                }
+              ],
+              "n_citations": 0
+            },
+            "snippets": [
+              "The development of transformer architecture has led to the evolution of many state-of-the-art language models in the natural language processing domain. BERT, which stands for Bidirectional Encoder Representation for Transformer [32], is one such revolutionary piece of technology that marks a new era in the field of Natural Language Understanding. It is made by stacking transformer encoder blocks on top of each other. BERT was an important development which managed to combine the bidirectional conditioning of each word that ELMo [31] earlier presented, along with the benefits of a fine-tunable, pre-trained transformer model",
+              "The next innovation that followed was using only the decoder blocks of the transformer which led to the development of GPT, which stands for Generative Pre-trained Transformer [33]. GPT-1, 2 and 3 are different models based on the size of the text corpus it was trained on. Unlike BERT, these models can generate entire sentences and hence prove to be a powerful tool for language generation. GPT generates next token from a sequence of tokens in an unsupervised manner. It is auto-regressive in nature, as the newly generated token is added to the initial input sentence and the whole sentence is again provided as an input to the model."
+            ],
+            "score": 0.9306640625
+          },
+          {
+            "id": "(Zhang et al., 2023)",
+            "paper": {
+              "corpus_id": 263310443,
+              "title": "Benchmarking and In-depth Performance Study of Large Language Models on Habana Gaudi Processors",
+              "year": 2023,
+              "venue": "SC Workshops",
+              "authors": [
+                {
+                  "name": "Chengming Zhang",
+                  "authorId": "2155988523"
+                },
+                {
+                  "name": "Baixi Sun",
+                  "authorId": "2189423368"
+                },
+                {
+                  "name": "Xiaodong Yu",
+                  "authorId": "2249766451"
+                },
+                {
+                  "name": "Zhen Xie",
+                  "authorId": "2251530025"
+                },
+                {
+                  "name": "Weijian Zheng",
+                  "authorId": "2249726854"
+                },
+                {
+                  "name": "K. Iskra",
+                  "authorId": "1700811"
+                },
+                {
+                  "name": "Pete Beckman",
+                  "authorId": "2266333392"
+                },
+                {
+                  "name": "Dingwen Tao",
+                  "authorId": "3058378"
+                }
+              ],
+              "n_citations": 2
+            },
+            "snippets": [
+              "The Transformer architecture was first introduced by Vaswani et al. [16] as a novel approach to sequence-to-sequence learning tasks, particularly in natural language processing. Transformers have since become a popular choice for various machine-learning applications, including language modeling, machine translation, and computer vision. The key innovation of the Transformer architecture is the self-attention mechanism, which allows the model to weigh different parts of the input sequence differently when making predictions. This mechanism enables Transformers to capture long-range dependencies and contextual information more effectively compared to traditional recurrent neural networks (RNNs) and convolutional neural networks (CNNs)",
+              "Many widely-received DNN models are based on Transformers. For example, the Bidirectional Encoder Representations from Transformers (BERT) [4] and the Generative Pre-trained Transformer (GPT) [14]. BERT is primarily an encoder from the Transformer architecture. GPT is both an encoder and a decoder, but during training, only the decoder portion is utilized. BERT is bidirectional, trying to understand the context on both sides of a word. GPT is unidirectional, predicting words based on the preceding context."
+            ],
+            "score": 0.97607421875
+          },
+          {
+            "id": "(Biswas et al., 2021)",
+            "paper": {
+              "corpus_id": 232290601,
+              "title": "Extractive Summarization of Call Transcripts",
+              "year": 2021,
+              "venue": "IEEE Access",
+              "authors": [
+                {
+                  "name": "Pratik K. Biswas",
+                  "authorId": "35161174"
+                },
+                {
+                  "name": "Aleksandr Iakubovich",
+                  "authorId": "2056069656"
+                }
+              ],
+              "n_citations": 8
+            },
+            "snippets": [
+              "Transformers in NLP provide general-purpose architectures for Natural Language Understanding (NLU) and Natural Language Generation (NLG) with over 32+ pre-trained models. They were first introduced in [44]. Transformers are Seq2Seq deep learning models that transform sequential inputs to sequential outputs. However, they are based solely on attention mechanisms, dispensing entirely with recurrence and convolutions of the earlier deep learning architectures. Transformers do not require that the sequential data be processed in order, which allows for much more parallelization than Recurrent Neural Networks (RNNs) and therefore reduced training times [44]. Since their introduction, transformers have become the model of choice for tackling many problems in NLP, replacing older recurrent neural network models such as the Long Short-term Memory (LSTM). Transformer models can train on much larger datasets than before, as they can support more parallelization during training. This has resulted in the development of pre-trained systems such as Bidirectional Encoder Representations from Transformers (BERT), which have been trained with huge general language datasets, and can be fine-tuned to specific linguistic tasks [9]. BERT is a bidirectional transformer pre-trained using a combination of masked language modeling objective and next sentence prediction on a large corpus comprising the Toronto Book Corpus and Wikipedia, by jointly conditioning on both left and right contexts in all layers. Consequently, a pre-trained BERT model can be fine-tuned with just one additional output layer to create state-of-the-art models for a wide range of NLP tasks."
+            ],
+            "score": 0.9091796875
+          },
+          {
+            "id": "(Agrawal et al., 2023)",
+            "paper": {
+              "corpus_id": 266551807,
+              "title": "DEAP: Design Space Exploration for DNN Accelerator Parallelism",
+              "year": 2023,
+              "venue": "arXiv.org",
+              "authors": [
+                {
+                  "name": "Ekansh Agrawal",
+                  "authorId": "2282139677"
+                },
+                {
+                  "name": "Xiangyu Sam Xu",
+                  "authorId": "2276485354"
+                }
+              ],
+              "n_citations": 0
+            },
+            "snippets": [
+              "LLMs are primarily built upon the Transformer architecture, leveraging techniques like word embeddings and attention mechanisms to process large amounts of data effectively. They have capabilities ranging from understanding and generating text based on context to passing standardized tests and recognizing humor [40]. Google's BERT was the first LLM to leverage the attention mechanism to construct first deeply bidirectional, unsupervised language representation, pre-trained using only a plain text corpus. BERT operates on two main training strategies: Masked Language Modeling (MLM) and Next Sentence Prediction (NSP) [11]",
+              "The GPT (Generative Pretrained Transformer) series, developed by OpenAI represents a progression in the field of of LLMs with each iteration introducing significant advancements. The original GPT model, with its architecture based on the Transformer model introduced by in 2017, had 117 million parameters. It primarily used a stack of decoder blocks from the Transformer architecture. The model was trained to predict the next word in a sentence, learning to generate coherent text over time [30]. GPT-2 expanded significantly on this architecture, boasting 1.5 billion parameters. While it maintained the fundamental architecture of GPT-1, the increase in parameters allowed for more depth and complexity in learning patterns and language understanding. GPT-2's larger scale improved its ability to generate more coherent and contextually accurate text, demonstrating a significant leap in language modeling capabilities (Radford et al., 2019). With GPT-3, the architecture underwent a massive scale-up, featuring an unprecedented 175 billion parameters. Although the fundamental architecture remained similar to GPT-2, focusing on the Transformer's decoder blocks, the sheer increase in size allowed GPT-3 to perform a wide range of language tasks with minimal taskspecific training data (Brown et al., 2020). As of April 2023, GPT-4 represents the latest iteration with further advancements in scale and complexity. [27]. Unofficial leaks claim the model have 1.75 trillion parameters coupled with 8 multi-agent mixture of experts architecture [6], [7], [27]."
+            ],
+            "score": 0.912109375
+          },
+          {
+            "id": "(Devlin et al., 2019)",
+            "paper": {
+              "corpus_id": 52967399,
+              "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+              "year": 2019,
+              "venue": "North American Chapter of the Association for Computational Linguistics",
+              "authors": [
+                {
+                  "name": "Jacob Devlin",
+                  "authorId": "39172707"
+                },
+                {
+                  "name": "Ming-Wei Chang",
+                  "authorId": "1744179"
+                },
+                {
+                  "name": "Kenton Lee",
+                  "authorId": "2544107"
+                },
+                {
+                  "name": "Kristina Toutanova",
+                  "authorId": "3259253"
+                }
+              ],
+              "n_citations": 86802
+            },
+            "snippets": [
+              "BERT's model architecture is a multi-layer bidirectional Transformer encoder based on the original implementation described in (Vaswani et al., 2017) and released in the tensor2tensor library.1",
+              "BERT BASE was chosen to have the same model size as OpenAI GPT for comparison purposes. Critically, however, the BERT Transformer uses bidirectional self-attention, while the GPT Transformer uses constrained self-attention where every token can only attend to context to its left.4"
+            ],
+            "score": 0.927734375
+          }
+        ],
+        "table": null
+      },
+      {
+        "title": "Evolution through GPT Series to GPT-4",
+        "tldr": "The GPT series evolved from GPT-1's 117 million parameters to increasingly larger and more capable models, with GPT-3 marking a pivotal moment at 175 billion parameters. Each iteration brought significant improvements in natural language understanding and generation capabilities, culminating in GPT-4's enhanced multi-modal abilities and superior performance across complex tasks. (8 sources)",
+        "text": "\nHere's the progression of the GPT series:\n\n1. **GPT-2 (2019)**\n- Expanded to 1.5 billion parameters, a significant increase from GPT-1  (Radford et al., 2019)\n- Trained on WebText, a new dataset of millions of webpages\n- Achieved state-of-the-art results on 7 out of 8 tested language modeling datasets without task-specific training  (Radford et al., 2019)\n\n2. **GPT-3 (2020)**\n- Massive scale-up to 175 billion parameters, 10x larger than previous models  (Brown et al., 2020)\n- Introduced few-shot learning capabilities, reducing the need for task-specific fine-tuning  (Brown et al., 2020)\n- Demonstrated strong performance across various tasks including translation, question-answering, and arithmetic  (Brown et al., 2020)  (Du et al., 2024)\n\n3. **GPT-3.5 and InstructGPT**\n- Focused on better alignment with user intent and instruction following  (Huang et al., 2024)\n- Improved truthfulness and reduced toxic output generation  (Ouyang et al., 2022)\n- Enhanced interaction quality and practical usability  (Huang et al., 2024)\n\n4. **GPT-4 (2023)**\n- Introduced cross-modal understanding and generation capabilities  (Chen et al., 2024)\n- Unofficial reports suggest approximately 1.75 trillion parameters with a multi-agent mixture of experts architecture  (Agrawal et al., 2023)\n- Demonstrated superior performance in handling complex texts and special contexts  (Jin et al., 2024)\n- Represents a significant advancement in language understanding and generation despite maintaining similar parameter count to GPT-3  (Jin et al., 2024)",
+        "citations": [
+          {
+            "id": "(Radford et al., 2019)",
+            "paper": {
+              "corpus_id": 160025533,
+              "title": "Language Models are Unsupervised Multitask Learners",
+              "year": 2019,
+              "venue": "",
+              "authors": [
+                {
+                  "name": "Alec Radford",
+                  "authorId": "38909097"
+                },
+                {
+                  "name": "Jeff Wu",
+                  "authorId": "49387725"
+                },
+                {
+                  "name": "R. Child",
+                  "authorId": "48422824"
+                },
+                {
+                  "name": "D. Luan",
+                  "authorId": "150970919"
+                },
+                {
+                  "name": "Dario Amodei",
+                  "authorId": "2698777"
+                },
+                {
+                  "name": "I. Sutskever",
+                  "authorId": "1701686"
+                }
+              ],
+              "n_citations": 20263
+            },
+            "snippets": [
+              "Natural language processing tasks, such as question answering, machine translation, reading comprehension, and summarization, are typically approached with supervised learning on taskspecific datasets. We demonstrate that language models begin to learn these tasks without any explicit supervision when trained on a new dataset of millions of webpages called WebText. When conditioned on a document plus questions, the answers generated by the language model reach 55 F1 on the CoQA dataset matching or exceeding the performance of 3 out of 4 baseline systems without using the 127,000+ training examples. The capacity of the language model is essential to the success of zero-shot task transfer and increasing it improves performance in a log-linear fashion across tasks. Our largest model, GPT-2, is a 1.5B parameter Transformer that achieves state of the art results on 7 out of 8 tested language modeling datasets in a zero-shot setting but still underfits WebText. Samples from the model reflect these improvements and contain coherent paragraphs of text. These findings suggest a promising path towards building language processing systems which learn to perform tasks from their naturally occurring demonstrations."
+            ],
+            "score": 0
+          },
+          {
+            "id": "(Brown et al., 2020)",
+            "paper": {
+              "corpus_id": 218971783,
+              "title": "Language Models are Few-Shot Learners",
+              "year": 2020,
+              "venue": "Neural Information Processing Systems",
+              "authors": [
+                {
+                  "name": "Tom B. Brown",
+                  "authorId": "31035595"
+                },
+                {
+                  "name": "Benjamin Mann",
+                  "authorId": "2056658938"
+                },
+                {
+                  "name": "Nick Ryder",
+                  "authorId": "39849748"
+                },
+                {
+                  "name": "Melanie Subbiah",
+                  "authorId": "2065894334"
+                },
+                {
+                  "name": "J. Kaplan",
+                  "authorId": "152724169"
+                },
+                {
+                  "name": "Prafulla Dhariwal",
+                  "authorId": "6515819"
+                },
+                {
+                  "name": "Arvind Neelakantan",
+                  "authorId": "2072676"
+                },
+                {
+                  "name": "Pranav Shyam",
+                  "authorId": "67311962"
+                },
+                {
+                  "name": "Girish Sastry",
+                  "authorId": "144864359"
+                },
+                {
+                  "name": "Amanda Askell",
+                  "authorId": "119609682"
+                },
+                {
+                  "name": "Sandhini Agarwal",
+                  "authorId": "144517868"
+                },
+                {
+                  "name": "Ariel Herbert-Voss",
+                  "authorId": "1404060687"
+                },
+                {
+                  "name": "Gretchen Krueger",
+                  "authorId": "2064404342"
+                },
+                {
+                  "name": "T. Henighan",
+                  "authorId": "103143311"
+                },
+                {
+                  "name": "R. Child",
+                  "authorId": "48422824"
+                },
+                {
+                  "name": "A. Ramesh",
+                  "authorId": "1992922591"
+                },
+                {
+                  "name": "Daniel M. Ziegler",
+                  "authorId": "2052152920"
+                },
+                {
+                  "name": "Jeff Wu",
+                  "authorId": "49387725"
+                },
+                {
+                  "name": "Clemens Winter",
+                  "authorId": "2059411355"
+                },
+                {
+                  "name": "Christopher Hesse",
+                  "authorId": "144239765"
+                },
+                {
+                  "name": "Mark Chen",
+                  "authorId": "2108828435"
+                },
+                {
+                  "name": "Eric Sigler",
+                  "authorId": "2064673055"
+                },
+                {
+                  "name": "Ma-teusz Litwin",
+                  "authorId": "1380985420"
+                },
+                {
+                  "name": "Scott Gray",
+                  "authorId": "145565184"
+                },
+                {
+                  "name": "B. Chess",
+                  "authorId": "1490681878"
+                },
+                {
+                  "name": "Jack Clark",
+                  "authorId": "2115193883"
+                },
+                {
+                  "name": "Christopher Berner",
+                  "authorId": "133740015"
+                },
+                {
+                  "name": "Sam McCandlish",
+                  "authorId": "52238703"
+                },
+                {
+                  "name": "Alec Radford",
+                  "authorId": "38909097"
+                },
+                {
+                  "name": "I. Sutskever",
+                  "authorId": "1701686"
+                },
+                {
+                  "name": "Dario Amodei",
+                  "authorId": "2698777"
+                }
+              ],
+              "n_citations": 35106
+            },
+            "snippets": [
+              "Recent work has demonstrated substantial gains on many NLP tasks and benchmarks by pre-training on a large corpus of text followed by fine-tuning on a specific task. While typically task-agnostic in architecture, this method still requires task-specific fine-tuning datasets of thousands or tens of thousands of examples. By contrast, humans can generally perform a new language task from only a few examples or from simple instructions - something which current NLP systems still largely struggle to do. Here we show that scaling up language models greatly improves task-agnostic, few-shot performance, sometimes even reaching competitiveness with prior state-of-the-art fine-tuning approaches. Specifically, we train GPT-3, an autoregressive language model with 175 billion parameters, 10x more than any previous non-sparse language model, and test its performance in the few-shot setting. For all tasks, GPT-3 is applied without any gradient updates or fine-tuning, with tasks and few-shot demonstrations specified purely via text interaction with the model. GPT-3 achieves strong performance on many NLP datasets, including translation, question-answering, and cloze tasks, as well as several tasks that require on-the-fly reasoning or domain adaptation, such as unscrambling words, using a novel word in a sentence, or performing 3-digit arithmetic. At the same time, we also identify some datasets where GPT-3's few-shot learning still struggles, as well as some datasets where GPT-3 faces methodological issues related to training on large web corpora. Finally, we find that GPT-3 can generate samples of news articles which human evaluators have difficulty distinguishing from articles written by humans. We discuss broader societal impacts of this finding and of GPT-3 in general."
+            ],
+            "score": 0
+          },
+          {
+            "id": "(Du et al., 2024)",
+            "paper": {
+              "corpus_id": 269302401,
+              "title": "A Short Review for Ontology Learning: Stride to Large Language Models Trend",
+              "year": 2024,
+              "venue": "",
+              "authors": [
+                {
+                  "name": "Rick Du",
+                  "authorId": "2297845050"
+                },
+                {
+                  "name": "Huilong An",
+                  "authorId": "2297845046"
+                },
+                {
+                  "name": "Keyu Wang",
+                  "authorId": "2298468407"
+                },
+                {
+                  "name": "Weidong Liu",
+                  "authorId": "2297997080"
+                }
+              ],
+              "n_citations": 1
+            },
+            "snippets": [
+              "The genesis of large language models can be traced back to the foundations of neural networks and early attempts at language representation.However, the groundbreaking transformations in this domain primarily began with the development of the Transformer architecture by Vaswani et al. [85] in 2017.This architecture addressed long-range dependencies in sequences more effectively than recurrent neural networks (RNNs) and convolutional neural networks (CNNs) by employing attention mechanisms",
+              "Notably, the introduction of OpenAI's GPT (Generative Pre-trained Transformer) series marked a watershed moment in the evolution of language models [86].GPT-1 demonstrated remarkable capabilities in natural language understanding and generation by utilizing unsupervised pre-training on vast corpora, followed by fine-tuning on specific downstream tasks [86].Subsequent iterations of the GPT series, including GPT-2 (Radford et al., 2019), GPT-3 (Brown et al., 2020), and their variants, escalated the scale and performance of language models by leveraging increasingly larger datasets and more intricate architectures.GPT-3, released in 2020, with its staggering 175 billion parameters, represented a paradigm shift in the size and capabilities of language models (Brown et al., 2020).Its sheer size endowed it with a remarkable aptitude for various language tasks, exhibiting a high degree of flexibility and adaptability with minimal task-specific fine-tuning",
+              "Apart from OpenAI's contributions, other prominent models such as BERT (Bidirectional Encoder Representations from Transformers) proposed by Google and its variations have also significantly influenced the landscape of large language models [89]."
+            ],
+            "score": 0.94921875
+          },
+          {
+            "id": "(Huang et al., 2024)",
+            "paper": {
+              "corpus_id": 269362530,
+              "title": "A Comprehensive Survey on Evaluating Large Language Model Applications in the Medical Industry",
+              "year": 2024,
+              "venue": "arXiv.org",
+              "authors": [
+                {
+                  "name": "Yining Huang",
+                  "authorId": "2145496906"
+                },
+                {
+                  "name": "Keke Tang",
+                  "authorId": "2075300944"
+                },
+                {
+                  "name": "Meilian Chen",
+                  "authorId": "2293385595"
+                }
+              ],
+              "n_citations": 11
+            },
+            "snippets": [
+              "Since the introduction of the Transformer architecture by Google's team in 2017 (Vaswani et al., 2017), the field of natural language processing has entered a new era.The innovation of the Transformer lies in its use of self-attention mechanisms, which significantly improved the model's ability to handle long-range dependencies, setting the foundation for numerous subsequent language models.Following this, OpenAI released GPT (Generative Pre-trained Transformer) [56] in 2018, which utilized a pre-training and fine-tuning approach.By undergoing unsupervised learning on vast amounts of text data and then fine-tuning on specific tasks, GPT significantly enhanced performance across a variety of natural language processing tasks.Google's BERT (Bidirectional Encoder Representations from Transformers) [57] model further refined pre-training methods by training in a bidirectional manner, enhancing the contextual understanding of text.The release of GPT-2 (Radford et al., 2019) and GPT-3 (Brown et al., 2020) marked significant increases in model size and generative capabilities.Particularly, GPT-3, with its 175 billion parameters, became known for producing text nearly indistinguishable from human writing at the time.Following this, InstructGPT (Ouyang et al., 2022) and ChatGPT (Ray, 2023) were optimized for following user instructions, further improving interaction quality and practicality with humans.In 2023, OpenAI launched GPT-4 [62], an even larger and smarter model capable of handling more complex language understanding and generation tasks, demonstrating superior performance on multiple dimensions."
+            ],
+            "score": 0.92822265625
+          },
+          {
+            "id": "(Ouyang et al., 2022)",
+            "paper": {
+              "corpus_id": 246426909,
+              "title": "Training language models to follow instructions with human feedback",
+              "year": 2022,
+              "venue": "Neural Information Processing Systems",
+              "authors": [
+                {
+                  "name": "Long Ouyang",
+                  "authorId": "31793034"
+                },
+                {
+                  "name": "Jeff Wu",
+                  "authorId": "49387725"
+                },
+                {
+                  "name": "Xu Jiang",
+                  "authorId": "2115903168"
+                },
+                {
+                  "name": "Diogo Almeida",
+                  "authorId": "2061137049"
+                },
+                {
+                  "name": "Carroll L. Wainwright",
+                  "authorId": "2064084601"
+                },
+                {
+                  "name": "Pamela Mishkin",
+                  "authorId": "2051714782"
+                },
+                {
+                  "name": "Chong Zhang",
+                  "authorId": null
+                },
+                {
+                  "name": "Sandhini Agarwal",
+                  "authorId": "144517868"
+                },
+                {
+                  "name": "Katarina Slama",
+                  "authorId": "2117680841"
+                },
+                {
+                  "name": "Alex Ray",
+                  "authorId": "2064770039"
+                },
+                {
+                  "name": "John Schulman",
+                  "authorId": "47971768"
+                },
+                {
+                  "name": "Jacob Hilton",
+                  "authorId": "2052366271"
+                },
+                {
+                  "name": "Fraser Kelton",
+                  "authorId": "2151735262"
+                },
+                {
+                  "name": "Luke E. Miller",
+                  "authorId": "2142365973"
+                },
+                {
+                  "name": "Maddie Simens",
+                  "authorId": "2151735251"
+                },
+                {
+                  "name": "Amanda Askell",
+                  "authorId": "119609682"
+                },
+                {
+                  "name": "P. Welinder",
+                  "authorId": "2930640"
+                },
+                {
+                  "name": "P. Christiano",
+                  "authorId": "145791315"
+                },
+                {
+                  "name": "J. Leike",
+                  "authorId": "2990741"
+                },
+                {
+                  "name": "Ryan J. Lowe",
+                  "authorId": "49407415"
+                }
+              ],
+              "n_citations": 10069
+            },
+            "snippets": [
+              "Making language models bigger does not inherently make them better at following a user's intent. For example, large language models can generate outputs that are untruthful, toxic, or simply not helpful to the user. In other words, these models are not aligned with their users. In this paper, we show an avenue for aligning language models with user intent on a wide range of tasks by fine-tuning with human feedback. Starting with a set of labeler-written prompts and prompts submitted through the OpenAI API, we collect a dataset of labeler demonstrations of the desired model behavior, which we use to fine-tune GPT-3 using supervised learning. We then collect a dataset of rankings of model outputs, which we use to further fine-tune this supervised model using reinforcement learning from human feedback. We call the resulting models InstructGPT. In human evaluations on our prompt distribution, outputs from the 1.3B parameter InstructGPT model are preferred to outputs from the 175B GPT-3, despite having 100x fewer parameters. Moreover, InstructGPT models show improvements in truthfulness and reductions in toxic output generation while having minimal performance regressions on public NLP datasets. Even though InstructGPT still makes simple mistakes, our results show that fine-tuning with human feedback is a promising direction for aligning language models with human intent."
+            ],
+            "score": 0
+          },
+          {
+            "id": "(Chen et al., 2024)",
+            "paper": {
+              "corpus_id": 268681641,
+              "title": "LCVO: An Efficient Pretraining-Free Framework for Visual Question Answering Grounding",
+              "year": 2024,
+              "venue": "arXiv.org",
+              "authors": [
+                {
+                  "name": "Yuhan Chen",
+                  "authorId": "2258429566"
+                },
+                {
+                  "name": "Lumei Su",
+                  "authorId": "2293722205"
+                },
+                {
+                  "name": "Lihua Chen",
+                  "authorId": "2293350064"
+                },
+                {
+                  "name": "Zhiwei Lin",
+                  "authorId": "2258344562"
+                }
+              ],
+              "n_citations": 1
+            },
+            "snippets": [
+              "The emergence of the Transformer architecture provided the architectural foundation and feasibility for large language models, fostering revolutionary progress in Natural Language Processing",
+              "The introductions of GPT-1 [33] and BERT [2] marked the onset of the era of pretrained language models, with \"pretraining-finetuning\" becoming a new paradigm for training large language models.Subsequent developments witnessed a continuous increase in model parameters, giving rise to models such as GPT-2 (Radford et al., 2019), T5 (Raffel et al., 2019), and OPT [36]",
+              "The releases of GPT-3 (Brown et al., 2020) and GPT-3.5 [41] generated widespread acclaim worldwide, showcasing outstanding performance in various language tasks, including text translation, content creation, logical inference, and code generation.GPT4.0 [42], surpassing GPT3.5, exhibits significant advancements with cross-modal understanding and generation capabilities, standing as one of the most advanced large models to date."
+            ],
+            "score": 0.91357421875
+          },
+          {
+            "id": "(Agrawal et al., 2023)",
+            "paper": {
+              "corpus_id": 266551807,
+              "title": "DEAP: Design Space Exploration for DNN Accelerator Parallelism",
+              "year": 2023,
+              "venue": "arXiv.org",
+              "authors": [
+                {
+                  "name": "Ekansh Agrawal",
+                  "authorId": "2282139677"
+                },
+                {
+                  "name": "Xiangyu Sam Xu",
+                  "authorId": "2276485354"
+                }
+              ],
+              "n_citations": 0
+            },
+            "snippets": [
+              "LLMs are primarily built upon the Transformer architecture, leveraging techniques like word embeddings and attention mechanisms to process large amounts of data effectively. They have capabilities ranging from understanding and generating text based on context to passing standardized tests and recognizing humor [40]. Google's BERT was the first LLM to leverage the attention mechanism to construct first deeply bidirectional, unsupervised language representation, pre-trained using only a plain text corpus. BERT operates on two main training strategies: Masked Language Modeling (MLM) and Next Sentence Prediction (NSP) [11]",
+              "The GPT (Generative Pretrained Transformer) series, developed by OpenAI represents a progression in the field of of LLMs with each iteration introducing significant advancements. The original GPT model, with its architecture based on the Transformer model introduced by in 2017, had 117 million parameters. It primarily used a stack of decoder blocks from the Transformer architecture. The model was trained to predict the next word in a sentence, learning to generate coherent text over time [30]. GPT-2 expanded significantly on this architecture, boasting 1.5 billion parameters. While it maintained the fundamental architecture of GPT-1, the increase in parameters allowed for more depth and complexity in learning patterns and language understanding. GPT-2's larger scale improved its ability to generate more coherent and contextually accurate text, demonstrating a significant leap in language modeling capabilities (Radford et al., 2019). With GPT-3, the architecture underwent a massive scale-up, featuring an unprecedented 175 billion parameters. Although the fundamental architecture remained similar to GPT-2, focusing on the Transformer's decoder blocks, the sheer increase in size allowed GPT-3 to perform a wide range of language tasks with minimal taskspecific training data (Brown et al., 2020). As of April 2023, GPT-4 represents the latest iteration with further advancements in scale and complexity. [27]. Unofficial leaks claim the model have 1.75 trillion parameters coupled with 8 multi-agent mixture of experts architecture [6], [7], [27]."
+            ],
+            "score": 0.912109375
+          },
+          {
+            "id": "(Jin et al., 2024)",
+            "paper": {
+              "corpus_id": 271709396,
+              "title": "From LLMs to LLM-based Agents for Software Engineering: A Survey of Current, Challenges and Future",
+              "year": 2024,
+              "venue": "arXiv.org",
+              "authors": [
+                {
+                  "name": "Haolin Jin",
+                  "authorId": "2321414842"
+                },
+                {
+                  "name": "Linghan Huang",
+                  "authorId": "2282337906"
+                },
+                {
+                  "name": "Haipeng Cai",
+                  "authorId": "2315123943"
+                },
+                {
+                  "name": "Jun Yan",
+                  "authorId": "2315079363"
+                },
+                {
+                  "name": "Bo Li",
+                  "authorId": "2315446873"
+                },
+                {
+                  "name": "Huaming Chen",
+                  "authorId": "2314929236"
+                }
+              ],
+              "n_citations": 10
+            },
+            "snippets": [
+              "In 2017 the new framework called \"Transformer\" introduced by Google's research team (Vaswani et al., 2017). The transformer model based on the self-attention mechanism which significantly improved the effectiveness of language models. The inclusion of positional encoding not only solved the long-sequence dependency issue but also enabled parallel computation, which was a considerable improvement over previous models. In 2018, OpenAI developed the Generative Pre-trained Transformer (GPT) [3], a model based on the transformer architecture. The core idea behind GPT-1 was to utilize a large corpus of unlabelled text for pre-training to learn the patterns and structures of language, followed by fine-tuning for specific tasks. Over the next two years, OpenAI released GPT-2 and GPT-3 which increased the parameter count to 175 billions and also demonstrated strong capabilities in context understanding and text generation [27]. GPT-4 launched by OpenAI in 2023, represents a milestone following GPT-3.5. Although GPT-4 maintains a similar parameter count of approximately 175 billion, its performance and diversity have seen considerable improvements. Through more refined training techniques and algorithm optimizations, GPT-4 enhanced the capability of language understanding and generation, particularly outperformed in handling complex texts and special contexts."
+            ],
+            "score": 0.916015625
+          }
+        ],
+        "table": null
+      }
+    ],
+    "cost": 0.482877
+  }
+}
