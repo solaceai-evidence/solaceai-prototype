@@ -26,6 +26,7 @@
     "pipeline_args": {
       "validate": true,
       "llm": "anthropic/claude-3-5-sonnet-20241022",
+      "fallback_llm": "openai/gpt-4o",
       "decomposer_llm": "anthropic/claude-3-5-sonnet-20241022"
     }
   }

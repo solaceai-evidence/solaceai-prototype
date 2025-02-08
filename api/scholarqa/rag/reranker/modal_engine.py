@@ -3,7 +3,7 @@ from typing import Dict, Any, Optional, Tuple, Union, List
 import modal
 import os
 
-from scholarqa.rag.reranker.reranker_base import AbstractReranker
+from scholarqa.rag.reranker.reranker_base import AbstractReranker, RERANKER_MAPPING
 import logging
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,9 @@ class ModalReranker(AbstractReranker):
         return self.modal_engine.generate(
             (query, documents, self.batch_size), streaming=False
         )
+
+
+RERANKER_MAPPING["modal"] = ModalReranker
 
 
 class ModalEngine:

@@ -19,6 +19,7 @@ from scholarqa.models import (
     TaskStep
 )
 from scholarqa.rag.reranker.modal_engine import ModalReranker
+from scholarqa.rag.reranker.reranker_base import RERANKER_MAPPING
 from scholarqa.rag.retrieval import PaperFinderWithReranker, PaperFinder
 from scholarqa.rag.retriever_base import FullTextRetriever
 from scholarqa.scholar_qa import ScholarQA
@@ -43,7 +44,7 @@ def lazy_load_state_mgr_client():
 def lazy_load_scholarqa(task_id: str, sqa_class: Type[T] = ScholarQA, **sqa_args) -> T:
     retriever = FullTextRetriever(**run_config.retriever_args)
     if run_config.reranker_args:
-        reranker = ModalReranker(**run_config.reranker_args)
+        reranker = RERANKER_MAPPING[run_config.reranker_service](**run_config.reranker_args)
         paper_finder = PaperFinderWithReranker(retriever, reranker, **run_config.paper_finder_args)
     else:
         paper_finder = PaperFinder(retriever, **run_config.paper_finder_args)

@@ -48,8 +48,9 @@ class ClusterPlan(BaseModel):
 
 
 class MultiStepQAPipeline:
-    def __init__(self, llm_model: str):
+    def __init__(self, llm_model: str, fallback_llm: str = GPT_4o):
         self.llm_model = llm_model
+        self.fallback_llm = fallback_llm
 
     def step_select_quotes(self, query: str, scored_df: pd.DataFrame, sys_prompt: str) -> Tuple[
         Dict[str, str], List[CompletionResult]]:
@@ -59,7 +60,7 @@ class MultiStepQAPipeline:
                      zip(scored_df["reference_string"], scored_df["relevance_judgment_input_expanded"])}
         messages = [USER_PROMPT_PAPER_LIST_FORMAT.format(query, v) for k, v in tup_items.items()]
         completion_results = batch_llm_completion(self.llm_model, messages=messages, system_prompt=sys_prompt,
-                                                  max_tokens=4096)
+                                                  max_tokens=4096, fallback=self.fallback_llm)
         quotes = [
             cr.content if cr.content != "None" and not cr.content.startswith("None\n") and not cr.content.startswith(
                 "None ")
@@ -261,6 +262,7 @@ class MultiStepQAPipeline:
                 logger.warning(f"No quotes for section {section_name}")
                 filled_in_prompt = PROMPT_ASSEMBLE_NO_QUOTES_SUMMARY.format(**fill_in_prompt_args)
 
-            response = llm_completion(user_prompt=filled_in_prompt, model=self.llm_model, max_tokens=4096)
+            response = llm_completion(user_prompt=filled_in_prompt, model=self.llm_model, fallback=self.fallback_llm,
+                                      max_tokens=4096)
             existing_sections.append(response.content)
             yield response

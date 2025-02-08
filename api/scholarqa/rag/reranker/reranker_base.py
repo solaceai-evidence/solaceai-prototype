@@ -81,3 +81,9 @@ class FlagEmbeddingScores:
         sentence_pairs = [(query, passage.replace(separator, self.get_tokenizer().eos_token)) for passage in passages]
         scores = self.model.compute_score(sentence_pairs, normalize=True, batch_size=32)
         return [float(s) for s in scores]
+
+RERANKER_MAPPING = {
+    "crossencoder": CrossEncoderScores,
+    "biencoder": BiEncoderScores,
+    "flag_embedding": FlagEmbeddingScores
+}

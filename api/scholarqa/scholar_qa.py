@@ -9,7 +9,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from scholarqa.config.config_setup import LogsConfig
-from scholarqa.llms.constants import CostAwareLLMResult
+from scholarqa.llms.constants import CostAwareLLMResult, GPT_4o
 from scholarqa.llms.litellm_helper import CLAUDE_35_SONNET, CostAwareLLMCaller, CostReportingArgs
 from scholarqa.llms.prompts import SYSTEM_PROMPT_QUOTE_PER_PAPER, SYSTEM_PROMPT_QUOTE_CLUSTER, PROMPT_ASSEMBLE_SUMMARY
 from scholarqa.models import GeneratedSection, TaskResult, ToolRequest, CitationSrc
@@ -46,15 +46,16 @@ class ScholarQA:
         self.task_id = task_id
         self.paper_finder = paper_finder
         self.llm_model = llm_model
-        self.validate = kwargs.get("validate", True)
-        if not self.validate or not os.getenv("OPENAI_API_KEY"):
+        fallback_llm = kwargs.get("fallback_llm", GPT_4o)
+        self.validate = kwargs.get("validate", "OPENAI_API_KEY" in os.environ)
+        if not self.validate:
             logger.warning("Validation of the query for harmful content is turned off")
         self.decomposer_llm = kwargs.get("decomposer_llm", self.llm_model)
         self.state_mgr = state_mgr if state_mgr else LocalStateMgrClient(self.logs_config.log_dir)
         self.llm_caller = CostAwareLLMCaller(self.state_mgr)
         if not multi_step_pipeline:
             logger.info(f"Creating a new MultiStepQAPipeline with model: {llm_model} for all the steps")
-            self.multi_step_pipeline = MultiStepQAPipeline(self.llm_model)
+            self.multi_step_pipeline = MultiStepQAPipeline(self.llm_model, fallback_llm=fallback_llm)
         else:
             self.multi_step_pipeline = multi_step_pipeline
 

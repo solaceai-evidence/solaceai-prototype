@@ -12,7 +12,7 @@ MODEL_NAME = "mixedbread-ai/mxbai-rerank-large-v1"
 MODEL_DIR = f"/root/models/{MODEL_NAME}"
 GPU_CONFIG = modal.gpu.L4(count=1)
 
-APP_NAME = "ai2-scholar-qa"
+APP_NAME = "<modal_app_name>"
 APP_LABEL = APP_NAME.lower()
 
 
@@ -171,7 +171,7 @@ api_image = (
     allow_concurrent_inputs=20,
     timeout=60 * 10,
 )
-async def inference_api(query: str, passages: List[str], batch_size: int = 512) -> List[float]:
+async def modal_api_name(query: str, passages: List[str], batch_size: int = 512) -> List[float]:
     model = Model()
     return model.get_scores.remote(query, passages, batch_size)
 

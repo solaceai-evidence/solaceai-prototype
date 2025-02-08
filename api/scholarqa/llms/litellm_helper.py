@@ -60,12 +60,13 @@ def setup_llm_cache(cache_type: str = "s3", **cache_args):
     litellm.enable_cache()
 
 
-def batch_llm_completion(model: str, messages: List[str], system_prompt: str = None, **llm_lite_params) -> List[
+def batch_llm_completion(model: str, messages: List[str], system_prompt: str = None, fallback=GPT_4o, **llm_lite_params) -> List[
     CompletionResult]:
     """returns the result from the llm chat completion api with cost and tokens used"""
+    fallbacks = [fallback] if fallback else []
     messages = [trim_messages([{"role": "system", "content": system_prompt}, {"role": "user", "content": msg}], model)
                 for msg in messages]
-    responses = litellm.batch_completion(messages=messages, model=model, fallbacks=[GPT_4o], **llm_lite_params)
+    responses = litellm.batch_completion(messages=messages, model=model, fallbacks=fallbacks, **llm_lite_params)
     results = []
     for i, res in enumerate(responses):
         try:
