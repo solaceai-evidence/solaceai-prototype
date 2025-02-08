@@ -1,10 +1,10 @@
 {
   "logs": {
     "log_dir": "logs",
+    "log_level": "INFO",
     "llm_cache_dir": "llm_cache",
     "event_trace_loc": "scholarqa_traces",
-    "tracing_mode": "local",
-    "test": "test"
+    "tracing_mode": "local"
   },
   "run_config": {
     "retrieval_service": "public_api",
@@ -14,8 +14,8 @@
     },
     "reranker_service": "modal",
     "reranker_args": {
-      "app_name": "ai2-scholar-qa",
-      "api_name": "inference_api",
+      "app_name": "modal_app_name",
+      "api_name": "modal_api_name",
       "batch_size": 256,
       "gen_options": {}
     },
