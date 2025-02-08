@@ -1,5 +1,3 @@
-[response_1738985067740.json](https://github.com/user-attachments/files/18716768/response_1738985067740.json)
-
 # Ai2 Scholar QA
 
 <img width="1050" alt="image" src="https://github.com/user-attachments/assets/2d7ccc15-2cd8-4316-bec6-ed2a1509f27b" />
@@ -188,4 +186,4 @@ i. The `query_corpusqa` end point is first called with the `query`, and a uuid a
 
 ii. Subsequently, the `query_corpusqa` is then polled to get the updated status of the async task until the task status is not `COMPLETED`
 
-Sample response: 
+[Sample response](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/sample_response) 
