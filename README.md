@@ -1,3 +1,4 @@
+
 # Ai2 Scholar QA
 
 <img width="1050" alt="image" src="https://github.com/user-attachments/assets/2d7ccc15-2cd8-4316-bec6-ed2a1509f27b" />
@@ -187,3 +188,32 @@ i. The `query_corpusqa` end point is first called with the `query`, and a uuid a
 ii. Subsequently, the `query_corpusqa` is then polled to get the updated status of the async task until the task status is not `COMPLETED`
 
 [Sample response](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/sample_response) 
+
+
+### Python Package
+
+```python
+conda create -n scholarqa python=3.11.3
+conda activate scholarqa
+pip install ai2-scholar-qa
+```
+
+Both the webapp and the api are powered by the same pipeline represented by the [ScholarQA](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/scholarqa/scholar_qa.py) class. The pipeline consists of a retrieval component, the `PaperFinder` which consists of a retriever and maybe a reranker and a 3 step generator component `MultiStepQAPipeline`. Each component is extensible and can be replaced by custom instances/classes as required.
+
+**Sample usage**
+
+```python
+from scholarqa.rag.reranker.modal_engine import ModalReranker
+from scholarqa.rag.retrieval import PaperFinderWithReranker
+from scholarqa.rag.retriever_base import FullTextRetriever
+from scholarqa import ScholarQA
+
+retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
+reranker = ModalReranker(app_name=<modal_app_name>, api_name=<modal_api_name>, batch_size=256, gen_options=dict())
+paper_finder = PaperFinderWithReranker(retriever, reranker, n_rerank=50, context_threshold=0.5)
+scholar_qa = ScholarQA(paper_finder=paper_finder)
+
+print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
+```
+
+Refer to [Pipeline and Custom Components]() for more details and examples on how to extend the package.
