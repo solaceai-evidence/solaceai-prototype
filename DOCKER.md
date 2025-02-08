@@ -1,4 +1,4 @@
-Scholar QA pplication that includes:
+Scholar QA application that includes:
 
 * A Python based, [FastAPI](https://fastapi.tiangolo.com/) RESTful API server.
 * A [TypeScript](https://www.typescriptlang.org/), [ReactJS](https://reactjs.org/)
@@ -19,7 +19,7 @@ To start a version of the application locally for development purposes, run
 this command:
 
 ```
-~ docker compose up --build
+docker compose up --build
 ```
 
 This process launches several processes. When things have finished starting,
