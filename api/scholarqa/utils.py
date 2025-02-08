@@ -35,7 +35,7 @@ class TaskIdAwareLogFormatter(Formatter):
         return f"{og_message} - {task_id_part}- {record.getMessage()}"
 
 
-def init_settings(logs_dir: str, default_level: int = logging.INFO, litellm_cache_dir: str = "litellm_cache") -> TaskIdAwareLogFormatter:
+def init_settings(logs_dir: str, log_level: str = "INFO", litellm_cache_dir: str = "litellm_cache") -> TaskIdAwareLogFormatter:
     def setup_logging() -> TaskIdAwareLogFormatter:
         # If LOG_FORMAT is "google:json" emit log message as JSON in a format Google Cloud can parse
         loggers = [
@@ -66,7 +66,7 @@ def init_settings(logs_dir: str, default_level: int = logging.INFO, litellm_cach
         tid_log_fmt = TaskIdAwareLogFormatter()
         for handler in handlers:
             handler.setFormatter(tid_log_fmt)
-        level = os.environ.get("LOG_LEVEL", default=default_level)
+        level = log_level
         logging.basicConfig(level=level, handlers=handlers)
         return tid_log_fmt
 

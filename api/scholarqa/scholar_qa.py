@@ -21,8 +21,6 @@ from scholarqa.state_mgmt.local_state_mgr import AbsStateMgrClient, LocalStateMg
 from scholarqa.trace.event_traces import EventTrace
 from scholarqa.utils import get_paper_metadata
 
-RETRIEVAL_SERVICE = os.getenv("RETRIEVAL_SERVICE", "public_api").lower()
-
 logger = logging.getLogger(__name__)
 
 

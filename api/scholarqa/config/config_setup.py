@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 class LogsConfig(BaseModel):
     log_dir: str = Field(default="logs", description="Directory to store logs, event traces and litellm cache")
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(default="INFO",
+                                                                                description="Logging level")
     llm_cache_dir: str = Field(default="llm_cache", description="Sub directory to cache llm calls")
     event_trace_loc: str = Field(default="scholarqa_traces", description="Sub directory to store event traces"
                                                                          "OR the GCS bucket name")
@@ -29,7 +31,8 @@ class LogsConfig(BaseModel):
         self.tid_log_formatter.task_id = task_id
 
     def init_formatter(self):
-        self.tid_log_formatter = init_settings(logs_dir=self.log_dir, litellm_cache_dir=self.llm_cache_dir)
+        self.tid_log_formatter = init_settings(logs_dir=self.log_dir, log_level=self.log_level,
+                                               litellm_cache_dir=self.llm_cache_dir)
 
     class Config:
         arbitrary_types_allowed = True
@@ -61,5 +64,6 @@ def read_json_config(config_path: str, model_class: AppConfig = AppConfig) -> Ap
     json_data = json.load(open(config_path, "r"))
     app_config = model_class.model_validate(json_data)
     app_config.logs.tid_log_formatter = init_settings(logs_dir=app_config.logs.log_dir,
+                                                        log_level=app_config.logs.log_level,
                                                       litellm_cache_dir=app_config.logs.llm_cache_dir)
     return app_config
