@@ -5,10 +5,18 @@
 
 This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and can be run as local docker containers or embedded into another application as a [python package](https://pypi.org/project/ai2-scholar-qa).
 
-- [Overview](#overview)
-- [Setup](#setup)
-  * [Environment Variables](#environment-variables)
-  * [Runtime Config](#runtime-config)
+- [Ai2 Scholar QA](#ai2-scholar-qa)
+    + [Overview](#overview)
+    + [Setup](#setup)
+      - [Environment Variables](#environment-variables)
+      - [Application Configuration](#application-configuration)
+      - [docker-compose.yaml](#docker-composeyaml)
+    + [Run Webapp](#run-webapp)
+      - [Startup](#startup)
+      - [UI](#ui)
+      - [Backend](#backend)
+    + [Async API](#async-api)
+    + [Python Package](#python-package)
 
 - ### Overview
 
