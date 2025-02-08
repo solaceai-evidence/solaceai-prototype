@@ -157,7 +157,7 @@ env_file:
 `environment.CONFIG_PATH` indicates the path of the application configuration json file.
 `env_file` indicates the path of the file with environment variables.
 
-### Run Webapp
+- ### Run Webapp
 
 Please refer to [DOCKER.md](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/DOCKER.md)
 for more info on setting up the docker app.
@@ -184,7 +184,7 @@ https://github.com/user-attachments/assets/baed8710-2161-4fbf-b713-3a2dcf46ac61
 
 https://github.com/user-attachments/assets/f9a1b39f-36c8-41c4-a0ac-10046ded0593
 
-### Async API
+- ### Async API
 The Ai2 Scholar QA UI is powered by an async api at the back end in [app.py](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/scholarqa/app.py) which is run from [dev.sh](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/dev.sh).
 
 i. The `query_corpusqa` end point is first called with the `query`, and a uuid as the `user_id`, adn it returns a `task_id`.
@@ -198,12 +198,15 @@ ii. Subsequently, the `query_corpusqa` is then polled to get the updated status 
 [Sample response](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/sample_response) 
 
 
-### Python Package
+- ### Python Package
 
 ```python
 conda create -n scholarqa python=3.11.3
 conda activate scholarqa
 pip install ai2-scholar-qa
+
+#to use sentence transformer models as re-ranker
+pip install 'ai2-scholar-qa.[all]'
 ```
 
 Both the webapp and the api are powered by the same pipeline represented by the [ScholarQA](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/scholarqa/scholar_qa.py) class. The pipeline consists of a retrieval component, the `PaperFinder` which consists of a retriever and maybe a reranker and a 3 step generator component `MultiStepQAPipeline`. Each component is extensible and can be replaced by custom instances/classes as required.
