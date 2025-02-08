@@ -1,13 +1,22 @@
+
 # Ai2 Scholar QA
 
 <img width="1050" alt="image" src="https://github.com/user-attachments/assets/2d7ccc15-2cd8-4316-bec6-ed2a1509f27b" />
 
 This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and can be run as local docker containers or embedded into another application as a [python package](https://pypi.org/project/ai2-scholar-qa).
 
-- [Overview](#overview)
-- [Setup](#setup)
-  * [Environment Variables](#environment-variables)
-  * [Runtime Config](#runtime-config)
+- [Ai2 Scholar QA](#ai2-scholar-qa)
+    + [Overview](#overview)
+    + [Setup](#setup)
+      - [Environment Variables](#environment-variables)
+      - [Application Configuration](#application-configuration)
+      - [docker-compose.yaml](#docker-composeyaml)
+    + [Run Webapp](#run-webapp)
+      - [Startup](#startup)
+      - [UI](#ui)
+      - [Backend](#backend)
+    + [Async API](#async-api)
+    + [Python Package](#python-package)
 
 - ### Overview
 
@@ -148,7 +157,7 @@ env_file:
 `environment.CONFIG_PATH` indicates the path of the application configuration json file.
 `env_file` indicates the path of the file with environment variables.
 
-### Run Webapp
+- ### Run Webapp
 
 Please refer to [DOCKER.md](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/DOCKER.md)
 for more info on setting up the docker app.
@@ -175,7 +184,7 @@ https://github.com/user-attachments/assets/baed8710-2161-4fbf-b713-3a2dcf46ac61
 
 https://github.com/user-attachments/assets/f9a1b39f-36c8-41c4-a0ac-10046ded0593
 
-### Async API
+- ### Async API
 The Ai2 Scholar QA UI is powered by an async api at the back end in [app.py](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/scholarqa/app.py) which is run from [dev.sh](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/dev.sh).
 
 i. The `query_corpusqa` end point is first called with the `query`, and a uuid as the `user_id`, adn it returns a `task_id`.
@@ -187,3 +196,35 @@ i. The `query_corpusqa` end point is first called with the `query`, and a uuid a
 ii. Subsequently, the `query_corpusqa` is then polled to get the updated status of the async task until the task status is not `COMPLETED`
 
 [Sample response](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/sample_response) 
+
+
+- ### Python Package
+
+```python
+conda create -n scholarqa python=3.11.3
+conda activate scholarqa
+pip install ai2-scholar-qa
+
+#to use sentence transformer models as re-ranker
+pip install 'ai2-scholar-qa.[all]'
+```
+
+Both the webapp and the api are powered by the same pipeline represented by the [ScholarQA](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/scholarqa/scholar_qa.py) class. The pipeline consists of a retrieval component, the `PaperFinder` which consists of a retriever and maybe a reranker and a 3 step generator component `MultiStepQAPipeline`. Each component is extensible and can be replaced by custom instances/classes as required.
+
+**Sample usage**
+
+```python
+from scholarqa.rag.reranker.modal_engine import ModalReranker
+from scholarqa.rag.retrieval import PaperFinderWithReranker
+from scholarqa.rag.retriever_base import FullTextRetriever
+from scholarqa import ScholarQA
+
+retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
+reranker = ModalReranker(app_name=<modal_app_name>, api_name=<modal_api_name>, batch_size=256, gen_options=dict())
+paper_finder = PaperFinderWithReranker(retriever, reranker, n_rerank=50, context_threshold=0.5)
+scholar_qa = ScholarQA(paper_finder=paper_finder)
+
+print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
+```
+
+Refer to [Pipeline and Custom Components]() for more details and examples on how to extend the package.
