@@ -1,4 +1,4 @@
-
+[response_1738985067740.json](https://github.com/user-attachments/files/18716768/response_1738985067740.json)
 
 # Ai2 Scholar QA
 
@@ -177,10 +177,15 @@ https://github.com/user-attachments/assets/baed8710-2161-4fbf-b713-3a2dcf46ac61
 
 https://github.com/user-attachments/assets/f9a1b39f-36c8-41c4-a0ac-10046ded0593
 
+### Async API
+The Ai2 Scholar QA UI is powered by an async api at the back end in [app.py](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/scholarqa/app.py) which is run from [dev.sh](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/dev.sh).
 
+i. The `query_corpusqa` end point is first called with the `query`, and a uuid as the `user_id`, adn it returns a `task_id`.
 
+<img width="1421" alt="image" src="https://github.com/user-attachments/assets/3b5792f0-04f9-4dbf-a704-d98beaf6e58b" />
 
+<img width="964" alt="image" src="https://github.com/user-attachments/assets/6cbb4d38-f1f4-4444-9b2d-4139ca28c514" />
 
+ii. Subsequently, the `query_corpusqa` is then polled to get the updated status of the async task until the task status is not `COMPLETED`
 
-
-
+Sample response: 
