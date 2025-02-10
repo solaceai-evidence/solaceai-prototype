@@ -37,7 +37,9 @@ export OPENAI_API_KEY=
 
 ``ANTHROPIC_API_KEY`` : Ai2 Scholar QA uses Anthropic's [Claude 3.5 Sonnet](https://www.anthropic.com/news/claude-3-5-sonnet) as the primary LLM for generation, but any model served by [litellm](https://docs.litellm.ai/docs/providers) should work. Please configure the corresponding api key here.
 
-`OPENAI_API_KEY`: OpenAI's [GPT 4o](https://openai.com/index/gpt-4o-and-more-tools-to-chatgpt-free/) is configured as the fallback llm. **Note:** We also use OpenAI's [text moderation api](https://platform.openai.com/docs/guides/moderation/overview#:~:text=The%20moderation%20endpoint%20is%20free%20to%20use%20when%20monitoring%20the%20inputs%20and%20outputs%20of%20OpenAI%20APIs.%20We%20currently%20disallow%20other%20use%20cases.)  to validate and filter harmful queries. If you don't have access to an OpenAI api key, this feature will be disabled.
+`OPENAI_API_KEY`: OpenAI's [GPT 4o](https://openai.com/index/gpt-4o-and-more-tools-to-chatgpt-free/) is configured as the fallback llm. 
+
+**Note:** We also use OpenAI's [text moderation api](https://platform.openai.com/docs/guides/moderation/overview#:~:text=The%20moderation%20endpoint%20is%20free%20to%20use%20when%20monitoring%20the%20inputs%20and%20outputs%20of%20OpenAI%20APIs.%20We%20currently%20disallow%20other%20use%20cases.)  to validate and filter harmful queries. If you don't have access to an OpenAI api key, this feature will be disabled.
 
 If you use [Modal](https://modal.com/) to serve your models, please configure `MODAL_TOKEN` and `MODAL_TOKEN_SECRET` here as well.
 
@@ -91,7 +93,7 @@ class LogsConfig(BaseModel):
 ```
 **Note:**
 
-> i. Event Traces are json documents containing the entire trace of the
+> i. Event Traces are json documents containing a trace of the entire
 > pipeline i.e. the results of retrieval, reranking, each step of the qa
 > pipeline and associated costs, if any. Please refer to the examples in
 > Logging.MD
@@ -122,8 +124,8 @@ pipeline_args: dict = Field(default=None, description="Arguments for the Scholar
 
 > i. `*(retrieval, reranker)_service` can be used to indicate the type
 > of retrieval/reranker you want to instantiate. Ai2 Scholar QA uses the
-> `FullTextRetriever` and `ModalReranker`  which are chosen based on the
-> default  `public_api` and `modal` keywords. To choose a #
+> `FullTextRetriever` and `ModalReranker` respectively, which are chosen based on the
+> default  `public_api` and `modal` keywords. To choose a
 > SentenceTransformers reranker, replace `modal` with `cross_encoder` or
 > `biencoder` or define your own types.
 > 
