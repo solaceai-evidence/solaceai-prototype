@@ -95,8 +95,7 @@ class LogsConfig(BaseModel):
 
 > i. Event Traces are json documents containing a trace of the entire
 > pipeline i.e. the results of retrieval, reranking, each step of the qa
-> pipeline and associated costs, if any. Please refer to the examples in
-> Logging.MD
+> pipeline and associated costs, if any.
 > 
 > ii. llm_cache_dir is used to initialize the local disk cache for caching llm calls via [litellm](https://docs.litellm.ai/docs/caching/all_caches).
 > 
@@ -228,5 +227,3 @@ scholar_qa = ScholarQA(paper_finder=paper_finder)
 
 print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
 ```
-
-Refer to [Pipeline and Custom Components]() for more details and examples on how to extend the package.
