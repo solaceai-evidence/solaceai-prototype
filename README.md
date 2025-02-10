@@ -295,3 +295,8 @@ print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
   - [AbsPaperFinder](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/retrieval.py#L14)
 
   and the MultiStepQAPipeline can be extended/modified as needed for generation.
+  
+* #### Modal deployment
+  If you would prefer to serve your models via modal, please refer to [MODAL.md](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/MODAL.md) for more info and sample code that we used to deploy the reranker model in the live demo.
+
+
