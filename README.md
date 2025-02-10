@@ -7,16 +7,22 @@ This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and c
 
 - [Ai2 Scholar QA](#ai2-scholar-qa)
     + [Overview](#overview)
+      - [Retrieval:](#retrieval-)
+      - [Multi-step Generation:](#multi-step-generation-)
     + [Setup](#setup)
       - [Environment Variables](#environment-variables)
       - [Application Configuration](#application-configuration)
       - [docker-compose.yaml](#docker-composeyaml)
     + [Run Webapp](#run-webapp)
       - [Startup](#startup)
-      - [UI](#ui)
-      - [Backend](#backend)
+    + [UI](#ui)
+    + [Backend](#backend)
     + [Async API](#async-api)
     + [Python Package](#python-package)
+    + [Custom Pipeline](#custom-pipeline)
+      - [API end points](#api-end-points)
+      - [ScholarQA class](#scholarqa-class)
+      - [Pipeline Components](#pipeline-components)
 
 - ### Overview
 Ai2 Scholar QA is a system for answering scientific queries and literature review by gathering evidence from multiple documents across our corpus and synthesizing an organized report with evidence for each claim. As a RAG based architecture, Ai2 Scholar QA has a retrieval component and a three step generator pipeline. 
@@ -40,6 +46,8 @@ These components are encapsulated in the [PaperFinder](https://github.com/allena
   iii. _Summary Generation_ -  Each section is generated based on the quotes assigned to that section and all the prior text generated in the report. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L97)
   
   These steps are encapsulated in the [MultiStepQAPipeline](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/rag/multi_step_qa_pipeline.py#L50C7-L50C26) class.
+
+Both the PaperFinder and MultiStepQAPipeline are in turn members of [ScholarQA](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/scholar_qa.py#L27), which is the main class powering our system.
 
   For more info please refer to our [blogpost](allenai.org/blog/ai2-scholarqa).
 
@@ -250,3 +258,40 @@ scholar_qa = ScholarQA(paper_finder=paper_finder)
 
 print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
 ```
+
+- ### Custom Pipeline
+* #### API end points
+  The api end points in app.py can be extended with a fastapi APIRouter in another script.
+  eg. `custom_app.py`
+  
+  ```python
+  from fastapi import APIRouter, FastAPI
+  from scholarqa.app import create_app as create_app_base
+  
+  def create_app() -> FastAPI:
+    app = create_app_base()
+    custom_router = APIRouter()
+
+    @custom_router.post("/custom")
+    def custom_endpt():
+        pass
+
+    app.include_router(custom_router)
+    return app.py
+  ```
+
+  To run `custom_app.py`, simply replace `scholarqa.app:create_app` in dev.sh with `<package>.custom_app:create_app`
+
+* #### ScholarQA class
+  To extend the existing ScholarQA functionality in a new class you can either create a sub class of ScholarQA or a new class altogether.
+  Either way, `lazy_load_scholarqa` in app.py should be reimplemented in the new api script to ensure the correct class is initialized.
+
+* #### Pipeline Components
+  The components of the pipeline are individually extensible.
+  We have the following abstract classes that can be extended to achieve desired customization for retrieval:
+  
+  - [AbstractRetriever](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/retriever_base.py#L10)
+  - [AbstractReranker](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/reranker/reranker_base.py#L15)
+  - [AbsPaperFinder](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/retrieval.py#L14)
+
+  and the MultiStepQAPipeline can be extended/modified as needed for generation.
