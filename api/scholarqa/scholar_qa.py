@@ -219,24 +219,7 @@ class ScholarQA:
 
     def gen_table_thread(self, user_id: str, query: str, dim: Dict[str, Any],
                          cit_ids: List[int], tlist: List[Any]) -> Thread:
-        def call_tables_api(didx: int, payload: Dict[str, Any]):
-            res = None
-            if not res or res.status_code != 200:
-                logger.warning(f"Error calling Tables API with payload: {payload}, received: {res.status_code}")
-                tlist[didx] = None
-            else:
-                tlist[didx] = res.json()["table"]
-
-        payload = {
-            "thread_id": self.task_id,
-            "original_query": query,
-            "section_title": dim["name"],
-            "corpus_ids": cit_ids,
-        }
-        logger.info(f"Calling Tables API with payload: {payload}")
-        tthread = Thread(target=call_tables_api, args=(dim["idx"], payload,))
-        tthread.start()
-        return tthread
+        return None
 
     def run_qa_pipeline(self, req: ToolRequest) -> TaskResult:
         """
@@ -337,12 +320,13 @@ class ScholarQA:
                     f"Iteratively generating section: {(idx + 1)} of {len(plan_json)} - {section_json.get('title', '')}",
                     curr_response=generated_sections, step_estimated_time=15)
                 json_summary.append(section_json)
-                # if cluster_json.result["dimensions"][idx]["format"] == "list" and section_json["citations"]:
-                #     cluster_json.result["dimensions"][idx]["idx"] = idx
-                #     cit_ids = [int(c["paper"]["corpus_id"]) for c in section_json["citations"]]
-                #     tthread = self.gen_table_thread(req.user_id, query, cluster_json.result["dimensions"][idx], cit_ids,
-                #                                     tables)
-                #     table_threads.append(tthread)
+                if cluster_json.result["dimensions"][idx]["format"] == "list" and section_json["citations"]:
+                    cluster_json.result["dimensions"][idx]["idx"] = idx
+                    cit_ids = [int(c["paper"]["corpus_id"]) for c in section_json["citations"]]
+                    tthread = self.gen_table_thread(req.user_id, query, cluster_json.result["dimensions"][idx], cit_ids,
+                                                    tables)
+                    if tthread:
+                        table_threads.append(tthread)
                 gen_sec = self.get_gen_sections_from_json(section_json)
                 generated_sections.append(gen_sec)
         except StopIteration as e:
