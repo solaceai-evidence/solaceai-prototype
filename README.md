@@ -19,6 +19,29 @@ This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and c
     + [Python Package](#python-package)
 
 - ### Overview
+Ai2 Scholar QA is a system for answering scientific queries and literature review by gathering evidence from multiple documents across our corpus and synthesizing an organized report with evidence for each claim. As a RAG based architecture, Ai2 Scholar QA has a retrieval component and a three step generator pipeline. 
+
+* #### Retrieval: 
+    The retrieval component consists of two sub-components:
+  
+    i. _Retriever_ - Based on the user query, relevant evidence passages are fetched using the Semantic Scholar public api's snippet/search end point which looks up an index of open source papers. Further, we also use the api's keyword search to suppliement the results from the index with paper abstracts. The user query is preprocessed to extract entities for filtering the papers and re-writing the query as needed. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L221)
+
+  ii. _Reranker_ - The results from the retriever are then reranked with [mixedbread-ai/mxbai-rerank-large-v1](https://huggingface.co/mixedbread-ai/mxbai-rerank-large-v1) and top k results are retained and aggregated at the paper-level to combine all the passages from a single paper.
+  
+These components are encapsulated in the [PaperFinder](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/rag/retrieval.py#L21) class.
+
+* #### Multi-step Generation:
+  The generation pipeline comprises of three steps:
+
+  i. _Quote Extraction_ - The user query along with the aggregated passages from the retrieval component are sent to an LLM (Claude Sonnet 3.5 default) to extract exact quotes relevant to answer the query. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L2)
+
+  ii. _Planning and Clustering_ - The llm is then prompted to generate an organization of the output report with sections headings and format of the section. The quotes from step (i) are clustered and assigned to each heading. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L52)
+
+  iii. _Summary Generation_ -  Each section is generated based on the quotes assigned to that section and all the prior text generated in the report. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L97)
+  
+  These steps are encapsulated in the [MultiStepQAPipeline](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/rag/multi_step_qa_pipeline.py#L50C7-L50C26) class.
+
+  For more info please refer to our [blogpost](allenai.org/blog/ai2-scholarqa).
 
 - ### Setup
 
