@@ -135,7 +135,7 @@ def create_app() -> FastAPI:
             task_result=None,
             steps=[started_task_step]
         )
-
+    app.state.use_tool_fn = use_tool
     return app
 
 
