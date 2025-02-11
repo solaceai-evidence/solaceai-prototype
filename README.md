@@ -204,6 +204,14 @@ ii. Run docker-compose
 docker compose up --build
 ```
 
+The docker compose command takes a while to run the first time to install torch and related dependencies.
+You can get the verbose output with the following command:
+
+```bash
+docker compose build --progress plain
+```
+
+
 #### Startup
 
 https://github.com/user-attachments/assets/7d6761d6-1e95-4dac-9aeb-a5a898a89fbe
