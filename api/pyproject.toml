@@ -8,10 +8,14 @@ build-backend = "setuptools.build_meta"
 [project]
 #Help generate the rest of the file
 name = "ai2-scholar-qa"
-version = "0.1.0"
+version = "0.5.3"
+readme = "README.md"
+license = {text = 'Apache-2.0'}
 description = "Python package to embed the Ai2 Scholar QA functionality in another application"
 authors = [{ name = "Amanpreet Singh", email = "amanpreets@allenai.org" },
-           { name = "Sergey Feldman", email = "sergey@allenai.org"}]
+           { name = "Sergey Feldman", email = "sergey@allenai.org"},
+            { name = "Joseph Chang", email = "josephc@allenai.org"}]
+
 dependencies = [
     "fastapi==0.115.8",
     "gunicorn==21.2.0",

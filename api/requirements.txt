@@ -25,3 +25,9 @@ filelock==3.16.1
 litellm==1.51.3
 pandas==2.2.2
 diskcache==5.6.3
+torch==2.3.1
+transformers==4.44.1
+sentencepiece
+hf-transfer==0.1.6
+huggingface_hub==0.23.4
+sentence-transformers==3.0.1

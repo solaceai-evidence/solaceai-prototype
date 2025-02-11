@@ -7,18 +7,49 @@ This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and c
 
 - [Ai2 Scholar QA](#ai2-scholar-qa)
     + [Overview](#overview)
+      - [Retrieval:](#retrieval-)
+      - [Multi-step Generation:](#multi-step-generation-)
     + [Setup](#setup)
       - [Environment Variables](#environment-variables)
       - [Application Configuration](#application-configuration)
       - [docker-compose.yaml](#docker-composeyaml)
     + [Run Webapp](#run-webapp)
       - [Startup](#startup)
-      - [UI](#ui)
-      - [Backend](#backend)
+    + [UI](#ui)
+    + [Backend](#backend)
     + [Async API](#async-api)
     + [Python Package](#python-package)
+    + [Custom Pipeline](#custom-pipeline)
+      - [API end points](#api-end-points)
+      - [ScholarQA class](#scholarqa-class)
+      - [Pipeline Components](#pipeline-components)
 
 - ### Overview
+Ai2 Scholar QA is a system for answering scientific queries and literature review by gathering evidence from multiple documents across our corpus and synthesizing an organized report with evidence for each claim. As a RAG based architecture, Ai2 Scholar QA has a retrieval component and a three step generator pipeline. 
+
+* #### Retrieval: 
+    The retrieval component consists of two sub-components:
+  
+    i. _Retriever_ - Based on the user query, relevant evidence passages are fetched using the Semantic Scholar public api's snippet/search end point which looks up an index of open source papers. Further, we also use the api's keyword search to suppliement the results from the index with paper abstracts. The user query is preprocessed to extract entities for filtering the papers and re-writing the query as needed. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L221)
+
+  ii. _Reranker_ - The results from the retriever are then reranked with [mixedbread-ai/mxbai-rerank-large-v1](https://huggingface.co/mixedbread-ai/mxbai-rerank-large-v1) and top k results are retained and aggregated at the paper-level to combine all the passages from a single paper.
+  
+These components are encapsulated in the [PaperFinder](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/rag/retrieval.py#L21) class.
+
+* #### Multi-step Generation:
+  The generation pipeline comprises of three steps:
+
+  i. _Quote Extraction_ - The user query along with the aggregated passages from the retrieval component are sent to an LLM (Claude Sonnet 3.5 default) to extract exact quotes relevant to answer the query. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L2)
+
+  ii. _Planning and Clustering_ - The llm is then prompted to generate an organization of the output report with sections headings and format of the section. The quotes from step (i) are clustered and assigned to each heading. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L52)
+
+  iii. _Summary Generation_ -  Each section is generated based on the quotes assigned to that section and all the prior text generated in the report. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L97)
+  
+  These steps are encapsulated in the [MultiStepQAPipeline](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/rag/multi_step_qa_pipeline.py#L50C7-L50C26) class.
+
+Both the PaperFinder and MultiStepQAPipeline are in turn members of [ScholarQA](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/scholar_qa.py#L27), which is the main class powering our system.
+
+  For more info please refer to our [blogpost](allenai.org/blog/ai2-scholarqa).
 
 - ### Setup
 
@@ -37,7 +68,9 @@ export OPENAI_API_KEY=
 
 ``ANTHROPIC_API_KEY`` : Ai2 Scholar QA uses Anthropic's [Claude 3.5 Sonnet](https://www.anthropic.com/news/claude-3-5-sonnet) as the primary LLM for generation, but any model served by [litellm](https://docs.litellm.ai/docs/providers) should work. Please configure the corresponding api key here.
 
-`OPENAI_API_KEY`: OpenAI's [GPT 4o](https://openai.com/index/gpt-4o-and-more-tools-to-chatgpt-free/) is configured as the fallback llm. **Note:** We also use OpenAI's [text moderation api](https://platform.openai.com/docs/guides/moderation/overview#:~:text=The%20moderation%20endpoint%20is%20free%20to%20use%20when%20monitoring%20the%20inputs%20and%20outputs%20of%20OpenAI%20APIs.%20We%20currently%20disallow%20other%20use%20cases.)  to validate and filter harmful queries. If you don't have access to an OpenAI api key, this feature will be disabled.
+`OPENAI_API_KEY`: OpenAI's [GPT 4o](https://openai.com/index/gpt-4o-and-more-tools-to-chatgpt-free/) is configured as the fallback llm. 
+
+**Note:** We also use OpenAI's [text moderation api](https://platform.openai.com/docs/guides/moderation/overview#:~:text=The%20moderation%20endpoint%20is%20free%20to%20use%20when%20monitoring%20the%20inputs%20and%20outputs%20of%20OpenAI%20APIs.%20We%20currently%20disallow%20other%20use%20cases.)  to validate and filter harmful queries. If you don't have access to an OpenAI api key, this feature will be disabled.
 
 If you use [Modal](https://modal.com/) to serve your models, please configure `MODAL_TOKEN` and `MODAL_TOKEN_SECRET` here as well.
 
@@ -91,10 +124,9 @@ class LogsConfig(BaseModel):
 ```
 **Note:**
 
-> i. Event Traces are json documents containing the entire trace of the
+> i. Event Traces are json documents containing a trace of the entire
 > pipeline i.e. the results of retrieval, reranking, each step of the qa
-> pipeline and associated costs, if any. Please refer to the examples in
-> Logging.MD
+> pipeline and associated costs, if any.
 > 
 > ii. llm_cache_dir is used to initialize the local disk cache for caching llm calls via [litellm](https://docs.litellm.ai/docs/caching/all_caches).
 > 
@@ -122,8 +154,8 @@ pipeline_args: dict = Field(default=None, description="Arguments for the Scholar
 
 > i. `*(retrieval, reranker)_service` can be used to indicate the type
 > of retrieval/reranker you want to instantiate. Ai2 Scholar QA uses the
-> `FullTextRetriever` and `ModalReranker`  which are chosen based on the
-> default  `public_api` and `modal` keywords. To choose a #
+> `FullTextRetriever` and `ModalReranker` respectively, which are chosen based on the
+> default  `public_api` and `modal` keywords. To choose a
 > SentenceTransformers reranker, replace `modal` with `cross_encoder` or
 > `biencoder` or define your own types.
 > 
@@ -227,4 +259,44 @@ scholar_qa = ScholarQA(paper_finder=paper_finder)
 print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
 ```
 
-Refer to [Pipeline and Custom Components]() for more details and examples on how to extend the package.
+- ### Custom Pipeline
+* #### API end points
+  The api end points in app.py can be extended with a fastapi APIRouter in another script.
+  eg. `custom_app.py`
+  
+  ```python
+  from fastapi import APIRouter, FastAPI
+  from scholarqa.app import create_app as create_app_base
+  
+  def create_app() -> FastAPI:
+    app = create_app_base()
+    custom_router = APIRouter()
+
+    @custom_router.post("/custom")
+    def custom_endpt():
+        pass
+
+    app.include_router(custom_router)
+    return app.py
+  ```
+
+  To run `custom_app.py`, simply replace `scholarqa.app:create_app` in dev.sh with `<package>.custom_app:create_app`
+
+* #### ScholarQA class
+  To extend the existing ScholarQA functionality in a new class you can either create a sub class of ScholarQA or a new class altogether.
+  Either way, `lazy_load_scholarqa` in app.py should be reimplemented in the new api script to ensure the correct class is initialized.
+
+* #### Pipeline Components
+  The components of the pipeline are individually extensible.
+  We have the following abstract classes that can be extended to achieve desired customization for retrieval:
+  
+  - [AbstractRetriever](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/retriever_base.py#L10)
+  - [AbstractReranker](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/reranker/reranker_base.py#L15)
+  - [AbsPaperFinder](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/retrieval.py#L14)
+
+  and the MultiStepQAPipeline can be extended/modified as needed for generation.
+  
+* #### Modal deployment
+  If you would prefer to serve your models via modal, please refer to [MODAL.md](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/MODAL.md) for more info and sample code that we used to deploy the reranker model in the live demo.
+
+
