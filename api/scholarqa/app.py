@@ -55,7 +55,6 @@ def lazy_load_scholarqa(task_id: str, sqa_class: Type[T] = ScholarQA, **sqa_args
 
 # setup logging config and local litellm cache
 CONFIG_PATH = os.environ.get("CONFIG_PATH", "run_configs/default.json")
-UUID_NAMESPACE = os.getenv("UUID_ENCODER_KEY", "ai2-scholar-qa")
 
 app_config = read_json_config(CONFIG_PATH)
 logs_config = app_config.logs
@@ -117,13 +116,12 @@ def create_app() -> FastAPI:
             app_config.state_mgr_client = lazy_load_state_mgr_client()
         # Caller is asking for a status update of long-running request
         if tool_request.task_id:
-            return _handle_async_task_check_in(tool_request.task_id)
+            return _handle_async_task_check_in(tool_request)
 
         # New task
         task_id = str(uuid4())
         logs_config.task_id = task_id
         logger.info("New task")
-        tool_request.user_id = str(uuid5(namespace=UUID(tool_request.user_id), name=f"nora-{UUID_NAMESPACE}"))
         app_config.state_mgr_client.init_task(task_id, tool_request)
         estimated_time = _start_async_task(task_id, tool_request)
 
@@ -142,7 +140,8 @@ def create_app() -> FastAPI:
 def _start_async_task(task_id: str, tool_request: ToolRequest) -> str:
     global started_task_step
     estimated_time = _estimate_task_length(tool_request)
-    task_state_manager = app_config.state_mgr_client.get_state_mgr(task_id)
+    tool_request.task_id = task_id
+    task_state_manager = app_config.state_mgr_client.get_state_mgr(tool_request)
     started_task_step = TaskStep(description=TASK_STATUSES["STARTED"], start_timestamp=time(),
                                  estimated_timestamp=time() + TIMEOUT)
     task_state = AsyncTaskState(
@@ -183,7 +182,7 @@ def _start_async_task(task_id: str, tool_request: ToolRequest) -> str:
 
 
 def _handle_async_task_check_in(
-        task_id: str,
+        tool_req: ToolRequest,
 ) -> Union[ToolResponse | AsyncToolResponse]:
     """
     For tasks that will take a while to complete, we issue a task id
@@ -193,8 +192,9 @@ def _handle_async_task_check_in(
     and returning either the current state of the given task id, or its
     final result.
     """
+    task_id = tool_req.task_id
     logs_config.task_id = task_id
-    task_state_manager = app_config.state_mgr_client.get_state_mgr(task_id)
+    task_state_manager = app_config.state_mgr_client.get_state_mgr(tool_req)
     try:
         task_state = task_state_manager.read_state(task_id)
     except NoSuchTaskException:

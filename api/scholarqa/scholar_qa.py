@@ -59,6 +59,8 @@ class ScholarQA:
         else:
             self.multi_step_pipeline = multi_step_pipeline
 
+        self.tool_request = None
+
     def update_task_state(
             self,
             status: str,
@@ -67,9 +69,10 @@ class ScholarQA:
             task_estimated_time: str = None,
     ):
         logger.info(status)
-        if self.task_id:
+        if self.task_id and self.tool_request:
             self.state_mgr.update_task_state(
                 self.task_id,
+                self.tool_request,
                 status,
                 step_estimated_time,
                 curr_response,
@@ -221,6 +224,9 @@ class ScholarQA:
                          cit_ids: List[int], tlist: List[Any]) -> Thread:
         return None
 
+    def get_user_msg_id(self):
+        return self.tool_request.user_id, self.task_id
+
     def run_qa_pipeline(self, req: ToolRequest) -> TaskResult:
         """
                 This function takes a query and returns a response.
@@ -239,11 +245,14 @@ class ScholarQA:
                 :param req: A scientific query posed to scholar qa by a user, consists of the string query, task id and user id
                 :return: A response to the query
         """
+        self.tool_request = req
         self.update_task_state("Processing user query", task_estimated_time="~3 minutes", step_estimated_time=5)
         task_id = self.task_id if self.task_id else req.task_id
+        msg_id, user_id = self.get_user_msg_id()
+        msg_id = task_id if not msg_id else msg_id
         query = req.query
         logger.info(
-            f"Received query: {query} from user_id: {req.user_id} with opt_in: {req.opt_in}"
+            f"Received query: {query} from user_id: {user_id} with opt_in: {req.opt_in}"
         )
         event_trace = EventTrace(
             task_id,
@@ -254,9 +263,10 @@ class ScholarQA:
         )
         cost_args = CostReportingArgs(
             task_id=task_id,
-            user_id=req.user_id,
+            user_id=user_id,
             description="Step 0: Query decomposition",
             model=self.llm_model,
+            msg_id=msg_id
         )
         llm_processed_query = self.preprocess_query(query, cost_args)
         event_trace.trace_decomposition_event(llm_processed_query)
@@ -323,7 +333,7 @@ class ScholarQA:
                 if cluster_json.result["dimensions"][idx]["format"] == "list" and section_json["citations"]:
                     cluster_json.result["dimensions"][idx]["idx"] = idx
                     cit_ids = [int(c["paper"]["corpus_id"]) for c in section_json["citations"]]
-                    tthread = self.gen_table_thread(req.user_id, query, cluster_json.result["dimensions"][idx], cit_ids,
+                    tthread = self.gen_table_thread(user_id, query, cluster_json.result["dimensions"][idx], cit_ids,
                                                     tables)
                     if tthread:
                         table_threads.append(tthread)

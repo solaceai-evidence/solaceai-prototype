@@ -1,31 +1,35 @@
 import os
 from abc import ABC, abstractmethod
 from time import time
-from typing import List, Any
+from typing import List, Any, Optional
+from uuid import uuid5, UUID
 
 from nora_lib.tasks.state import IStateManager, StateManager
 
-from scholarqa.llms.constants import CompletionResult
-from scholarqa.models import TaskResult, TaskStep, AsyncTaskState
+from scholarqa.llms.constants import CompletionResult, CostReportingArgs
+from scholarqa.models import TaskResult, TaskStep, AsyncTaskState, ToolRequest
+
+UUID_NAMESPACE = os.getenv("UUID_ENCODER_KEY", "ai2-scholar-qa")
 
 
 class AbsStateMgrClient(ABC):
     @abstractmethod
-    def get_state_mgr(self, msg_id: str) -> IStateManager:
+    def get_state_mgr(self, tool_req: ToolRequest) -> IStateManager:
         pass
 
-    def init_task(self, task_id: str, tool_request: Any):
+    def init_task(self, task_id: str, tool_request: ToolRequest):
         pass
 
     def update_task_state(
             self,
             task_id: str,
+            tool_req: ToolRequest,
             status: str,
             step_estimated_time: int = 0,
             curr_response: Any = None,
             task_estimated_time: str = None,
     ):
-        state_mgr = self.get_state_mgr(task_id)
+        state_mgr = self.get_state_mgr(tool_req)
         curr_step = TaskStep(description=status, start_timestamp=time())
         task_state = state_mgr.read_state(task_id)
         task_state.task_status = status
@@ -38,8 +42,7 @@ class AbsStateMgrClient(ABC):
         task_state.extra_state["steps"].append(curr_step)
         state_mgr.write_state(task_state)
 
-    def report_llm_usage(self, completion_costs: List[CompletionResult], task_id: str, user_id: str, description: str,
-                         model: str) -> float:
+    def report_llm_usage(self, completion_costs: List[CompletionResult], cost_args: CostReportingArgs) -> float:
         pass
 
 
@@ -49,9 +52,14 @@ class LocalStateMgrClient(AbsStateMgrClient):
         os.makedirs(self._async_state_dir, exist_ok=True)
         self.state_mgr = StateManager(AsyncTaskState, self._async_state_dir)
 
-    def get_state_mgr(self, msg_id: str) -> IStateManager:
+    def get_state_mgr(self, tool_req: Optional[ToolRequest] = None) -> IStateManager:
         return self.state_mgr
 
-    def report_llm_usage(self, completion_costs: List[CompletionResult], task_id: str, user_id: str, description: str,
-                         model: str) -> float:
+    def report_llm_usage(self, completion_costs: List[CompletionResult], cost_args: CostReportingArgs) -> float:
         return sum([cost.cost for cost in completion_costs])
+
+    def init_task(self, task_id: str, tool_request: ToolRequest):
+        try:
+            tool_request.user_id = str(uuid5(namespace=UUID(tool_request.user_id), name=f"nora-{UUID_NAMESPACE}"))
+        except Exception as e:
+            pass

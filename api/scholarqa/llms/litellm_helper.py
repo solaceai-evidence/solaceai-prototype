@@ -30,7 +30,7 @@ class CostAwareLLMCaller:
     def call_method(self, cost_args: CostReportingArgs, method: Callable, **kwargs) -> CostAwareLLMResult:
         method_result = method(**kwargs)
         result, completion_costs, completion_models = self.parse_result_args(method_result)
-        total_cost = self.state_mgr.report_llm_usage(completion_costs=completion_costs, **cost_args._asdict())
+        total_cost = self.state_mgr.report_llm_usage(completion_costs=completion_costs, cost_args=cost_args)
         return CostAwareLLMResult(result=result, tot_cost=total_cost, models=completion_models)
 
     def call_iter_method(self, cost_args: CostReportingArgs, gen_method: Callable, **kwargs) -> Generator[
@@ -42,7 +42,7 @@ class CostAwareLLMCaller:
             all_completion_models.extend(completion_models)
             all_results.append(result)
             yield result
-        total_cost = self.state_mgr.report_llm_usage(completion_costs=all_completion_costs, **cost_args._asdict())
+        total_cost = self.state_mgr.report_llm_usage(completion_costs=all_completion_costs, cost_args=cost_args)
         return CostAwareLLMResult(result=all_results, tot_cost=total_cost, models=all_completion_models)
 
 

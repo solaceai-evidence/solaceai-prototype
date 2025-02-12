@@ -10,6 +10,6 @@ LLAMA_405_TOGETHER_AI = "together_ai/meta-llama/Meta-Llama-3.1-405B-Instruct-Tur
 CompletionResult = namedtuple("CompletionCost",
                               ["content", "model", "cost", "input_tokens", "output_tokens", "total_tokens"])
 
-CostReportingArgs = namedtuple("CostReportingArgs", ["task_id", "user_id", "description", "model"])
+CostReportingArgs = namedtuple("CostReportingArgs", ["task_id", "user_id", "msg_id", "description", "model"])
 
 CostAwareLLMResult = namedtuple("CostAwareLLMResult", ["result", "tot_cost", "models"])
