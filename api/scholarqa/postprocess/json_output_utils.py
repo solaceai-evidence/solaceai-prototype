@@ -83,7 +83,9 @@ def pop_ref_data(ref_str_id, ref_corpus_id, fixed_quote, curr_paper_metadata) ->
 
 @traceable(name="Postprocessing: Converted LLM generated output to json summary")
 def get_json_summary(llm_model: str, summary_sections: List[str], summary_quotes: Dict[str, Any],
-                     paper_metadata: Dict[str, Any], citation_ids: Dict[str, Dict[int, str]]) -> List[Dict[str, Any]]:
+                     paper_metadata: Dict[str, Any], citation_ids: Dict[str, Dict[int, str]],
+                     inline_tags=False) -> List[Dict[str, Any]]:
+    text_ref_format = '<Paper corpusId="{corpus_id}" paperTitle="{ref_str}" isShortName></Paper>'
     sections = []
     llm_name_parts = llm_model.split("/", maxsplit=1)
     llm_ref_format = f'<Model name="{llm_name_parts[0].capitalize()}" version="{llm_name_parts[1]}">'
@@ -124,7 +126,11 @@ def get_json_summary(llm_model: str, summary_sections: List[str], summary_quotes
                         ref_str_id = resolve_ref_id(ref_str, ref_corpus_id, citation_ids)
                         ref_data = pop_ref_data(ref_str_id, ref_corpus_id, fixed_quote,
                                                 paper_metadata.get(ref_corpus_id))
-                        curr_section["text"] = curr_section["text"].replace(ref, ref_data["id"])
+                        if inline_tags:
+                            curr_section["text"] = curr_section["text"].replace(ref, text_ref_format.format(
+                                corpus_id=ref_data["paper"]["corpus_id"], ref_str=ref_data["id"]))
+                        else:
+                            curr_section["text"] = curr_section["text"].replace(ref, ref_data["id"])
                         refs_list.append(ref_data)
             # curr_section["text"] = curr_section["text"].replace(") ; (", "]; [")
             curr_section["citations"] = refs_list

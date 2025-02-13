@@ -238,7 +238,7 @@ class ScholarQA:
         return self.tool_request.user_id, self.task_id
 
     @traceable(run_type="tool", name="ai2_scholar_qa_trace")
-    def run_qa_pipeline(self, req: ToolRequest) -> TaskResult:
+    def run_qa_pipeline(self, req: ToolRequest, inline_tags=False) -> TaskResult:
         """
                 This function takes a query and returns a response.
                 Goes through the following steps:
@@ -336,7 +336,7 @@ class ScholarQA:
                 section_json = \
                     get_json_summary(self.multi_step_pipeline.llm_model, [section_text], per_paper_summaries_extd,
                                      paper_metadata,
-                                     citation_ids)[0]
+                                     citation_ids, inline_tags)[0]
                 section_json["format"] = cluster_json.result["dimensions"][idx]["format"]
                 self.update_task_state(
                     f"Iteratively generating section: {(idx + 1)} of {len(plan_json)} - {section_json.get('title', '')}",
