@@ -139,6 +139,17 @@ class LogsConfig(BaseModel):
 > 
 > iii. By default, the working directory is `./api` , so the `log_dir` will be created inside it as a sub-directory unless the config is modified.
 
+You can also activate Langsmith based log traces if you have an api key configured.
+Please add the following environment variables:
+
+```
+LANGCHAIN_API_KEY
+LANGCHAIN_TRACING_V2
+LANGCHAIN_ENDPOINT
+LANGCHAIN_PROJECT
+```
+
+
 **Pipeline**
 ```python
 class RunConfig(BaseModel):  
@@ -258,13 +269,25 @@ from scholarqa.rag.reranker.modal_engine import ModalReranker
 from scholarqa.rag.retrieval import PaperFinderWithReranker
 from scholarqa.rag.retriever_base import FullTextRetriever
 from scholarqa import ScholarQA
+from scholarqa.llms.constants import CLAUDE_35_SONNET
 
 retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
 reranker = ModalReranker(app_name=<modal_app_name>, api_name=<modal_api_name>, batch_size=256, gen_options=dict())
 paper_finder = PaperFinderWithReranker(retriever, reranker, n_rerank=50, context_threshold=0.5)
-scholar_qa = ScholarQA(paper_finder=paper_finder)
 
+#For wrapper class with MultiStepQAPipeline integrated
+scholar_qa = ScholarQA(paper_finder=paper_finder, llm_model=CLAUDE_35_SONNET) #llm_model can be any litellm model
 print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
+
+#Custom MultiStepQAPipeline class/steps
+from scholarqa.rag.multi_step_qa_pipeline import MultiStepQAPipeline
+mqa_pipeline = MultiStepQAPipeline(llm_model=CLAUDE_35_SONNET)
+
+per_paper_summaries, completion_results = mqa_pipeline.step_select_quotes(query, scored_df, sys_prompt)
+
+plan_json = mqa_pipeline.step_clustering(query, per_paper_summaries, sys_prompt)
+
+response = list(generate_iterative_summary(query, per_paper_summaries, plan_json, sys_prompt))
 ```
 
 - ### Custom Pipeline
