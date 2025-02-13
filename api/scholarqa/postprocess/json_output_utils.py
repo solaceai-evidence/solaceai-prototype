@@ -1,6 +1,7 @@
 import re
 from typing import Optional, Dict, Any, List
 from scholarqa.utils import make_int
+from langsmith import traceable
 
 
 def find_tldr_super_token(text: str) -> Optional[str]:
@@ -80,6 +81,7 @@ def pop_ref_data(ref_str_id, ref_corpus_id, fixed_quote, curr_paper_metadata) ->
     return curr_ref
 
 
+@traceable(name="Postprocessing: Converted LLM generated output to json summary")
 def get_json_summary(llm_model: str, summary_sections: List[str], summary_quotes: Dict[str, Any],
                      paper_metadata: Dict[str, Any], citation_ids: Dict[str, Dict[int, str]]) -> List[Dict[str, Any]]:
     sections = []

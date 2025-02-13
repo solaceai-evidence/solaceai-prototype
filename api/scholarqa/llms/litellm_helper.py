@@ -6,6 +6,7 @@ from typing import List, Any, Callable, Tuple, Iterator, Union, Generator
 import litellm
 from litellm.caching import Cache
 from litellm.utils import trim_messages
+from langsmith import traceable
 
 from scholarqa.state_mgmt.local_state_mgr import AbsStateMgrClient
 
@@ -60,7 +61,9 @@ def setup_llm_cache(cache_type: str = "s3", **cache_args):
     litellm.enable_cache()
 
 
-def batch_llm_completion(model: str, messages: List[str], system_prompt: str = None, fallback=GPT_4o, **llm_lite_params) -> List[
+@traceable(run_type="llm", name="batch completion")
+def batch_llm_completion(model: str, messages: List[str], system_prompt: str = None, fallback=GPT_4o,
+                         **llm_lite_params) -> List[
     CompletionResult]:
     """returns the result from the llm chat completion api with cost and tokens used"""
     fallbacks = [fallback] if fallback else []
@@ -85,6 +88,7 @@ def batch_llm_completion(model: str, messages: List[str], system_prompt: str = N
     return results
 
 
+@traceable(run_type="llm", name="completion")
 def llm_completion(user_prompt: str, system_prompt: str = None, fallback=GPT_4o, **llm_lite_params) -> CompletionResult:
     """returns the result from the llm chat completion api with cost and tokens used"""
     messages = []

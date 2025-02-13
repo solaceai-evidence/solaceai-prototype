@@ -20,6 +20,7 @@ from scholarqa.rag.retrieval import PaperFinder
 from scholarqa.state_mgmt.local_state_mgr import AbsStateMgrClient, LocalStateMgrClient
 from scholarqa.trace.event_traces import EventTrace
 from scholarqa.utils import get_paper_metadata
+from langsmith import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,7 @@ class ScholarQA:
                 task_estimated_time,
             )
 
+    @traceable(name="Preprocessing: Validate and decompose user query")
     def preprocess_query(self, query: str, cost_args: CostReportingArgs, ) -> CostAwareLLMResult:
         if self.validate:
             # Validate the query for harmful/unanswerable content
@@ -90,6 +92,7 @@ class ScholarQA:
             cost_args=cost_args, method=decompose_query, query=query, decomposer_llm_model=self.decomposer_llm
         )
 
+    @traceable(name="Retrieval: Find relevant paper passages for the query")
     def find_relevant_papers(self, llm_processed_query: LLMProcessedQuery) -> Tuple[
         List[Dict[str, Any]], List[Dict[str, Any]]]:
         # retrieval from vespa index
@@ -120,6 +123,7 @@ class ScholarQA:
 
         return snippet_results, search_api_results
 
+    @traceable(name="Retrieval: Rerank the passages and aggregate at paper level")
     def rerank_and_aggregate(self, user_query: str, retrieved_candidates: List[Dict[str, Any]], filter_paper_metadata: [
         Dict[str, Any]]) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         if self.paper_finder.n_rerank > 0:
@@ -140,6 +144,7 @@ class ScholarQA:
         logger.info("Reranking w. formatting time: %.2f", time() - start)
         return agg_df, paper_metadata
 
+    @traceable(name="Generation: Extract relevant quotes from paper passages or filter")
     def step_select_quotes(self, query: str, scored_df: pd.DataFrame, cost_args: CostReportingArgs,
                            sys_prompt: str = SYSTEM_PROMPT_QUOTE_PER_PAPER) -> CostAwareLLMResult:
         logger.info("Running Step 1 - quote extraction")
@@ -158,6 +163,7 @@ class ScholarQA:
             f"time: {time() - start:.2f}")
         return per_paper_summaries
 
+    @traceable(name="Generation: Cluster quotes to generate an organization plan")
     def step_clustering(self, query: str, per_paper_summaries: Dict[str, str], cost_args: CostReportingArgs,
                         sys_prompt: str = SYSTEM_PROMPT_QUOTE_CLUSTER) -> CostAwareLLMResult:
         logger.info("Running Step 2: Clustering the extracted quotes into meaningful dimensions")
@@ -171,6 +177,7 @@ class ScholarQA:
         logger.info(f"Step 2 done - {cluster_json.result}, cost: {cluster_json.tot_cost}, time: {time() - start:.2f}")
         return cluster_json
 
+    @traceable(name="Generation: Generate an iterative summary")
     def step_gen_iterative_summary(self, query: str, per_paper_summaries: Dict[str, str], sec_names: List[str],
                                    plan_json: Dict[str, Any], cost_args: CostReportingArgs,
                                    sys_prompt: str = PROMPT_ASSEMBLE_SUMMARY) -> Generator[
@@ -212,6 +219,9 @@ class ScholarQA:
             logger.error(f"Error while converting json to TaskResult: {e}")
             raise e
 
+    def postprocess_json_output(self, json_summary: List[Dict[str, Any]]) -> None:
+        pass
+
     def answer_query(self, query: str) -> Dict[str, Any]:
         task_id = str(uuid4())
         self.logs_config.task_id = task_id
@@ -227,6 +237,7 @@ class ScholarQA:
     def get_user_msg_id(self):
         return self.tool_request.user_id, self.task_id
 
+    @traceable(run_type="tool", name="ai2_scholar_qa_trace")
     def run_qa_pipeline(self, req: ToolRequest) -> TaskResult:
         """
                 This function takes a query and returns a response.
@@ -248,7 +259,7 @@ class ScholarQA:
         self.tool_request = req
         self.update_task_state("Processing user query", task_estimated_time="~3 minutes", step_estimated_time=5)
         task_id = self.task_id if self.task_id else req.task_id
-        msg_id, user_id = self.get_user_msg_id()
+        user_id, msg_id = self.get_user_msg_id()
         msg_id = task_id if not msg_id else msg_id
         query = req.query
         logger.info(
@@ -326,11 +337,13 @@ class ScholarQA:
                     get_json_summary(self.multi_step_pipeline.llm_model, [section_text], per_paper_summaries_extd,
                                      paper_metadata,
                                      citation_ids)[0]
+                section_json["format"] = cluster_json.result["dimensions"][idx]["format"]
                 self.update_task_state(
                     f"Iteratively generating section: {(idx + 1)} of {len(plan_json)} - {section_json.get('title', '')}",
                     curr_response=generated_sections, step_estimated_time=15)
                 json_summary.append(section_json)
-                if cluster_json.result["dimensions"][idx]["format"] == "list" and section_json["citations"]:
+                self.postprocess_json_output(json_summary)
+                if section_json["format"] == "list" and section_json["citations"]:
                     cluster_json.result["dimensions"][idx]["idx"] = idx
                     cit_ids = [int(c["paper"]["corpus_id"]) for c in section_json["citations"]]
                     tthread = self.gen_table_thread(user_id, query, cluster_json.result["dimensions"][idx], cit_ids,
@@ -354,6 +367,6 @@ class ScholarQA:
             json_summary[sidx]["table"] = tables[sidx] if tables[sidx] else None
             generated_sections[sidx].table = tables[sidx] if tables[sidx] else None
         event_trace.trace_summary_event(json_summary, all_sections)
-
+        self.postprocess_json_output(json_summary)
         event_trace.persist_trace(self.logs_config)
         return TaskResult(sections=generated_sections, cost=event_trace.total_cost)
