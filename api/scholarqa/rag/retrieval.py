@@ -86,6 +86,10 @@ class PaperFinder(AbsPaperFinder):
             return markdown_output
 
         df = pd.DataFrame(agg_reranked_candidates)
+        try:
+            df = df.drop(["text", "section_title", "ref_mentions", "score", "stype", "rerank_score"], axis=1)
+        except Exception as e:
+            logger.info(e)
         df = df[~df.sentences.isna() & ~df.year.isna()] if not df.empty else df
         if df.empty:
             return df
