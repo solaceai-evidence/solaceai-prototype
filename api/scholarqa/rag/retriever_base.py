@@ -35,7 +35,7 @@ class FullTextRetriever(AbstractRetriever):
     def snippet_search(self, query: str, **filter_kwargs) -> List[Dict[str, Any]]:
         if not self.n_retrieval:
             return []
-        query_params = {fkey: fval for fkey, fval in filter_kwargs.items() if fkey in {"year", "venue"} and fval}
+        query_params = {fkey: fval for fkey, fval in filter_kwargs.items() if fval}
         query_params.update({"query": query, "limit": self.n_retrieval})
         print(query_params)
         snippets = query_s2_api(
