@@ -100,7 +100,7 @@ class ScholarQA:
         rewritten_query = llm_processed_query.rewritten_query
         keyword_query = llm_processed_query.keyword_query
         self.update_task_state(
-            f"Retrieving relevant passages from 8M+ open access papers",
+            f"Retrieving relevant passages from a corpus of 8M+ open access papers",
             step_estimated_time=5
         )
         # Get relevant paper passages from the Semantic Scholar index for the llm rewritten query
@@ -115,7 +115,7 @@ class ScholarQA:
                                                                               **llm_processed_query.search_filters)
             search_api_results = [item for item in search_api_results if item["corpus_id"] not in snippet_corpus_ids]
             self.update_task_state(
-                f"Retrieved {len(search_api_results)} more papers from Semantic Scholar using keyword search",
+                f"Retrieved {len(search_api_results)} more papers from Semantic Scholar abstracts using keyword search",
                 step_estimated_time=1)
         else:
             search_api_results = []
