@@ -47,7 +47,7 @@ class PaperFinder(AbsPaperFinder):
     @staticmethod
     def aggregate_snippets_to_papers(snippets_list: List[Dict[str, Any]], paper_metadata: Dict[str, Any]) -> List[
         Dict[str, Any]]:
-        logging.info("Aggregating the passages at paper level with metadata")
+        logging.info(f"Aggregating {len(snippets_list)} passages at paper level with metadata")
         paper_snippets = dict()
         for snippet in snippets_list:
             corpus_id = snippet["corpus_id"]
@@ -55,7 +55,8 @@ class PaperFinder(AbsPaperFinder):
                 paper_snippets[corpus_id] = paper_metadata[corpus_id]
                 paper_snippets[corpus_id]["corpus_id"] = corpus_id
                 paper_snippets[corpus_id]["sentences"] = []
-            paper_snippets[corpus_id]["sentences"].append(snippet)
+            if snippet["stype"] != "public_api":
+                paper_snippets[corpus_id]["sentences"].append(snippet)
             paper_snippets[corpus_id]["relevance_judgement"] = max(
                 paper_snippets[corpus_id].get("relevance_judgement", -1),
                 snippet.get("rerank_score", snippet["score"]))
@@ -79,7 +80,7 @@ class PaperFinder(AbsPaperFinder):
             grouped = sentences_df.groupby("section_title", sort=False)["text"].apply("\n...\n".join)
 
             # Exclude sections titled 'Abstract' or 'Title'
-            grouped = grouped[(grouped.index != "Abstract") & (grouped.index != "Title")]
+            grouped = grouped[(grouped.index != "abstract") & (grouped.index != "title")]
 
             # Format as Markdown
             markdown_output = "\n\n".join(f"## {title}\n{text}" for title, text in grouped.items())

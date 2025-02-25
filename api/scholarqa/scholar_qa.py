@@ -158,6 +158,11 @@ class ScholarQA:
         per_paper_summaries = self.llm_caller.call_method(cost_args, self.multi_step_pipeline.step_select_quotes,
                                                           query=query, scored_df=scored_df,
                                                           sys_prompt=sys_prompt)
+        api_corpus_ids = set(
+            scored_df[scored_df.sentences.apply(lambda x: not x)].corpus_id.astype(str))
+        ref_strs = {rs.split(" | ")[0][1:] for rs in per_paper_summaries.result}
+        logger.info(f"Paper abstracts used from s2 api: {api_corpus_ids.intersection(ref_strs)}")
+
         logger.info(
             f"Step 1 done - {len(per_paper_summaries.result)} papers with quotes extracted, cost: {per_paper_summaries.tot_cost}, "
             f"time: {time() - start:.2f}")

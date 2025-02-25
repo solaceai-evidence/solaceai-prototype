@@ -100,10 +100,11 @@ class FullTextRetriever(AbstractRetriever):
             paper_data = [{k: make_int(v) if k in NUMERIC_META_FIELDS else pd.get(k) for k, v in pd.items()}
                           for pd in paper_data]
             for pd in paper_data:
-                pd["corpus_id"] = pd["corpusId"]
+                pd["corpus_id"] = str(pd["corpusId"])
                 pd["text"] = pd["abstract"]
                 pd["section_title"] = "abstract"
-                pd["sentences"] = []
+                pd["char_start_offset"] = 0
+                pd["sentence_offsets"] = []
                 pd["ref_mentions"] = []
                 pd["score"] = 0.0
                 pd["stype"] = "public_api"
