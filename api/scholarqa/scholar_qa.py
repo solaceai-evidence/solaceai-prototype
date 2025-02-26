@@ -19,7 +19,7 @@ from scholarqa.rag.multi_step_qa_pipeline import MultiStepQAPipeline
 from scholarqa.rag.retrieval import PaperFinder
 from scholarqa.state_mgmt.local_state_mgr import AbsStateMgrClient, LocalStateMgrClient
 from scholarqa.trace.event_traces import EventTrace
-from scholarqa.utils import get_paper_metadata
+from scholarqa.utils import get_paper_metadata, NUMERIC_META_FIELDS, CATEGORICAL_META_FIELDS
 from langsmith import traceable
 
 logger = logging.getLogger(__name__)
@@ -296,9 +296,12 @@ class ScholarQA:
         event_trace.trace_retrieval_event(retrieved_candidates)
 
         # Rerank the retrieved candidates based on the query with a cross encoder
+        s2_srch_metadata = [{k: v for k, v in paper.items() if
+                             k == "corpus_id" or k in NUMERIC_META_FIELDS or k in CATEGORICAL_META_FIELDS} for paper in
+                            s2_srch_res]
         reranked_df, paper_metadata = self.rerank_and_aggregate(query, retrieved_candidates,
                                                                 {str(paper["corpus_id"]): paper for paper in
-                                                                 s2_srch_res})
+                                                                 s2_srch_metadata})
         if reranked_df.empty:
             raise Exception(
                 "No relevant papers found for the query post reranking, skipping quote extraction.")

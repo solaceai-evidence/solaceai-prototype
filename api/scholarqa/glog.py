@@ -10,7 +10,7 @@ class Formatter(jsonlogger.JsonFormatter):
     """
 
     def __init__(self, task_id_aware_formatter = None):
-        super().__init__("%(asctime)s - %(name)s - %(levelname)s")
+        super().__init__()
         self.task_id_aware_formatter = task_id_aware_formatter
 
     def add_fields(self, log_record, record, message_dict):
@@ -18,7 +18,7 @@ class Formatter(jsonlogger.JsonFormatter):
         log_record["severity"] = record.levelname
 
     def format(self, record: logging.LogRecord) -> str:
-        record.msg = {"msg": self.task_id_aware_formatter.format(record)} if self.task_id_aware_formatter else record.msg
+        record.msg = {"message": self.task_id_aware_formatter.format(record)} if self.task_id_aware_formatter else record.msg
         return super().format(record)
 
 
