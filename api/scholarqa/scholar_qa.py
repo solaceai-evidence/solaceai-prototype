@@ -183,17 +183,11 @@ class ScholarQA:
         return cluster_json
 
     @traceable(name="Generation: Generate an iterative summary")
-    def step_gen_iterative_summary(self, query: str, per_paper_summaries: Dict[str, str], sec_names: List[str],
+    def step_gen_iterative_summary(self, query: str, per_paper_summaries: Dict[str, str],
                                    plan_json: Dict[str, Any], cost_args: CostReportingArgs,
                                    sys_prompt: str = PROMPT_ASSEMBLE_SUMMARY) -> Generator[
         str, None, CostAwareLLMResult]:
         logger.info("Running Step 3: Assemble the summary with the links (takes ~2 mins)")
-        task_estimated_time = 30 + 15 * len(plan_json)
-        task_estimated_time = max((task_estimated_time + task_estimated_time % 60) // 60, 1)
-        outline = '\n    - ' + '\n    - '.join(sec_names)
-        self.update_task_state(f"Start generating each section in the answer outline: {outline}",
-                               task_estimated_time=f"~{task_estimated_time} minutes" if task_estimated_time > 1 else "~1 minute",
-                               step_estimated_time=15)
         start = time()
 
         cost_args = cost_args._replace(model=self.multi_step_pipeline.llm_model)._replace(
@@ -329,26 +323,36 @@ class ScholarQA:
         event_trace.trace_inline_citation_following_event(per_paper_summaries_extd)
 
         # step 3: generating output as per the outline
+        section_titles = [dim["name"] for dim in cluster_json.result["dimensions"]]
         gen_sections_iter = self.step_gen_iterative_summary(query, per_paper_summaries_extd,
-                                                            [dim["name"] for dim in cluster_json.result["dimensions"]],
                                                             plan_json, cost_args)
 
         json_summary, generated_sections, table_threads = [], [], []
         tables = [None for _ in cluster_json.result["dimensions"]]
         citation_ids = dict()
 
+        task_estimated_time = 30 + 15 * len(plan_json)
+        task_estimated_time = max((task_estimated_time + task_estimated_time % 60) // 60, 1)
+        outline = '\n    - ' + '\n    - '.join(section_titles)
+        self.update_task_state(f"Start generating each section in the answer outline: {outline}",
+                               task_estimated_time=f"~{task_estimated_time} minutes" if task_estimated_time > 1 else "~1 minute",
+                               step_estimated_time=15)
+
         try:
-            idx_iter = enumerate(gen_sections_iter)
+            gen_iter = gen_sections_iter
+            idx = 0
             while True:
-                idx, section_text = next(idx_iter)
+                if idx < len(plan_json):
+                    self.update_task_state(
+                        f"Iteratively generating section: {(idx + 1)} of {len(plan_json)} - {section_titles[idx]}",
+                        curr_response=generated_sections, step_estimated_time=15)
+                section_text = next(gen_iter)
                 section_json = \
                     get_json_summary(self.multi_step_pipeline.llm_model, [section_text], per_paper_summaries_extd,
                                      paper_metadata,
                                      citation_ids, inline_tags)[0]
                 section_json["format"] = cluster_json.result["dimensions"][idx]["format"]
-                self.update_task_state(
-                    f"Iteratively generating section: {(idx + 1)} of {len(plan_json)} - {section_json.get('title', '')}",
-                    curr_response=generated_sections, step_estimated_time=15)
+
                 json_summary.append(section_json)
                 self.postprocess_json_output(json_summary)
                 if section_json["format"] == "list" and section_json["citations"]:
@@ -360,6 +364,7 @@ class ScholarQA:
                         table_threads.append(tthread)
                 gen_sec = self.get_gen_sections_from_json(section_json)
                 generated_sections.append(gen_sec)
+                idx += 1
         except StopIteration as e:
             all_sections = e.value
 
