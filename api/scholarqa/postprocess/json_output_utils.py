@@ -49,9 +49,11 @@ def get_section_text(gen_text: str) -> Dict[str, Any]:
             else:
                 text = parts[1].strip()
             curr_section["text"] = text
+        else:
+            raise Exception("Invalid content generated for the query by the LLM")
     except Exception as e:
         logger.exception(f"Error while parsing llm gen text: {gen_text} - {e}")
-        raise Exception("Error while parsing llm generated text")
+        raise e
 
     return curr_section
 
