@@ -20,7 +20,7 @@ S2_API_BASE_URL = "https://api.semanticscholar.org/graph/v1/"
 CompletionResult = namedtuple("CompletionCost",
                               ["content", "model", "cost", "input_tokens", "output_tokens", "total_tokens"])
 NUMERIC_META_FIELDS = {"year", "citationCount", "referenceCount", "influentialCitationCount"}
-CATEGORICAL_META_FIELDS = {"title", "abstract", "corpusId", "authors", "venue"}
+CATEGORICAL_META_FIELDS = {"title", "abstract", "corpusId", "authors", "venue", "isOpenAccess", "openAccessPdf"}
 METADATA_FIELDS = ",".join(CATEGORICAL_META_FIELDS.union(NUMERIC_META_FIELDS))
 
 
