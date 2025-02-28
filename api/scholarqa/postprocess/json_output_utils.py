@@ -39,7 +39,6 @@ def get_section_text(gen_text: str) -> Dict[str, Any]:
             title = parts[0].strip()
             title = re.sub(r"\s*\(list\)", "", title)
             title = re.sub(r"\s*\(synthesis\)", "", title)
-            curr_section = dict()
             curr_section["title"] = title.strip('#').strip()
             if tldr_token is not None:
                 text_parts = parts[1].strip().split("\n", 1)
