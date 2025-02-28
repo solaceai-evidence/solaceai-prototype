@@ -2,6 +2,9 @@ import re
 from typing import Optional, Dict, Any, List
 from scholarqa.utils import make_int
 from langsmith import traceable
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def find_tldr_super_token(text: str) -> Optional[str]:
@@ -31,20 +34,26 @@ def get_section_text(gen_text: str) -> Dict[str, Any]:
         parts = gen_text.split(tldr_token)
     else:
         parts = [gen_text]
-    if len(parts) > 1:
-        title = parts[0].strip()
-        title = re.sub(r"\s*\(list\)", "", title)
-        title = re.sub(r"\s*\(synthesis\)", "", title)
-        curr_section = dict()
-        curr_section["title"] = title.strip('#').strip()
-        if tldr_token is not None:
-            text_parts = parts[1].strip().split("\n", 1)
-            tldr = text_parts[0]  # Assume TLDR is a single line
-            text = text_parts[1]
-            curr_section["tldr"] = tldr.strip('#').strip()
+    try:
+        if len(parts) > 1:
+            title = parts[0].strip()
+            title = re.sub(r"\s*\(list\)", "", title)
+            title = re.sub(r"\s*\(synthesis\)", "", title)
+            curr_section["title"] = title.strip('#').strip()
+            if tldr_token is not None:
+                text_parts = parts[1].strip().split("\n", 1)
+                tldr = text_parts[0]  # Assume TLDR is a single line
+                text = text_parts[1]
+                curr_section["tldr"] = tldr.strip('#').strip()
+            else:
+                text = parts[1].strip()
+            curr_section["text"] = text
         else:
-            text = parts[1].strip()
-        curr_section["text"] = text
+            raise Exception("Invalid content generated for the query by the LLM")
+    except Exception as e:
+        logger.exception(f"Error while parsing llm gen text: {gen_text} - {e}")
+        raise e
+
     return curr_section
 
 
