@@ -13,6 +13,7 @@ from scholarqa.llms.litellm_helper import batch_llm_completion, llm_completion
 from scholarqa.llms.prompts import USER_PROMPT_PAPER_LIST_FORMAT, USER_PROMPT_QUOTE_LIST_FORMAT, \
     PROMPT_ASSEMBLE_NO_QUOTES_SUMMARY
 from scholarqa.utils import CompletionResult, get_ref_author_str, make_int, get_paper_metadata
+from anyascii import anyascii
 
 logger = logging.getLogger(__name__)
 
@@ -202,6 +203,7 @@ class MultiStepQAPipeline:
                                                                         f"{get_ref_author_str(mdata['authors'])} | "
                                                                         f"{make_int(mdata.get('year'))} "
                                                                         f"| Citations: {make_int(mdata['citationCount'])}]")
+                mref_str = anyascii(mref_str)
                 per_paper_summaries[ref_str]["quote"] = per_paper_summaries[ref_str]["quote"].replace(
                     f"({mdata['corpusId']})",
                     f"({get_ref_author_str(mdata['authors'])}, {make_int(mdata.get('year'))})")
