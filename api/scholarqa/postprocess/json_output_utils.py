@@ -152,6 +152,7 @@ def get_json_summary(llm_model: str, summary_sections: List[str], summary_quotes
                         refs_list.append(ref_data)
                 else:
                     curr_section["text"] = curr_section["text"].replace(ref, "")
+                    logger.warning(f"Reference not found in the summary quotes: {ref}")
             curr_section["text"] = re.sub(r"[ ]+", " ", curr_section["text"])
             # curr_section["text"] = curr_section["text"].replace(") ; (", "]; [")
             curr_section["citations"] = refs_list
