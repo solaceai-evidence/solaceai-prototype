@@ -7,6 +7,7 @@ import pandas as pd
 from scholarqa.rag.reranker.reranker_base import AbstractReranker
 from scholarqa.rag.retriever_base import AbstractRetriever
 from scholarqa.utils import make_int, get_ref_author_str
+from anyascii import anyascii
 
 logger = logging.getLogger(__name__)
 
@@ -135,8 +136,8 @@ class PaperFinder(AbsPaperFinder):
         df.loc[:, "relevance_judgment_input_expanded"] = prepend_text + section_text
         df["reference_string"] = df.apply(
             lambda
-                row: f"[{make_int(row.corpus_id)} | {get_ref_author_str(row.authors)} | "
-                     f"{make_int(row['year'])} | Citations: {make_int(row['citation_count'])}]",
+                row: anyascii(f"[{make_int(row.corpus_id)} | {get_ref_author_str(row.authors)} | "
+                     f"{make_int(row['year'])} | Citations: {make_int(row['citation_count'])}]"),
             axis=1,
         )
         return df

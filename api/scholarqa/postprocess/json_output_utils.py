@@ -3,6 +3,7 @@ from typing import Optional, Dict, Any, List
 from scholarqa.utils import make_int
 from langsmith import traceable
 import logging
+from anyascii import anyascii
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +123,7 @@ def get_json_summary(llm_model: str, summary_sections: List[str], summary_quotes
             refs_done = set()
 
             for ref in references:
+                ref = anyascii(ref)
                 if ref in summary_quotes or ref in inline_citation_quotes:
                     ref_parts = ref[1:-1].split(" | ")
                     ref_corpus_id, ref_str = ref_parts[0], f"({ref_parts[1]}, {make_int(ref_parts[2])})".replace(
@@ -148,6 +150,10 @@ def get_json_summary(llm_model: str, summary_sections: List[str], summary_quotes
                         else:
                             curr_section["text"] = curr_section["text"].replace(ref, ref_data["id"])
                         refs_list.append(ref_data)
+                else:
+                    curr_section["text"] = curr_section["text"].replace(ref, "")
+                    logger.warning(f"Reference not found in the summary quotes: {ref}")
+            curr_section["text"] = re.sub(r"[ ]+", " ", curr_section["text"])
             # curr_section["text"] = curr_section["text"].replace(") ; (", "]; [")
             curr_section["citations"] = refs_list
             # add number of unique citations to section tldr
