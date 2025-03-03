@@ -124,20 +124,20 @@ class LogsConfig(BaseModel):
 ```
 **Note:**
 
-> i. Event Traces are json documents containing a trace of the entire
-> pipeline i.e. the results of retrieval, reranking, each step of the qa
-> pipeline and associated costs, if any.
-> 
-> ii. llm_cache_dir is used to initialize the local disk cache for caching llm calls via [litellm](https://docs.litellm.ai/docs/caching/all_caches).
-> 
-> ii. The traces are stored locally in `{log_dir}/{event_trace_loc}` by
-> default. They can also be persisted in a Google Cloud Storage (GCS)
-> bucket. Please set the `tracing_mode="gcs"` and `event_trace_loc=<GCS
-> bucket name>`  here and the `export
-> GOOGLE_APPLICATION_CREDENTIALS=<Service Account Key json file path>`
-> in .`env`.
-> 
-> iii. By default, the working directory is `./api` , so the `log_dir` will be created inside it as a sub-directory unless the config is modified.
+  i. Event Traces are json documents containing a trace of the entire
+  pipeline i.e. the results of retrieval, reranking, each step of the qa
+  pipeline and associated costs, if any.
+ 
+  ii. llm_cache_dir is used to initialize the local disk cache for caching llm calls via [litellm](https://docs.litellm.ai/docs/caching/all_caches).
+
+  iii. The traces are stored locally in `{log_dir}/{event_trace_loc}` by
+  default. They can also be persisted in a Google Cloud Storage (GCS)
+  bucket. Please set the `tracing_mode="gcs"` and `event_trace_loc=<GCS
+  bucket name>`  here and the `export
+  GOOGLE_APPLICATION_CREDENTIALS=<Service Account Key json file path>`
+  in .`env`.
+
+  iv. By default, the working directory is `./api` , so the `log_dir` will be created inside it as a sub-directory unless the config is modified.
 
 You can also activate Langsmith based log traces if you have an api key configured.
 Please add the following environment variables:
@@ -153,29 +153,29 @@ LANGCHAIN_PROJECT
 **Pipeline**
 ```python
 class RunConfig(BaseModel):  
-retrieval_service: str = Field(default="public_api", description="Service to use for paper retrieval")  
-retriever_args: dict = Field(default=None, description="Arguments for the retrieval service")  
-reranker_service: str = Field(default="modal", description="Service to use for paper reranking")  
-reranker_args: dict = Field(default=None, description="Arguments for the reranker service")  
-paper_finder_args: dict = Field(default=None, description="Arguments for the paper finder service")  
-pipeline_args: dict = Field(default=None, description="Arguments for the Scholar QA pipeline service")
+    retrieval_service: str = Field(default="public_api", description="Service to use for paper retrieval")
+    retriever_args: dict = Field(default=None, description="Arguments for the retrieval service")
+    reranker_service: str = Field(default="modal", description="Service to use for paper reranking")
+    reranker_args: dict = Field(default=None, description="Arguments for the reranker service")
+    paper_finder_args: dict = Field(default=None, description="Arguments for the paper finder service")
+    pipeline_args: dict = Field(default=None, description="Arguments for the Scholar QA pipeline service")
 ```
 
 **Note:**
 
-> i. `*(retrieval, reranker)_service` can be used to indicate the type
-> of retrieval/reranker you want to instantiate. Ai2 Scholar QA uses the
-> `FullTextRetriever` and `ModalReranker` respectively, which are chosen based on the
-> default  `public_api` and `modal` keywords. To choose a
-> SentenceTransformers reranker, replace `modal` with `cross_encoder` or
-> `biencoder` or define your own types.
-> 
-> ii. `*(retriever, reranker, paper_finder, pipeline)_args` are used to
-> initialize the corresponding instances of the pipeline components. eg.
-> ``retriever = FullTextRetriever(**run_config.retriever_args)``. You
-> can initialize multiple runs and customize your pipeline.
->
->iii.  If the `reranker_args` are not defined, the app resorts to using only the retrieval service.
+  i. `*(retrieval, reranker)_service` can be used to indicate the type
+   of retrieval/reranker you want to instantiate. Ai2 Scholar QA uses the
+   `FullTextRetriever` and `ModalReranker` respectively, which are chosen based on the
+   default  `public_api` and `modal` keywords. To choose a
+   SentenceTransformers reranker, replace `modal` with `cross_encoder` or
+   `biencoder` or define your own types.
+ 
+  ii. `*(retriever, reranker, paper_finder, pipeline)_args` are used to
+   initialize the corresponding instances of the pipeline components. eg.
+   ``retriever = FullTextRetriever(**run_config.retriever_args)``. You
+   can initialize multiple runs and customize your pipeline.
+
+  iii.  If the `reranker_args` are not defined, the app resorts to using only the retrieval service.
 
 * #### docker-compose.yaml
 The web app initializes 4 docker containers - one each for the API, GUI, nginx proxy and sonar with their own Dockerfile.
@@ -257,7 +257,7 @@ conda activate scholarqa
 pip install ai2-scholar-qa
 
 #to use sentence transformer models as re-ranker
-pip install 'ai2-scholar-qa.[all]'
+pip install 'ai2-scholar-qa[all]'
 ```
 
 Both the webapp and the api are powered by the same pipeline represented by the [ScholarQA](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/scholarqa/scholar_qa.py) class. The pipeline consists of a retrieval component, the `PaperFinder` which consists of a retriever and maybe a reranker and a 3 step generator component `MultiStepQAPipeline`. Each component is extensible and can be replaced by custom instances/classes as required.
