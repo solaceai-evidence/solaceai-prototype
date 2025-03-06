@@ -117,11 +117,11 @@ def query_s2_api(
     return response.json()
 
 
-def get_paper_metadata(corpus_ids: Set[str]) -> Dict[str, Any]:
+def get_paper_metadata(corpus_ids: Set[str], fields=METADATA_FIELDS) -> Dict[str, Any]:
     paper_data = query_s2_api(
         end_pt="paper/batch",
         params={
-            "fields": METADATA_FIELDS
+            "fields": fields
         },
         payload={"ids": ["CorpusId:{0}".format(cid) for cid in corpus_ids]},
         method="post",

@@ -93,7 +93,7 @@ class ScholarQA:
         )
 
     @traceable(name="Retrieval: Find relevant paper passages for the query")
-    def find_relevant_papers(self, llm_processed_query: LLMProcessedQuery) -> Tuple[
+    def find_relevant_papers(self, llm_processed_query: LLMProcessedQuery, **kwargs) -> Tuple[
         List[Dict[str, Any]], List[Dict[str, Any]]]:
         # retrieval from vespa index
         start = time()
@@ -105,7 +105,8 @@ class ScholarQA:
         )
         # Get relevant paper passages from the Semantic Scholar index for the llm rewritten query
         snippet_results = self.paper_finder.retrieve_passages(query=rewritten_query,
-                                                              **llm_processed_query.search_filters)
+                                                              **llm_processed_query.search_filters,
+                                                              **kwargs)
         snippet_corpus_ids = {snippet["corpus_id"] for snippet in snippet_results}
         self.update_task_state(f"Retrieved {len(snippet_results)} highly relevant passages", step_estimated_time=1)
 
@@ -221,12 +222,12 @@ class ScholarQA:
     def postprocess_json_output(self, json_summary: List[Dict[str, Any]]) -> None:
         pass
 
-    def answer_query(self, query: str) -> Dict[str, Any]:
+    def answer_query(self, query: str, inline_tags: bool = True) -> Dict[str, Any]:
         task_id = str(uuid4())
         self.logs_config.task_id = task_id
         logger.info("New task")
         tool_request = ToolRequest(task_id=task_id, query=query, user_id="lib_user")
-        task_result = self.run_qa_pipeline(tool_request)
+        task_result = self.run_qa_pipeline(tool_request, inline_tags)
         return task_result.model_dump()
 
     def gen_table_thread(self, user_id: str, query: str, dim: Dict[str, Any],

@@ -67,7 +67,7 @@ def resolve_ref_id(ref_str, ref_corpus_id, citation_ids):
             rfsplits = ref_str.split(",")
             # in case of 2 (Doe et al., 2024), the one found later becomes (Doe et al._1, 2024) and so on...
             if len(rfsplits) > 1:
-                ref_str_id = f"{rfsplits[0]}_{len(citation_ids[ref_str])}, {rfsplits[1]}"
+                ref_str_id = f"{rfsplits[0]}_{len(citation_ids[ref_str])},{rfsplits[1]}"
             else:
                 ref_str_id = f"{ref_str}_{len(citation_ids[ref_str])}"
         else:

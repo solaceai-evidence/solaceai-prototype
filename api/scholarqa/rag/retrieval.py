@@ -99,7 +99,7 @@ class PaperFinder(AbsPaperFinder):
 
         # there are multiple relevance judgments in ['relevance_judgements'] for each paper
         # we will keep rows where ANY of the relevance judgments are 2 or 3
-        df = df[df["relevance_judgement"] > self.context_threshold]
+        df = df[df["relevance_judgement"] >= self.context_threshold]
 
         if df.empty:
             return df
