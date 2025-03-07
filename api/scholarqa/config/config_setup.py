@@ -17,6 +17,7 @@ class LogsConfig(BaseModel):
     llm_cache_dir: str = Field(default="llm_cache", description="Sub directory to cache llm calls")
     event_trace_loc: str = Field(default="scholarqa_traces", description="Sub directory to store event traces"
                                                                          "OR the GCS bucket name")
+    extras: dict = Field(default=None, description="Extra arguments for the logs")
     tracing_mode: Literal["local", "gcs"] = Field(default="local",
                                                   description="Mode to store event traces (local or gcs)")
     tid_log_formatter: TaskIdAwareLogFormatter = Field(default=None,
