@@ -152,7 +152,7 @@ class ScholarQA:
         self.update_task_state("Extracting salient key statements from papers",
                                step_estimated_time=15)
         logger.info(
-            f"{scored_df.shape[0]} papers with relevance_judgement > {self.paper_finder.context_threshold} to start with.")
+            f"{scored_df.shape[0]} papers with relevance_judgement >= {self.paper_finder.context_threshold} to start with.")
         start = time()
         cost_args = cost_args._replace(model=self.multi_step_pipeline.llm_model)._replace(
             description="Corpus QA Step 1: Quote extraction")

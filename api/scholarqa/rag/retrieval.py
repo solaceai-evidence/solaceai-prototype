@@ -20,11 +20,10 @@ class AbsPaperFinder(AbstractRetriever):
 
 
 class PaperFinder(AbsPaperFinder):
-    def __init__(self, retriever: AbstractRetriever,
-                 context_threshold: float = 0.0):
+    def __init__(self, retriever: AbstractRetriever, context_threshold: float = 0.0, n_rerank: int = -1):
         self.retriever = retriever
         self.context_threshold = context_threshold
-        self.n_rerank = -1
+        self.n_rerank = n_rerank
 
     def retrieve_passages(self, query: str, **filter_kwargs) -> List[Dict[str, Any]]:
         """Retrieve relevant passages along with scores from an index for the given query"""
@@ -43,6 +42,9 @@ class PaperFinder(AbsPaperFinder):
         snippets_list = [snippet for snippet in snippets_list if snippet["corpus_id"] in paper_metadata
                          and snippet["text"] is not None]
         aggregated_candidates = self.aggregate_snippets_to_papers(snippets_list, paper_metadata)
+        aggregated_candidates = [acand for acand in aggregated_candidates if
+                                 acand["relevance_judgement"] >= self.context_threshold]
+
         return self.format_retrieval_response(aggregated_candidates)
 
     @staticmethod
@@ -99,7 +101,7 @@ class PaperFinder(AbsPaperFinder):
 
         # there are multiple relevance judgments in ['relevance_judgements'] for each paper
         # we will keep rows where ANY of the relevance judgments are 2 or 3
-        df = df[df["relevance_judgement"] >= self.context_threshold]
+        # df = df[df["relevance_judgement"] >= self.context_threshold]
 
         if df.empty:
             return df
@@ -137,7 +139,7 @@ class PaperFinder(AbsPaperFinder):
         df["reference_string"] = df.apply(
             lambda
                 row: anyascii(f"[{make_int(row.corpus_id)} | {get_ref_author_str(row.authors)} | "
-                     f"{make_int(row['year'])} | Citations: {make_int(row['citation_count'])}]"),
+                              f"{make_int(row['year'])} | Citations: {make_int(row['citation_count'])}]"),
             axis=1,
         )
         return df
@@ -146,8 +148,7 @@ class PaperFinder(AbsPaperFinder):
 class PaperFinderWithReranker(PaperFinder):
     def __init__(self, retriever: AbstractRetriever, reranker: AbstractReranker, n_rerank: int = -1,
                  context_threshold: float = 0.5):
-        super().__init__(retriever, context_threshold)
-        self.n_rerank = n_rerank
+        super().__init__(retriever, context_threshold, n_rerank)
         if reranker:
             self.reranker_engine = reranker
         else:
