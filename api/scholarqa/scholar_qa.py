@@ -270,7 +270,8 @@ class ScholarQA:
             self.paper_finder.retriever.n_retrieval if hasattr(self.paper_finder.retriever, "n_retrieval") else 0,
             # noqa
             self.paper_finder.n_rerank,
-            req
+            req,
+            user_id=user_id
         )
         cost_args = CostReportingArgs(
             task_id=task_id,

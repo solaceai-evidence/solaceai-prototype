@@ -9,12 +9,15 @@ from scholarqa.config.config_setup import LogsConfig
 
 
 class EventTrace:
-    def __init__(self, task_id: str, n_retrieval: int, n_rerank: int, req: ToolRequest):
+    def __init__(self, task_id: str, n_retrieval: int, n_rerank: int, req: ToolRequest, user_id: str = None):
         self.query = req.query
-        try:
-            self.user_id = req.user_id
-        except Exception as e:
-            self.user_id = None
+        if not user_id:
+            try:
+                self.user_id = req.user_id
+            except Exception as e:
+                self.user_id = None
+        else:
+            self.user_id = user_id
         self.task_id = task_id
         self.timestamp = datetime.now().isoformat()
         self.n_retrieval = n_retrieval
