@@ -374,7 +374,7 @@ class ScholarQA:
                                step_estimated_time=20)
 
         start = time()
-        for tthread in tqdm(table_threads):
+        for tthread in table_threads:
             tthread.join()
         logger.info(f"Adhoc Table generation wait time: {time() - start:.2f}")
 
