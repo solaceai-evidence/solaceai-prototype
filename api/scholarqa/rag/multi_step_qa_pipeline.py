@@ -237,7 +237,7 @@ class MultiStepQAPipeline:
         plan_str = "\n".join([k for k in plan])
         existing_sections = []
         i = 0
-        for section_name, inds in tqdm(plan.items()):
+        for section_name, inds in plan.items():
             # inds are a string like this: "[1, 2, 3]"
             # get the quotes for each index
             quotes = ""
