@@ -93,7 +93,7 @@ class MultiStepQAPipeline:
                                           ref_template="/$defs/{model}")}
                                       )
         except Exception as e:
-            logger.warning(f"Error while clustering with Claude 3.5: {e}, falling back to GPT-4o.")
+            logger.warning(f"Error while clustering with {self.llm_model}: {e}, trying to fall back to GPT-4o.")
             response = llm_completion(user_prompt=user_prompt,
                                       system_prompt=sys_prompt, fallback=None, model=GPT_4o,
                                       max_tokens=4096,
