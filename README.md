@@ -66,7 +66,7 @@ export OPENAI_API_KEY=
 
 ``S2_API_KEY`` : Used to retrieve the relevant [paper passages](https://api.semanticscholar.org/api-docs/#tag/Snippet-Text/operation/get_snippet_search) , [keyword search results](https://api.semanticscholar.org/api-docs/#tag/Paper-Data/operation/get_graph_paper_relevance_search) and [associated metadata](https://api.semanticscholar.org/api-docs/#tag/Paper-Data/operation/post_graph_get_papers) via the Semantic Scholar public api.
 
-``ANTHROPIC_API_KEY`` : Ai2 Scholar QA uses Anthropic's [Claude 3.5 Sonnet](https://www.anthropic.com/news/claude-3-5-sonnet) as the primary LLM for generation, but any model served by [litellm](https://docs.litellm.ai/docs/providers) should work. Please configure the corresponding api key here.
+``ANTHROPIC_API_KEY`` : Ai2 Scholar QA uses Anthropic's [Claude 3.5 Sonnet](https://www.anthropic.com/news/claude-3-5-sonnet) as the primary LLM for generation, but any model served by [litellm](https://docs.litellm.ai/docs/providers) from the providers listed [here](https://docs.litellm.ai/docs/completion/json_mode#pass-in-json_schema) will work. Please configure the corresponding api key here.
 
 `OPENAI_API_KEY`: OpenAI's [GPT 4o](https://openai.com/index/gpt-4o-and-more-tools-to-chatgpt-free/) is configured as the fallback llm. 
 
@@ -269,19 +269,19 @@ from scholarqa.rag.reranker.modal_engine import ModalReranker
 from scholarqa.rag.retrieval import PaperFinderWithReranker
 from scholarqa.rag.retriever_base import FullTextRetriever
 from scholarqa import ScholarQA
-from scholarqa.llms.constants import CLAUDE_35_SONNET
+from scholarqa.llms.constants import CLAUDE_37_SONNET
 
 retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
 reranker = ModalReranker(app_name=<modal_app_name>, api_name=<modal_api_name>, batch_size=256, gen_options=dict())
 paper_finder = PaperFinderWithReranker(retriever, reranker, n_rerank=50, context_threshold=0.5)
 
 #For wrapper class with MultiStepQAPipeline integrated
-scholar_qa = ScholarQA(paper_finder=paper_finder, llm_model=CLAUDE_35_SONNET) #llm_model can be any litellm model
+scholar_qa = ScholarQA(paper_finder=paper_finder, llm_model=CLAUDE_37_SONNET) #llm_model can be any litellm model
 print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
 
 #Custom MultiStepQAPipeline class/steps
 from scholarqa.rag.multi_step_qa_pipeline import MultiStepQAPipeline
-mqa_pipeline = MultiStepQAPipeline(llm_model=CLAUDE_35_SONNET)
+mqa_pipeline = MultiStepQAPipeline(llm_model=CLAUDE_37_SONNET)
 
 per_paper_summaries, completion_results = mqa_pipeline.step_select_quotes(query, scored_df, sys_prompt)
 
