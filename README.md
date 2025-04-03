@@ -39,7 +39,7 @@ These components are encapsulated in the [PaperFinder](https://github.com/allena
 * #### Multi-step Generation:
   The generation pipeline comprises of three steps:
 
-  i. _Quote Extraction_ - The user query along with the aggregated passages from the retrieval component are sent to an LLM (Claude Sonnet 3.5 default) to extract exact quotes relevant to answer the query. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L2)
+  i. _Quote Extraction_ - The user query along with the aggregated passages from the retrieval component are sent to an LLM (Claude Sonnet 3.7 default) to extract exact quotes relevant to answer the query. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L2)
 
   ii. _Planning and Clustering_ - The llm is then prompted to generate an organization of the output report with sections headings and format of the section. The quotes from step (i) are clustered and assigned to each heading. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L52)
 
