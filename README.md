@@ -66,8 +66,7 @@ export OPENAI_API_KEY=
 
 ``S2_API_KEY`` : Used to retrieve the relevant [paper passages](https://api.semanticscholar.org/api-docs/#tag/Snippet-Text/operation/get_snippet_search) , [keyword search results](https://api.semanticscholar.org/api-docs/#tag/Paper-Data/operation/get_graph_paper_relevance_search) and [associated metadata](https://api.semanticscholar.org/api-docs/#tag/Paper-Data/operation/post_graph_get_papers) via the Semantic Scholar public api.
 
-``ANTHROPIC_API_KEY`` : Ai2 Scholar QA uses Anthropic's [Claude 3.5 Sonnet](https://www.anthropic.com/news/claude-3-5-sonnet) as the primary LLM for generation, but any model served by litellm from the providers listed [here](https://docs.litellm.ai/docs/completion/json_mode#pass-in-json_schema) will work. Please configure the corresponding api key here.
-
+``ANTHROPIC_API_KEY`` : Ai2 Scholar QA uses Anthropic's [Claude 3.7 Sonnet](https://www.anthropic.com/news/claude-3-7-sonnet) as the primary LLM for generation, but any model served by litellm from the providers listed [here](https://docs.litellm.ai/docs/completion/json_mode#pass-in-json_schema) will work. Please configure the corresponding api key here.
 `OPENAI_API_KEY`: OpenAI's [GPT 4o](https://openai.com/index/gpt-4o-and-more-tools-to-chatgpt-free/) is configured as the fallback llm. 
 
 **Note:** We also use OpenAI's [text moderation api](https://platform.openai.com/docs/guides/moderation/overview#:~:text=The%20moderation%20endpoint%20is%20free%20to%20use%20when%20monitoring%20the%20inputs%20and%20outputs%20of%20OpenAI%20APIs.%20We%20currently%20disallow%20other%20use%20cases.)  to validate and filter harmful queries. If you don't have access to an OpenAI api key, this feature will be disabled.
