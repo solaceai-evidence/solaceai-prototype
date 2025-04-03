@@ -33,12 +33,6 @@ def moderation_api(text: str) -> bool:
 
 
 def validate(query: str) -> None:
-    def _starts_with_who_is(question: str):
-        # Regular expression to match "Who is" at the beginning of the question
-        pattern = r"^who is\b"
-        # Perform case-insensitive match
-        return bool(re.match(pattern, question.lower(), re.IGNORECASE))
-
     # self.update_task_state(task_id, "Validating the query")
     logger.info(
         "Checking query for malicious content with moderation api..."
@@ -47,10 +41,6 @@ def validate(query: str) -> None:
         if moderation_api(query):
             raise Exception(
                 "The input query contains harmful content."
-            )
-        if _starts_with_who_is(query):
-            raise Exception(
-                "We cannot answer questions about people."
             )
     except Exception as e:
         logger.error(f"Query validation failed, {e}")
