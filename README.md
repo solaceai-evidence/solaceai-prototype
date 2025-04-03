@@ -39,7 +39,7 @@ These components are encapsulated in the [PaperFinder](https://github.com/allena
 * #### Multi-step Generation:
   The generation pipeline comprises of three steps:
 
-  i. _Quote Extraction_ - The user query along with the aggregated passages from the retrieval component are sent to an LLM (Claude Sonnet 3.5 default) to extract exact quotes relevant to answer the query. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L2)
+  i. _Quote Extraction_ - The user query along with the aggregated passages from the retrieval component are sent to an LLM (Claude Sonnet 3.7 default) to extract exact quotes relevant to answer the query. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L2)
 
   ii. _Planning and Clustering_ - The llm is then prompted to generate an organization of the output report with sections headings and format of the section. The quotes from step (i) are clustered and assigned to each heading. [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L52)
 
@@ -66,8 +66,7 @@ export OPENAI_API_KEY=
 
 ``S2_API_KEY`` : Used to retrieve the relevant [paper passages](https://api.semanticscholar.org/api-docs/#tag/Snippet-Text/operation/get_snippet_search) , [keyword search results](https://api.semanticscholar.org/api-docs/#tag/Paper-Data/operation/get_graph_paper_relevance_search) and [associated metadata](https://api.semanticscholar.org/api-docs/#tag/Paper-Data/operation/post_graph_get_papers) via the Semantic Scholar public api.
 
-``ANTHROPIC_API_KEY`` : Ai2 Scholar QA uses Anthropic's [Claude 3.5 Sonnet](https://www.anthropic.com/news/claude-3-5-sonnet) as the primary LLM for generation, but any model served by [litellm](https://docs.litellm.ai/docs/providers) should work. Please configure the corresponding api key here.
-
+``ANTHROPIC_API_KEY`` : Ai2 Scholar QA uses Anthropic's [Claude 3.7 Sonnet](https://www.anthropic.com/news/claude-3-7-sonnet) as the primary LLM for generation, but any model served by litellm from the providers listed [here](https://docs.litellm.ai/docs/completion/json_mode#pass-in-json_schema) will work. Please configure the corresponding api key here.
 `OPENAI_API_KEY`: OpenAI's [GPT 4o](https://openai.com/index/gpt-4o-and-more-tools-to-chatgpt-free/) is configured as the fallback llm. 
 
 **Note:** We also use OpenAI's [text moderation api](https://platform.openai.com/docs/guides/moderation/overview#:~:text=The%20moderation%20endpoint%20is%20free%20to%20use%20when%20monitoring%20the%20inputs%20and%20outputs%20of%20OpenAI%20APIs.%20We%20currently%20disallow%20other%20use%20cases.)  to validate and filter harmful queries. If you don't have access to an OpenAI api key, this feature will be disabled.
@@ -269,19 +268,19 @@ from scholarqa.rag.reranker.modal_engine import ModalReranker
 from scholarqa.rag.retrieval import PaperFinderWithReranker
 from scholarqa.rag.retriever_base import FullTextRetriever
 from scholarqa import ScholarQA
-from scholarqa.llms.constants import CLAUDE_35_SONNET
+from scholarqa.llms.constants import CLAUDE_37_SONNET
 
 retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
 reranker = ModalReranker(app_name=<modal_app_name>, api_name=<modal_api_name>, batch_size=256, gen_options=dict())
 paper_finder = PaperFinderWithReranker(retriever, reranker, n_rerank=50, context_threshold=0.5)
 
 #For wrapper class with MultiStepQAPipeline integrated
-scholar_qa = ScholarQA(paper_finder=paper_finder, llm_model=CLAUDE_35_SONNET) #llm_model can be any litellm model
+scholar_qa = ScholarQA(paper_finder=paper_finder, llm_model=CLAUDE_37_SONNET) #llm_model can be any litellm model
 print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
 
 #Custom MultiStepQAPipeline class/steps
 from scholarqa.rag.multi_step_qa_pipeline import MultiStepQAPipeline
-mqa_pipeline = MultiStepQAPipeline(llm_model=CLAUDE_35_SONNET)
+mqa_pipeline = MultiStepQAPipeline(llm_model=CLAUDE_37_SONNET)
 
 per_paper_summaries, completion_results = mqa_pipeline.step_select_quotes(query, scored_df, sys_prompt)
 
