@@ -309,6 +309,7 @@ from scholarqa.llms.constants import CLAUDE_37_SONNET
 retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20) #full text and keyword search
 reranker = CrossEncoderScores(model_name_or_path="mixedbread-ai/mxbai-rerank-large-v1") #sentence transformer
 
+
 #Reranker if deployed on Modal, modal_app_name and modal_api_name are modal specific arguments.
 #Please refer https://github.com/allenai/ai2-scholarqa-lib/blob/aps/readme_fixes/docs/MODAL.md for more info 
 reranker = ModalReranker(app_name=<modal_app_name>, api_name=<modal_api_name>, batch_size=256, gen_options=dict())
@@ -324,7 +325,7 @@ print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
 
 **Pipeline steps (Modular usage)**
 
-Conitnuing from sample usage, below is a breakdown of the pipeline execution in the ScholarQA class.
+Continuing from sample usage, below is a breakdown of the pipeline execution in the ScholarQA class.
 
 ```python
 from scholarqa.rag.multi_step_qa_pipeline import MultiStepQAPipeline
@@ -355,13 +356,12 @@ keyword_srch_metadata = [{k: v for k, v in paper.items() if k == "corpus_id" or 
                         for paper in s2_srch_res]
 reranked_df, paper_metadata = scholar_qa.rerank_and_aggregate(query, retrieved_candidates, filter_paper_metadata={str(paper["corpus_id"]): paper for paper in
                                                                  keyword_srch_metadata})
-
-
 # Step 1 - quote extraction
 per_paper_quotes = scholar_qa.step_select_quotes(query, reranked_df, cost_args, sys_prompt=SYSTEM_PROMPT_QUOTE_PER_PAPER)
 
 # step 2: outline planning and clustering
 cluster_json = scholar_qa.step_clustering(query, per_paper_quotes.result, cost_args, sys_prompt=SYSTEM_PROMPT_QUOTE_CLUSTER)
+
 # Changing to expected format in the summary generation prompt
 plan_json = {f'{dim["name"]} ({dim["format"]})': dim["quotes"] for dim in cluster_json.result["dimensions"]}
 
@@ -373,6 +373,8 @@ per_paper_summaries_extd = scholar_qa.multi_step_pipeline.extend_quote_citations
 # step 3: generating output as per the outline
 answer = list(scholar_qa.step_gen_iterative_summary(query, per_paper_summaries_extd, plan_json, cost_args, sys_prompt=PROMPT_ASSEMBLE_SUMMARY))
 
+# step 3: generating output as per the outline
+answer = list(generate_iterative_summary(query, per_paper_quotes, plan_json, cost_args, sys_prompt))
 ```
 
 - ### Custom Pipeline
