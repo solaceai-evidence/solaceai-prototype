@@ -5,10 +5,30 @@
 
 This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and can be run as local docker containers or embedded into another application as a [python package](https://pypi.org/project/ai2-scholar-qa).
 
+<p align="center">
+  <a href="https://qa.allen.ai/chat">
+    <img alt="Live App" src="https://img.shields.io/badge/Ai2-qa.allen.ai-white?labelColor=teal&color=black">
+  </a>  
+  <a href="https://www.semanticscholar.org/paper/Ai2-Scholar-QA%3A-Organized-Literature-Synthesis-with-Singh-Chang/c815591e854afb83dc985fa3ff07506d6b25a1b4?utm_source=direct_link">
+    <img alt="Paper URL" src="https://img.shields.io/badge/Semantic%20Scholar-white?logo=semanticscholar&labelColor=%231857B6&color=black">
+  </a>
+  <a href="https://pypi.org/project/ai2-scholar-qa/">
+    <img alt="PyPI" src="https://img.shields.io/badge/PyPI-white?logo=PyPI&logoColor=white&labelColor=%233775A9&color=black">
+  </a>
+    <a href="https://huggingface.co/datasets/allenai/sqa_reranking_eval">
+    <img alt="HuggingFace Dataset" src="https://img.shields.io/badge/Dataset-white?logo=Hugging%20Face&logoColor=white&labelColor=%23FFD21E&color=black">
+  </a>
+    </a>
+    <a href="https://www.youtube.com/watch?v=augQU982aGQ&ab_channel=Ai2">
+    <img alt="Demo walkthrough" src="https://img.shields.io/badge/Youtube-white?logo=YouTube&logoColor=white&labelColor=%23FF0000&color=black">
+  </a>
+</p>
+
+
 - [Ai2 Scholar QA](#ai2-scholar-qa)
     + [Overview](#overview)
-      - [Retrieval:](#retrieval-)
-      - [Multi-step Generation:](#multi-step-generation-)
+      - [Retrieval:](#retrieval)
+      - [Multi-step Generation:](#multi-step-generation)
     + [Setup](#setup)
       - [Environment Variables](#environment-variables)
       - [Application Configuration](#application-configuration)
