@@ -316,11 +316,11 @@ print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
 from scholarqa.rag.multi_step_qa_pipeline import MultiStepQAPipeline
 mqa_pipeline = MultiStepQAPipeline(llm_model=CLAUDE_37_SONNET)
 
-per_paper_summaries, completion_results = mqa_pipeline.step_select_quotes(query, scored_df, sys_prompt)
+per_paper_quotes, _ = mqa_pipeline.step_select_quotes(query, reranked_df, sys_prompt)
 
-plan_json = mqa_pipeline.step_clustering(query, per_paper_summaries, sys_prompt)
+plan_json = mqa_pipeline.step_clustering(query, per_paper_quotes, sys_prompt)
 
-response = list(generate_iterative_summary(query, per_paper_summaries, plan_json, sys_prompt))
+response = list(generate_iterative_summary(query, per_paper_quotes, plan_json, sys_prompt))
 ```
 
 - ### Custom Pipeline
