@@ -3,8 +3,6 @@
 
 <img width="1050" alt="image" src="https://github.com/user-attachments/assets/2d7ccc15-2cd8-4316-bec6-ed2a1509f27b" />
 
-This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and can be run as local docker containers or embedded into another application as a [python package](https://pypi.org/project/ai2-scholar-qa).
-
 <p align="center">
   <a href="https://qa.allen.ai/chat">
     <img alt="Live App" src="https://img.shields.io/badge/Ai2-qa.allen.ai-white?labelColor=teal&color=black">
@@ -23,6 +21,12 @@ This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and c
     <img alt="Demo walkthrough" src="https://img.shields.io/badge/Youtube-white?logo=YouTube&logoColor=white&labelColor=%23FF0000&color=black">
   </a>
 </p>
+
+#
+
+This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and can be run as local docker containers or embedded into another application as a [python package](https://pypi.org/project/ai2-scholar-qa).
+
+
 
 
 - [Ai2 Scholar QA](#ai2-scholar-qa)
@@ -43,6 +47,7 @@ This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and c
       - [API end points](#api-end-points)
       - [ScholarQA class](#scholarqa-class)
       - [Pipeline Components](#pipeline-components)
+    + [Citation](#citation)
 
 - ### Overview
 Ai2 Scholar QA is a system for answering scientific queries and literature review by gathering evidence from multiple documents across our corpus and synthesizing an organized report with evidence for each claim. As a RAG based architecture, Ai2 Scholar QA has a retrieval component and a three step generator pipeline. 
@@ -349,4 +354,14 @@ response = list(generate_iterative_summary(query, per_paper_summaries, plan_json
 * #### Modal deployment
   If you would prefer to serve your models via modal, please refer to [MODAL.md](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/MODAL.md) for more info and sample code that we used to deploy the reranker model in the live demo.
 
+- ### Citation
+  Please cite the work as follows:
+  ```bibtex
+  @inproceedings{Singh2025Ai2SQ,
+  title={Ai2 Scholar QA: Organized Literature Synthesis with Attribution},
+  author={Amanpreet Singh and Joseph Chee Chang and Chloe Anastasiades and Dany Haddad and Aakanksha Naik and Amber Tanaka and Angele Zamarron and Cecile Nguyen and Jena D. Hwang and Jason Dunkleberger and Matt Latzke and Smita Rao and Jaron Lochner and Rob Evans and Rodney Kinney and Daniel S. Weld and Doug Downey and Sergey Feldman},
+  year={2025},
+  url={https://api.semanticscholar.org/CorpusID:277786810}
+}
+  ```
 
