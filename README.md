@@ -298,29 +298,78 @@ Both the webapp and the api are powered by the same pipeline represented by the 
 **Sample usage**
 
 ```python
+from scholarqa.rag.reranker.reranker_base import CrossEncoderScores
 from scholarqa.rag.reranker.modal_engine import ModalReranker
 from scholarqa.rag.retrieval import PaperFinderWithReranker
 from scholarqa.rag.retriever_base import FullTextRetriever
 from scholarqa import ScholarQA
 from scholarqa.llms.constants import CLAUDE_37_SONNET
 
-retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
+#Retrieval class/steps
+retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20) #full text and keyword search
+reranker = CrossEncoderScores(model_name_or_path="mixedbread-ai/mxbai-rerank-large-v1") #sentence transformer
+
+#Reranker if deployed on Modal
 reranker = ModalReranker(app_name=<modal_app_name>, api_name=<modal_api_name>, batch_size=256, gen_options=dict())
-paper_finder = PaperFinderWithReranker(retriever, reranker, n_rerank=50, context_threshold=0.5)
+
+#wraps around the retriever with `retrieve_passages()` and `retrieve_additional_papers()`, and reranker with rerank()
+#any modifications to the retrieval output can be made here
+paper_finder =  PaperFinderWithReranker(retriever, reranker, n_rerank=50, context_threshold=0.5)
 
 #For wrapper class with MultiStepQAPipeline integrated
 scholar_qa = ScholarQA(paper_finder=paper_finder, llm_model=CLAUDE_37_SONNET) #llm_model can be any litellm model
 print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
+```
 
-#Custom MultiStepQAPipeline class/steps
+**Pipeline steps (Modular usage)**
+
+Conitnuing from sample usage, below is a breakdown of the pipeline execution in the ScholarQA class.
+
+```python
 from scholarqa.rag.multi_step_qa_pipeline import MultiStepQAPipeline
+from scholarqa.preprocess.query_preprocessor import decompose_query
+from scholarqa.llms.constants import CLAUDE_37_SONNET
+
+#Custom MultiStepQAPipeline class/steps with llm_model asa any litellm supported model
 mqa_pipeline = MultiStepQAPipeline(llm_model=CLAUDE_37_SONNET)
 
-per_paper_quotes, _ = mqa_pipeline.step_select_quotes(query, reranked_df, sys_prompt)
+query = "Which is the 9th planet in our solar system?"
 
-plan_json = mqa_pipeline.step_clustering(query, per_paper_quotes, sys_prompt)
+scholar_qa = ScholarQA(paper_finder=paper_finder, multi_step_pipeline=llm_model=mqa_pipeline, CLAUDE_37_SONNET)
 
-response = list(generate_iterative_summary(query, per_paper_quotes, plan_json, sys_prompt))
+cost_args = None #This is used for house keeping, can be None
+
+# Decompose the query to get filters like year, venue, fos, citations, etc along with
+#a re-written version of the query and a query suitable for keyword search.
+llm_processed_query = scholar_qa.query(query, cost_args)
+
+# Paper finder step - retrieve relevant paper passages from semantic scholar index and api
+full_text_src, keyword_srch_res = scholar_qa.find_relevant_papers(llm_processed_query.result)
+retrieved_candidates = snippet_srch_res + s2_srch_res
+
+# Rerank the retrieved candidates based on the query with a cross encoder
+#keyword search results are returned with associated metadata, metadata is retrieved separately for full text serach results
+keyword_srch_metadata = [{k: v for k, v in paper.items() if k == "corpus_id" or k in NUMERIC_META_FIELDS or k in CATEGORICAL_META_FIELDS}
+                        for paper in s2_srch_res]
+reranked_df, paper_metadata = scholar_qa.rerank_and_aggregate(query, retrieved_candidates, filter_paper_metadata={str(paper["corpus_id"]): paper for paper in
+                                                                 keyword_srch_metadata})
+# Step 1 - quote extraction
+per_paper_quotes = scholar_qa.step_select_quotes(query, reranked_df, cost_args, sys_prompt)
+
+# step 2: outline planning and clustering
+cluster_json = scholar_qa.step_clustering(query, per_paper_quotes.result, cost_args, sys_prompt)
+# Changing to expected format in the summary generation prompt
+plan_json = {f'{dim["name"]} ({dim["format"]})': dim["quotes"] for dim in cluster_json.result["dimensions"]}
+
+# step 2.1: extend the clustered snippets in plan json with their inline citations
+per_paper_summaries_extd = scholar_qa.multi_step_pipeline.extend_quote_citations(reranked_df,
+                                                                           per_paper_summaries.result,
+                                                                           plan_json, paper_metadata)
+event_trace.trace_inline_citation_following_event(per_paper_summaries_extd)
+
+# step 3: generating output as per the outline
+answer = list(generate_iterative_summary(query, per_paper_quotes, plan_json, cost_args, sys_prompt))
+
 ```
 
 - ### Custom Pipeline
