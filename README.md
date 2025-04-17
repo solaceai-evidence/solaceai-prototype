@@ -372,9 +372,6 @@ per_paper_summaries_extd = scholar_qa.multi_step_pipeline.extend_quote_citations
 
 # step 3: generating output as per the outline
 answer = list(scholar_qa.step_gen_iterative_summary(query, per_paper_summaries_extd, plan_json, cost_args, sys_prompt=PROMPT_ASSEMBLE_SUMMARY))
-
-# step 3: generating output as per the outline
-answer = list(generate_iterative_summary(query, per_paper_quotes, plan_json, cost_args, sys_prompt))
 ```
 
 - ### Custom Pipeline
