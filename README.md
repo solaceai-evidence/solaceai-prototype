@@ -50,6 +50,9 @@ This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and c
     + [Citation](#citation)
 
 - ### Overview
+
+![image](https://github.com/user-attachments/assets/f5824b8e-8c9e-4c12-8a40-efb62b9e5e58)
+  
 Ai2 Scholar QA is a system for answering scientific queries and literature review by gathering evidence from multiple documents across our corpus and synthesizing an organized report with evidence for each claim. As a RAG based architecture, Ai2 Scholar QA has a retrieval component and a three step generator pipeline. 
 
 * #### Retrieval: 
