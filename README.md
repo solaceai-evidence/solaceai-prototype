@@ -432,6 +432,5 @@ answer = list(generate_iterative_summary(query, per_paper_quotes, plan_json, cos
   author={Amanpreet Singh and Joseph Chee Chang and Chloe Anastasiades and Dany Haddad and Aakanksha Naik and Amber Tanaka and Angele Zamarron and Cecile Nguyen and Jena D. Hwang and Jason Dunkleberger and Matt Latzke and Smita Rao and Jaron Lochner and Rob Evans and Rodney Kinney and Daniel S. Weld and Doug Downey and Sergey Feldman},
   year={2025},
   url={https://api.semanticscholar.org/CorpusID:277786810}
-}
   ```
 
