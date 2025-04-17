@@ -143,7 +143,7 @@ Please refer to [default.json](https://github.com/allenai/ai2-scholarqa-lib/blob
 ```
 
 The config is used to populate the [AppConfig](https://github.com/allenai/ai2-scholarqa-lib/blob/c65c0917b64c501db397e01f34420c7167927da8/api/scholarqa/config/config_setup.py#L47) instance.
-The logging and pipeline instances initialized with the config are outliend below:
+It wraps the logging and pipeline instances which are initialized with the config and are outlined below:
 
 **Logging**
 ```python
@@ -309,7 +309,8 @@ from scholarqa.llms.constants import CLAUDE_37_SONNET
 retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20) #full text and keyword search
 reranker = CrossEncoderScores(model_name_or_path="mixedbread-ai/mxbai-rerank-large-v1") #sentence transformer
 
-#Reranker if deployed on Modal
+#Reranker if deployed on Modal, modal_app_name and modal_api_name are modal specific arguments.
+#Please refer https://github.com/allenai/ai2-scholarqa-lib/blob/aps/readme_fixes/docs/MODAL.md for more info 
 reranker = ModalReranker(app_name=<modal_app_name>, api_name=<modal_api_name>, batch_size=256, gen_options=dict())
 
 #wraps around the retriever with `retrieve_passages()` and `retrieve_additional_papers()`, and reranker with rerank()
@@ -382,14 +383,21 @@ answer = list(scholar_qa.step_gen_iterative_summary(query, per_paper_summaries_e
   ```python
   from fastapi import APIRouter, FastAPI
   from scholarqa.app import create_app as create_app_base
+  from scholarqa.app import app_config
+  from scholarqa.models import ToolRequest
   
   def create_app() -> FastAPI:
     app = create_app_base()
     custom_router = APIRouter()
 
-    @custom_router.post("/custom")
-    def custom_endpt():
-        pass
+    @custom_router.post("/retrieval")
+    def retrieval(tool_request: ToolRequest, task_id: str):
+      scholar_qa = app_config.load_scholarqa(task_id)
+      #a re-written version of the query and a query suitable for keyword search.
+      llm_processed_query = scholar_qa.query(query, cost_args=None)
+      full_text_src, keyword_srch_res = scholar_qa.find_relevant_papers(llm_processed_query.result)
+      retrieved_candidates = snippet_srch_res + s2_srch_res
+      return retrieved_candidates
 
     app.include_router(custom_router)
     return app.py
