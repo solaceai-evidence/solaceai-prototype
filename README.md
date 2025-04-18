@@ -143,7 +143,7 @@ Please refer to [default.json](https://github.com/allenai/ai2-scholarqa-lib/blob
 ```
 
 The config is used to populate the [AppConfig](https://github.com/allenai/ai2-scholarqa-lib/blob/c65c0917b64c501db397e01f34420c7167927da8/api/scholarqa/config/config_setup.py#L47) instance.
-The logging and pipeline instances initialized with the config are outliend below:
+It wraps the logging and pipeline instances which are initialized with the config and are outlined below:
 
 **Logging**
 ```python
@@ -309,7 +309,9 @@ from scholarqa.llms.constants import CLAUDE_37_SONNET
 retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20) #full text and keyword search
 reranker = CrossEncoderScores(model_name_or_path="mixedbread-ai/mxbai-rerank-large-v1") #sentence transformer
 
-#Reranker if deployed on Modal
+
+#Reranker if deployed on Modal, modal_app_name and modal_api_name are modal specific arguments.
+#Please refer https://github.com/allenai/ai2-scholarqa-lib/blob/aps/readme_fixes/docs/MODAL.md for more info 
 reranker = ModalReranker(app_name=<modal_app_name>, api_name=<modal_api_name>, batch_size=256, gen_options=dict())
 
 #wraps around the retriever with `retrieve_passages()` and `retrieve_additional_papers()`, and reranker with rerank()
@@ -323,12 +325,13 @@ print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
 
 **Pipeline steps (Modular usage)**
 
-Conitnuing from sample usage, below is a breakdown of the pipeline execution in the ScholarQA class.
+Continuing from sample usage, below is a breakdown of the pipeline execution in the ScholarQA class.
 
 ```python
 from scholarqa.rag.multi_step_qa_pipeline import MultiStepQAPipeline
 from scholarqa.preprocess.query_preprocessor import decompose_query
 from scholarqa.llms.constants import CLAUDE_37_SONNET
+from scholarqa.llms.prompts import SYSTEM_PROMPT_QUOTE_PER_PAPER, SYSTEM_PROMPT_QUOTE_CLUSTER, PROMPT_ASSEMBLE_SUMMARY
 
 #Custom MultiStepQAPipeline class/steps with llm_model asa any litellm supported model
 mqa_pipeline = MultiStepQAPipeline(llm_model=CLAUDE_37_SONNET)
@@ -354,22 +357,21 @@ keyword_srch_metadata = [{k: v for k, v in paper.items() if k == "corpus_id" or 
 reranked_df, paper_metadata = scholar_qa.rerank_and_aggregate(query, retrieved_candidates, filter_paper_metadata={str(paper["corpus_id"]): paper for paper in
                                                                  keyword_srch_metadata})
 # Step 1 - quote extraction
-per_paper_quotes = scholar_qa.step_select_quotes(query, reranked_df, cost_args, sys_prompt)
+per_paper_quotes = scholar_qa.step_select_quotes(query, reranked_df, cost_args, sys_prompt=SYSTEM_PROMPT_QUOTE_PER_PAPER)
 
 # step 2: outline planning and clustering
-cluster_json = scholar_qa.step_clustering(query, per_paper_quotes.result, cost_args, sys_prompt)
+cluster_json = scholar_qa.step_clustering(query, per_paper_quotes.result, cost_args, sys_prompt=SYSTEM_PROMPT_QUOTE_CLUSTER)
+
 # Changing to expected format in the summary generation prompt
 plan_json = {f'{dim["name"]} ({dim["format"]})': dim["quotes"] for dim in cluster_json.result["dimensions"]}
 
 # step 2.1: extend the clustered snippets in plan json with their inline citations
 per_paper_summaries_extd = scholar_qa.multi_step_pipeline.extend_quote_citations(reranked_df,
-                                                                           per_paper_summaries.result,
+                                                                           per_paper_quotes.result,
                                                                            plan_json, paper_metadata)
-event_trace.trace_inline_citation_following_event(per_paper_summaries_extd)
 
 # step 3: generating output as per the outline
-answer = list(generate_iterative_summary(query, per_paper_quotes, plan_json, cost_args, sys_prompt))
-
+answer = list(scholar_qa.step_gen_iterative_summary(query, per_paper_summaries_extd, plan_json, cost_args, sys_prompt=PROMPT_ASSEMBLE_SUMMARY))
 ```
 
 - ### Custom Pipeline
@@ -380,14 +382,21 @@ answer = list(generate_iterative_summary(query, per_paper_quotes, plan_json, cos
   ```python
   from fastapi import APIRouter, FastAPI
   from scholarqa.app import create_app as create_app_base
+  from scholarqa.app import app_config
+  from scholarqa.models import ToolRequest
   
   def create_app() -> FastAPI:
     app = create_app_base()
     custom_router = APIRouter()
 
-    @custom_router.post("/custom")
-    def custom_endpt():
-        pass
+    @custom_router.post("/retrieval")
+    def retrieval(tool_request: ToolRequest, task_id: str):
+      scholar_qa = app_config.load_scholarqa(task_id)
+      #a re-written version of the query and a query suitable for keyword search.
+      llm_processed_query = scholar_qa.query(query, cost_args=None)
+      full_text_src, keyword_srch_res = scholar_qa.find_relevant_papers(llm_processed_query.result)
+      retrieved_candidates = snippet_srch_res + s2_srch_res
+      return retrieved_candidates
 
     app.include_router(custom_router)
     return app.py
@@ -420,6 +429,5 @@ answer = list(generate_iterative_summary(query, per_paper_quotes, plan_json, cos
   author={Amanpreet Singh and Joseph Chee Chang and Chloe Anastasiades and Dany Haddad and Aakanksha Naik and Amber Tanaka and Angele Zamarron and Cecile Nguyen and Jena D. Hwang and Jason Dunkleberger and Matt Latzke and Smita Rao and Jaron Lochner and Rob Evans and Rodney Kinney and Daniel S. Weld and Doug Downey and Sergey Feldman},
   year={2025},
   url={https://api.semanticscholar.org/CorpusID:277786810}
-}
   ```
 
