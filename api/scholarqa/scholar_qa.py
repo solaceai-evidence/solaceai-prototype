@@ -245,7 +245,7 @@ class ScholarQA:
                 lambda x: [re.sub(r'[^a-zA-Z]', '', sentence["text"]).lower() for sentence in x])
             # iterate over the reqd_ref_df and get the snippets for each row from reqd_paper_summaries
             for row_idx, row in reqd_ref_df.iterrows():
-                ref_str, sentences, sent_alpa = row["reference_string"], row["sentences"], row["sentence_alpha"]
+                ref_str, sentences, sent_alpha = row["reference_string"], row["sentences"], row["sentence_alpha"]
                 mapped_quotes = []
 
                 curr_reqd_quotes = reqd_paper_summaries[ref_str].split("...")
@@ -261,7 +261,7 @@ class ScholarQA:
                         lookup_idx = sentence["text"].lower().find(quote.lower().strip())
                         raw_match = lookup_idx >= 0
                         if not raw_match:
-                            lookup_idx = sent_alpa[sidx].find(quote_reg)
+                            lookup_idx = sent_alpha[sidx].find(quote_reg)
                         if lookup_idx >= 0:
                             lookup_end = lookup_idx + len(quote)
                             curr_quote_map["section_title"] = sentence["section_title"]
