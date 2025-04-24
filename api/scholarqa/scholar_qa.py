@@ -547,7 +547,7 @@ class ScholarQA:
         for sidx in range(len(json_summary)):
             json_summary[sidx]["table"] = tables[sidx] if tables[sidx] else None
             generated_sections[sidx].table = tables[sidx] if tables[sidx] else None
-        event_trace.trace_summary_event(json_summary, all_sections)
         self.postprocess_json_output(json_summary, quotes_meta=quotes_metadata)
+        event_trace.trace_summary_event(json_summary, all_sections)
         event_trace.persist_trace(self.logs_config)
         return TaskResult(sections=generated_sections, cost=event_trace.total_cost)
