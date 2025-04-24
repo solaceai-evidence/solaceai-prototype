@@ -213,8 +213,8 @@ class ScholarQA:
         return return_val
 
     @staticmethod
-    def get_quote_citations(retrieval_df: pd.DataFrame, per_paper_summaries: Dict[str, str],
-                            plan_json: Dict[str, List[int]]) -> Dict[str, List[Dict[str, Any]]]:
+    def passage_to_quotes_metadata(retrieval_df: pd.DataFrame, per_paper_summaries: Dict[str, str],
+                                   plan_json: Dict[str, List[int]]) -> Dict[str, List[Dict[str, Any]]]:
         """
         Map the quotes extracted in step 1 `per_paper_summaries` to their actual full length versions
         in retrieval_df and make a map of quote ref string --> [inline citations].
@@ -352,10 +352,10 @@ class ScholarQA:
         avl_paper_metadata.update(additional_metadata)
         return per_paper_summaries
 
-    def extend_quote_citations(self, score_df: pd.DataFrame, per_paper_summaries: Dict[str, str],
-                               plan_json: Dict[str, List[int]], paper_metadata: Dict[str, Any]) -> Tuple[
+    def extract_quote_citations(self, score_df: pd.DataFrame, per_paper_summaries: Dict[str, str],
+                                plan_json: Dict[str, List[int]], paper_metadata: Dict[str, Any]) -> Tuple[
         Dict[str, Dict[str, Any]], Dict[str, List[Dict[str, Any]]]]:
-        quotes_metadata = self.get_quote_citations(score_df, per_paper_summaries, plan_json)
+        quotes_metadata = self.passage_to_quotes_metadata(score_df, per_paper_summaries, plan_json)
         per_paper_inline_cites = {
             ref_str: set(ref for q in qmeta if q.get("ref_mentions") for ref in q["ref_mentions"])
             for ref_str, qmeta in quotes_metadata.items()
@@ -485,9 +485,9 @@ class ScholarQA:
         event_trace.trace_clustering_event(cluster_json, plan_json)
 
         # step 2.1: extend the clustered snippets with their inline citations
-        per_paper_summaries_extd, quotes_metadata = self.extend_quote_citations(reranked_df,
-                                                               per_paper_summaries.result,
-                                                               plan_json, paper_metadata)
+        per_paper_summaries_extd, quotes_metadata = self.extract_quote_citations(reranked_df,
+                                                                                 per_paper_summaries.result,
+                                                                                 plan_json, paper_metadata)
         event_trace.trace_inline_citation_following_event(per_paper_summaries_extd, quotes_metadata)
 
         # step 3: generating output as per the outline
