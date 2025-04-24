@@ -1,12 +1,14 @@
 import logging
 import os
+import re
 from threading import Thread
 from time import time
 from typing import List, Any, Dict, Tuple, Generator
 from uuid import uuid4
 
 import pandas as pd
-from tqdm import tqdm
+from anyascii import anyascii
+from langsmith import traceable
 
 from scholarqa.config.config_setup import LogsConfig
 from scholarqa.llms.constants import CostAwareLLMResult, GPT_4o
@@ -19,10 +21,14 @@ from scholarqa.rag.multi_step_qa_pipeline import MultiStepQAPipeline
 from scholarqa.rag.retrieval import PaperFinder
 from scholarqa.state_mgmt.local_state_mgr import AbsStateMgrClient, LocalStateMgrClient
 from scholarqa.trace.event_traces import EventTrace
-from scholarqa.utils import get_paper_metadata, NUMERIC_META_FIELDS, CATEGORICAL_META_FIELDS
-from langsmith import traceable
+from scholarqa.utils import get_paper_metadata, NUMERIC_META_FIELDS, CATEGORICAL_META_FIELDS, get_ref_author_str, \
+    make_int
 
 logger = logging.getLogger(__name__)
+
+# Regular expressions to fix weird formatting issues cause after citation linking in the evidences
+CLOSE_BRACKET_PATTERN = r'(?<![\[|,\s*\d])(\d+\])'  # (Doe et al., 2024)10] --> (Doe et al., 2024)[10]
+OPEN_BRACKET_PATTERN = r"(\[[\d+,]+),(?=[^\[]*$)"  # [8,9,(Doe et al., 2024) --> [8,9](Doe et al., 2024)
 
 
 class ScholarQA:
@@ -81,7 +87,7 @@ class ScholarQA:
             )
 
     @traceable(name="Preprocessing: Validate and decompose user query")
-    def preprocess_query(self, query: str, cost_args: CostReportingArgs, ) -> CostAwareLLMResult:
+    def preprocess_query(self, query: str, cost_args: CostReportingArgs=None, ) -> CostAwareLLMResult:
         if self.validate:
             # Validate the query for harmful/unanswerable content
             validate(query)
@@ -146,7 +152,7 @@ class ScholarQA:
         return agg_df, paper_metadata
 
     @traceable(name="Generation: Extract relevant quotes from paper passages or filter")
-    def step_select_quotes(self, query: str, scored_df: pd.DataFrame, cost_args: CostReportingArgs,
+    def step_select_quotes(self, query: str, scored_df: pd.DataFrame, cost_args: CostReportingArgs = None,
                            sys_prompt: str = SYSTEM_PROMPT_QUOTE_PER_PAPER) -> CostAwareLLMResult:
         logger.info("Running Step 1 - quote extraction")
         self.update_task_state("Extracting salient key statements from papers",
@@ -170,7 +176,7 @@ class ScholarQA:
         return per_paper_summaries
 
     @traceable(name="Generation: Cluster quotes to generate an organization plan")
-    def step_clustering(self, query: str, per_paper_summaries: Dict[str, str], cost_args: CostReportingArgs,
+    def step_clustering(self, query: str, per_paper_summaries: Dict[str, str], cost_args: CostReportingArgs = None,
                         sys_prompt: str = SYSTEM_PROMPT_QUOTE_CLUSTER) -> CostAwareLLMResult:
         logger.info("Running Step 2: Clustering the extracted quotes into meaningful dimensions")
         self.update_task_state("Synthesizing an answer outline based on extracted quotes", step_estimated_time=15)
@@ -185,7 +191,7 @@ class ScholarQA:
 
     @traceable(name="Generation: Generate an iterative summary")
     def step_gen_iterative_summary(self, query: str, per_paper_summaries: Dict[str, str],
-                                   plan_json: Dict[str, Any], cost_args: CostReportingArgs,
+                                   plan_json: Dict[str, Any], cost_args: CostReportingArgs = None,
                                    sys_prompt: str = PROMPT_ASSEMBLE_SUMMARY) -> Generator[
         str, None, CostAwareLLMResult]:
         logger.info("Running Step 3: Assemble the summary with the links (takes ~2 mins)")
@@ -207,6 +213,164 @@ class ScholarQA:
         return return_val
 
     @staticmethod
+    def get_quote_citations(retrieval_df: pd.DataFrame, per_paper_summaries: Dict[str, str],
+                            plan_json: Dict[str, List[int]]) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Map the quotes extracted in step 1 `per_paper_summaries` to their actual full length versions
+        in retrieval_df and make a map of quote ref string --> [inline citations].
+
+        i) First parse the plan json to get the required paper indices to be sent for the final generation in step 3.
+        ii) For those papers, find the quotes from per_paper_summaries and passages from retrieval_df.
+        iii) For each quote, first check if the paper metadata from retrieval_df consists of passages, if not, then the quotes are taken from
+        abstracts of keyword results.
+        iii) Else, try to match the paper quotes as substrings to the corresponding paper passages to get the inline citations along with
+        offsets.
+        iv) First try matching the raw string (high precision), if unsuccessful, try matching only the alphabet characters (high recall).
+        v) Once a match is found, use its offsets in the passage and iterate over the sentence offsets/inline citations to find any that occur within the snippet.
+        vi) In case of a raw string match, replace any citation mentions (if possible), with the paper id of the corresponding inline citation to be linked later.
+        """
+        # get all the ref strings for the clutering plan generated in step 2
+        ref_str_list = [k for k in per_paper_summaries]
+        # paper identifiers for the selected quotes in the plan obtained from their corresponding index
+        req_ref_strs = {ref_str_list[item] for sublist in plan_json.values() for item in sublist if
+                        item < len(ref_str_list)}
+        quotes_metadata = dict()
+        if req_ref_strs:
+            # filter the quotes according to the plan
+            reqd_paper_summaries = {k: v for k, v in per_paper_summaries.items() if k in req_ref_strs}
+            # filter the dataframe according to the plan
+            reqd_ref_df = retrieval_df[retrieval_df["reference_string"].apply(lambda x: x in req_ref_strs)].copy()
+            # remove all special characters from the passages in the dataframe for approximate match
+            reqd_ref_df["sentence_alpha"] = reqd_ref_df["sentences"].apply(
+                lambda x: [re.sub(r'[^a-zA-Z]', '', sentence["text"]).lower() for sentence in x])
+            # iterate over the reqd_ref_df and get the snippets for each row from reqd_paper_summaries
+            for row_idx, row in reqd_ref_df.iterrows():
+                ref_str, sentences, sent_alpa = row["reference_string"], row["sentences"], row["sentence_alpha"]
+                mapped_quotes = []
+
+                curr_reqd_quotes = reqd_paper_summaries[ref_str].split("...")
+                curr_reqd_quotes_reg = [re.sub(r'[^a-zA-Z]', '', quote).lower() for quote in curr_reqd_quotes]
+                for idx, (quote, quote_reg) in enumerate(zip(curr_reqd_quotes, curr_reqd_quotes_reg)):
+                    new_quote = quote.strip()
+                    curr_quote_map = {"quote": new_quote, "section_title": "abstract",
+                                      "pdf_hash": "", } if not sentences else dict()
+
+                    shift = 0  # keep track of changes to the quote offsets when the inline citations are modified
+                    for sidx, sentence in enumerate(sentences):
+                        # can lookup exact string now since we prompt the llm to include the citations in the quotes
+                        lookup_idx = sentence["text"].lower().find(quote.lower().strip())
+                        raw_match = lookup_idx >= 0
+                        if not raw_match:
+                            lookup_idx = sent_alpa[sidx].find(quote_reg)
+                        if lookup_idx >= 0:
+                            lookup_end = lookup_idx + len(quote)
+                            curr_quote_map["section_title"] = sentence["section_title"]
+                            curr_quote_map["pdf_hash"] = sentence["pdf_hash"]
+                            curr_quote_map["start"], curr_quote_map["end"] = lookup_idx, lookup_end
+                            curr_quote_map["sentence_offsets"], curr_quote_map["ref_mentions"] = [], []
+                            if sentence.get("sentence_offsets"):
+                                for sidx, soff in enumerate(sentence["sentence_offsets"]):
+                                    # check if the sentence offset is within the range of the quote
+                                    # the sentence can be completely or partially inside the quote
+                                    if (lookup_idx < soff["end"] <= lookup_end) or (
+                                            lookup_idx <= soff["start"] < lookup_end):
+                                        curr_quote_map["sentence_offsets"].append(soff)
+                            if sentence.get("ref_mentions"):
+                                for sref in sentence["ref_mentions"]:
+                                    if sref.get("matchedPaperCorpusId") and lookup_idx <= sref.get(
+                                            "start") and sref.get("end") <= lookup_end:
+                                        curr_quote_map["ref_mentions"].append(sref["matchedPaperCorpusId"])
+                                        if raw_match:
+                                            new_start, new_end = sref["start"] - lookup_idx, sref["end"] - lookup_idx
+                                            cite_str = f"({sref['matchedPaperCorpusId']})"
+                                            new_quote = new_quote[:new_start + shift] + cite_str + new_quote[
+                                                                                                   new_end + shift:]
+                                            shift += (len(cite_str) - sref["end"] + sref["start"])
+                                # curr_inline_citations.update(
+                                #     [sref["matchedPaperCorpusId"] for sref in sentence["ref_mentions"] if
+                                #      sref.get("start") >= lookup_idx and sref.get("end") <= lookup_end])
+                            break
+                    curr_quote_map["quote"] = new_quote
+                    if "section_title" not in curr_quote_map:
+                        curr_quote_map["pdf_hash"] = ""
+                        for field in ["title", "abstract"]:
+                            if row[field] and new_quote.lower() in row[field].lower():
+                                curr_quote_map["section_title"] = field
+                    mapped_quotes.append(curr_quote_map)
+                quotes_metadata[ref_str] = mapped_quotes
+                updated_quotes = "...".join([mq["quote"] for mq in mapped_quotes])
+                # fix weird formatting
+                updated_quotes = re.sub(CLOSE_BRACKET_PATTERN, r'[\1',
+                                        updated_quotes)  # (Doe et al., 2024)10] --> (Doe et al., 2024)[10]
+                updated_quotes = re.sub(OPEN_BRACKET_PATTERN, r'\1]',
+                                        updated_quotes)  # [8,9,(Doe et al., 2024) --> [8,9](Doe et al., 2024)
+                per_paper_summaries[ref_str] = updated_quotes
+
+        return quotes_metadata
+
+    def populate_citations_metadata(self, avl_paper_metadata: Dict[str, Dict[str, Any]],
+                                    paper_inline_cites: Dict[str, List],
+                                    per_paper_summaries: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        """
+        retrieve the metadata of the quote inline citations if not already present and update the quotes from string,
+        to a dict of {"quote": quote, "inline_citations": {ref_str: abstract, ... }}.
+        Also, link the citation mentions to modify them from (corpus_id) to (Doe et al., 2024)
+        """
+        corpus_id_ref_str_map = {ref_str[1:-1].split(" | ")[0]: ref_str for ref_str in per_paper_summaries}
+        additional_citation_ids = {item for sublist in paper_inline_cites.values() for item in sublist if
+                                   item not in avl_paper_metadata}
+        if additional_citation_ids:
+            logger.info(f"Fetching metadata for {len(additional_citation_ids)} additional inline citations")
+            additional_metadata = get_paper_metadata(additional_citation_ids)
+        else:
+            additional_metadata = dict()
+        per_paper_summaries = {k: {"quote": quote, "inline_citations": dict()} for k, quote in
+                               per_paper_summaries.items()}
+        for ref_str, cite_ids in paper_inline_cites.items():
+            quote_cid = ref_str[1:-1].split(" | ")[0]
+            # 2 sets of ref mentions, one where paper metadata is already available and the rest for which metadata was requested from s2 api
+            curr_metadata = [avl_paper_metadata[cite_id] for cite_id in cite_ids if
+                             cite_id in avl_paper_metadata]
+            curr_metadata += [additional_metadata[cite_id] for cite_id in cite_ids if
+                              cite_id in additional_metadata]
+            for idx, mdata in enumerate(curr_metadata):
+                mref_str = corpus_id_ref_str_map.get(mdata["corpusId"], f"[{mdata['corpusId']} | "
+                                                                        f"{get_ref_author_str(mdata['authors'])} | "
+                                                                        f"{make_int(mdata.get('year'))} "
+                                                                        f"| Citations: {make_int(mdata['citationCount'])}]")
+                mref_str = anyascii(mref_str)
+                per_paper_summaries[ref_str]["quote"] = per_paper_summaries[ref_str]["quote"].replace(
+                    f"({mdata['corpusId']})",
+                    f"({get_ref_author_str(mdata['authors'])}, {make_int(mdata.get('year'))})")
+                if mdata["corpusId"] in additional_metadata:
+                    additional_metadata[mdata["corpusId"]]["relevance_judgement"] = max(
+                        additional_metadata[mdata["corpusId"]].get("relevance_judgement", 0),
+                        avl_paper_metadata[quote_cid]["relevance_judgement"])
+                if mdata.get("abstract"):
+                    per_paper_summaries[ref_str]["inline_citations"][mref_str] = mdata["abstract"]
+            per_paper_summaries[ref_str]["quote"] = per_paper_summaries[ref_str]["quote"].replace("NULL, ", "")
+        avl_paper_metadata.update(additional_metadata)
+        return per_paper_summaries
+
+    def extend_quote_citations(self, score_df: pd.DataFrame, per_paper_summaries: Dict[str, str],
+                               plan_json: Dict[str, List[int]], paper_metadata: Dict[str, Any]) -> Tuple[
+        Dict[str, Dict[str, Any]], Dict[str, List[Dict[str, Any]]]]:
+        quotes_metadata = self.get_quote_citations(score_df, per_paper_summaries, plan_json)
+        per_paper_inline_cites = {
+            ref_str: set(ref for q in qmeta if q.get("ref_mentions") for ref in q["ref_mentions"])
+            for ref_str, qmeta in quotes_metadata.items()
+        }
+        per_paper_inline_cites = {k: sorted(v) for k, v in per_paper_inline_cites.items() if v}
+        per_paper_summaries_extd = self.populate_citations_metadata(paper_metadata, per_paper_inline_cites,
+                                                                    per_paper_summaries)
+        for ref_str, quote_map in per_paper_summaries_extd.items():
+            if quotes_metadata.get(ref_str):
+                quote_parts = quote_map["quote"].split("...")
+                for idx, qmap in enumerate(quotes_metadata[ref_str]):
+                    qmap["quote"] = quote_parts[idx]
+        return per_paper_summaries_extd, quotes_metadata
+
+    @staticmethod
     def get_gen_sections_from_json(section: Dict[str, Any]) -> GeneratedSection:
         try:
             citations = [CitationSrc(**citation) for citation in section["citations"]]
@@ -219,7 +383,7 @@ class ScholarQA:
             logger.error(f"Error while converting json to TaskResult: {e}")
             raise e
 
-    def postprocess_json_output(self, json_summary: List[Dict[str, Any]]) -> None:
+    def postprocess_json_output(self, json_summary: List[Dict[str, Any]], **kwargs) -> None:
         pass
 
     def answer_query(self, query: str, inline_tags: bool = True) -> Dict[str, Any]:
@@ -254,7 +418,9 @@ class ScholarQA:
                 5) Generate the summarized output using the quotes and outline in (3) and (4)
 
                 :param req: A scientific query posed to scholar qa by a user, consists of the string query, task id and user id
+                :param inline_tags: Whether to include inline <paper> tags in the output or not
                 :return: A response to the query
+
         """
         self.tool_request = req
         self.update_task_state("Processing user query", task_estimated_time="~3 minutes", step_estimated_time=5)
@@ -319,10 +485,10 @@ class ScholarQA:
         event_trace.trace_clustering_event(cluster_json, plan_json)
 
         # step 2.1: extend the clustered snippets with their inline citations
-        per_paper_summaries_extd = self.multi_step_pipeline.extend_quote_citations(reranked_df,
-                                                                                   per_paper_summaries.result,
-                                                                                   plan_json, paper_metadata)
-        event_trace.trace_inline_citation_following_event(per_paper_summaries_extd)
+        per_paper_summaries_extd, quotes_metadata = self.extend_quote_citations(reranked_df,
+                                                               per_paper_summaries.result,
+                                                               plan_json, paper_metadata)
+        event_trace.trace_inline_citation_following_event(per_paper_summaries_extd, quotes_metadata)
 
         # step 3: generating output as per the outline
         section_titles = [dim["name"] for dim in cluster_json.result["dimensions"]]
@@ -356,7 +522,7 @@ class ScholarQA:
                 section_json["format"] = cluster_json.result["dimensions"][idx]["format"]
 
                 json_summary.append(section_json)
-                self.postprocess_json_output(json_summary)
+                self.postprocess_json_output(json_summary, quotes_meta=quotes_metadata)
                 if section_json["format"] == "list" and section_json["citations"]:
                     cluster_json.result["dimensions"][idx]["idx"] = idx
                     cit_ids = [int(c["paper"]["corpus_id"]) for c in section_json["citations"]]
@@ -382,6 +548,6 @@ class ScholarQA:
             json_summary[sidx]["table"] = tables[sidx] if tables[sidx] else None
             generated_sections[sidx].table = tables[sidx] if tables[sidx] else None
         event_trace.trace_summary_event(json_summary, all_sections)
-        self.postprocess_json_output(json_summary)
+        self.postprocess_json_output(json_summary, quotes_meta=quotes_metadata)
         event_trace.persist_trace(self.logs_config)
         return TaskResult(sections=generated_sections, cost=event_trace.total_cost)

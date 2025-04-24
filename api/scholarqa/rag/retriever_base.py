@@ -53,7 +53,7 @@ class FullTextRetriever(AbstractRetriever):
                 res_map["title"] = paper["title"]
                 res_map["text"] = snippet["text"]
                 res_map["score"] = fields["score"]
-                res_map["section_title"] = snippet["snippetKind"] if snippet["snippetKind"] != "body" else fields.get(
+                res_map["section_title"] = snippet["snippetKind"] if snippet["snippetKind"] != "body" else snippet.get(
                     "section",
                     "body")
                 if "snippetOffset" in snippet and snippet["snippetOffset"].get("start"):
@@ -72,6 +72,7 @@ class FullTextRetriever(AbstractRetriever):
                                                and rmen.get("start") and rmen.get("end")]
                 else:
                     res_map["ref_mentions"] = []
+                res_map["pdf_hash"] = snippet.get("extractionPdfHash","")
                 res_map["stype"] = "vespa"
                 if res_map:
                     snippets_list.append(res_map)
@@ -108,4 +109,5 @@ class FullTextRetriever(AbstractRetriever):
                 pd["ref_mentions"] = []
                 pd["score"] = 0.0
                 pd["stype"] = "public_api"
+                pd["pdf_hash"] = ""
         return paper_data

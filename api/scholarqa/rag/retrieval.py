@@ -20,6 +20,8 @@ class AbsPaperFinder(AbstractRetriever):
 
 
 class PaperFinder(AbsPaperFinder):
+    snippet_srch_fields = ["text", "snippetKind", "snippetOffset", "section", "annotations.sentences", "annotations.refMentions",
+                           "annotations.sentences.start","annotations.sentences.end"]
     def __init__(self, retriever: AbstractRetriever, context_threshold: float = 0.0, n_rerank: int = -1):
         self.retriever = retriever
         self.context_threshold = context_threshold
@@ -27,6 +29,7 @@ class PaperFinder(AbsPaperFinder):
 
     def retrieve_passages(self, query: str, **filter_kwargs) -> List[Dict[str, Any]]:
         """Retrieve relevant passages along with scores from an index for the given query"""
+        filter_kwargs.update({"fields": ",".join([f"snippet.{f}" for f in self.snippet_srch_fields])})
         return self.retriever.retrieve_passages(query, **filter_kwargs)
 
     def retrieve_additional_papers(self, query: str, **filter_kwargs) -> List[Dict[str, Any]]:
