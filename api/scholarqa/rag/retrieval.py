@@ -20,7 +20,7 @@ class AbsPaperFinder(AbstractRetriever):
 
 
 class PaperFinder(AbsPaperFinder):
-    snippet_srch_fields = ["text", "snippetKind", "snippetOffset", "section", "annotations.sentences", "annotations.refMentions",
+    snippet_srch_fields = ["text", "snippetKind", "snippetOffset", "section", "annotations.refMentions",
                            "annotations.sentences.start","annotations.sentences.end"]
     def __init__(self, retriever: AbstractRetriever, context_threshold: float = 0.0, n_rerank: int = -1):
         self.retriever = retriever
