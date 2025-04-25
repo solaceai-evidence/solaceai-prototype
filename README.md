@@ -312,7 +312,7 @@ reranker = CrossEncoderScores(model_name_or_path="mixedbread-ai/mxbai-rerank-lar
 
 #Reranker if deployed on Modal, modal_app_name and modal_api_name are modal specific arguments.
 #Please refer https://github.com/allenai/ai2-scholarqa-lib/blob/aps/readme_fixes/docs/MODAL.md for more info 
-reranker = ModalReranker(app_name=<modal_app_name>, api_name=<modal_api_name>, batch_size=256, gen_options=dict())
+reranker = ModalReranker(app_name='<modal_app_name>', api_name='<modal_api_name>', batch_size=256, gen_options=dict())
 
 #wraps around the retriever with `retrieve_passages()` and `retrieve_additional_papers()`, and reranker with rerank()
 #any modifications to the retrieval output can be made here
@@ -328,50 +328,52 @@ print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
 Continuing from sample usage, below is a breakdown of the pipeline execution in the ScholarQA class.
 
 ```python
+from scholarqa import ScholarQA
 from scholarqa.rag.multi_step_qa_pipeline import MultiStepQAPipeline
-from scholarqa.preprocess.query_preprocessor import decompose_query
 from scholarqa.llms.constants import CLAUDE_37_SONNET
 from scholarqa.llms.prompts import SYSTEM_PROMPT_QUOTE_PER_PAPER, SYSTEM_PROMPT_QUOTE_CLUSTER, PROMPT_ASSEMBLE_SUMMARY
+from scholarqa.utils import NUMERIC_META_FIELDS, CATEGORICAL_META_FIELDS
 
-#Custom MultiStepQAPipeline class/steps with llm_model asa any litellm supported model
+# Custom MultiStepQAPipeline class/steps with llm_model asa any litellm supported model
 mqa_pipeline = MultiStepQAPipeline(llm_model=CLAUDE_37_SONNET)
 
 query = "Which is the 9th planet in our solar system?"
 
-scholar_qa = ScholarQA(paper_finder=paper_finder, multi_step_pipeline=llm_model=mqa_pipeline, CLAUDE_37_SONNET)
-
-cost_args = None #This is used for house keeping, can be None
+scholar_qa = ScholarQA(paper_finder=paper_finder, multi_step_pipeline=mqa_pipeline, llm_model=CLAUDE_37_SONNET)
 
 # Decompose the query to get filters like year, venue, fos, citations, etc along with
-#a re-written version of the query and a query suitable for keyword search.
-llm_processed_query = scholar_qa.query(query, cost_args)
+# a re-written version of the query and a query suitable for keyword search.
+llm_processed_query = scholar_qa.preprocess_query(query)
 
 # Paper finder step - retrieve relevant paper passages from semantic scholar index and api
 full_text_src, keyword_srch_res = scholar_qa.find_relevant_papers(llm_processed_query.result)
-retrieved_candidates = snippet_srch_res + s2_srch_res
+retrieved_candidates = full_text_src + keyword_srch_res
 
 # Rerank the retrieved candidates based on the query with a cross encoder
-#keyword search results are returned with associated metadata, metadata is retrieved separately for full text serach results
-keyword_srch_metadata = [{k: v for k, v in paper.items() if k == "corpus_id" or k in NUMERIC_META_FIELDS or k in CATEGORICAL_META_FIELDS}
-                        for paper in s2_srch_res]
-reranked_df, paper_metadata = scholar_qa.rerank_and_aggregate(query, retrieved_candidates, filter_paper_metadata={str(paper["corpus_id"]): paper for paper in
-                                                                 keyword_srch_metadata})
+# keyword search results are returned with associated metadata, metadata is retrieved separately for full text serach results
+keyword_srch_metadata = [
+    {k: v for k, v in paper.items() if k == "corpus_id" or k in NUMERIC_META_FIELDS or k in CATEGORICAL_META_FIELDS}
+    for paper in keyword_srch_res]
+reranked_df, paper_metadata = scholar_qa.rerank_and_aggregate(query, retrieved_candidates,
+                                                              filter_paper_metadata={str(paper["corpus_id"]): paper for
+                                                                                     paper in
+                                                                                     keyword_srch_metadata})
 # Step 1 - quote extraction
-per_paper_quotes = scholar_qa.step_select_quotes(query, reranked_df, cost_args, sys_prompt=SYSTEM_PROMPT_QUOTE_PER_PAPER)
+per_paper_quotes = scholar_qa.step_select_quotes(query, reranked_df, sys_prompt=SYSTEM_PROMPT_QUOTE_PER_PAPER)
 
 # step 2: outline planning and clustering
-cluster_json = scholar_qa.step_clustering(query, per_paper_quotes.result, cost_args, sys_prompt=SYSTEM_PROMPT_QUOTE_CLUSTER)
+cluster_json = scholar_qa.step_clustering(query, per_paper_quotes.result, sys_prompt=SYSTEM_PROMPT_QUOTE_CLUSTER)
 
 # Changing to expected format in the summary generation prompt
 plan_json = {f'{dim["name"]} ({dim["format"]})': dim["quotes"] for dim in cluster_json.result["dimensions"]}
 
 # step 2.1: extend the clustered snippets in plan json with their inline citations
-per_paper_summaries_extd = scholar_qa.multi_step_pipeline.extend_quote_citations(reranked_df,
-                                                                           per_paper_quotes.result,
-                                                                           plan_json, paper_metadata)
+per_paper_summaries_extd = scholar_qa.extract_quote_citations(reranked_df, per_paper_quotes.result, plan_json,
+                                                              paper_metadata)
 
 # step 3: generating output as per the outline
-answer = list(scholar_qa.step_gen_iterative_summary(query, per_paper_summaries_extd, plan_json, cost_args, sys_prompt=PROMPT_ASSEMBLE_SUMMARY))
+answer = list(scholar_qa.step_gen_iterative_summary(query, per_paper_summaries_extd, plan_json,
+                                                    sys_prompt=PROMPT_ASSEMBLE_SUMMARY))
 ```
 
 - ### Custom Pipeline
@@ -393,9 +395,9 @@ answer = list(scholar_qa.step_gen_iterative_summary(query, per_paper_summaries_e
     def retrieval(tool_request: ToolRequest, task_id: str):
       scholar_qa = app_config.load_scholarqa(task_id)
       #a re-written version of the query and a query suitable for keyword search.
-      llm_processed_query = scholar_qa.query(query, cost_args=None)
+      llm_processed_query = scholar_qa.preprocess_query(tool_request.query)
       full_text_src, keyword_srch_res = scholar_qa.find_relevant_papers(llm_processed_query.result)
-      retrieved_candidates = snippet_srch_res + s2_srch_res
+      retrieved_candidates = full_text_src + keyword_srch_res
       return retrieved_candidates
 
     app.include_router(custom_router)

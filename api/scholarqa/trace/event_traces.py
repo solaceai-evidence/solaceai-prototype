@@ -1,11 +1,10 @@
-import os
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
-from scholarqa.models import ToolRequest
-from scholarqa.trace.trace_writer import GCSWriter, LocalWriter, TraceWriter
-from scholarqa.llms.constants import CostAwareLLMResult
 from scholarqa.config.config_setup import LogsConfig
+from scholarqa.llms.constants import CostAwareLLMResult
+from scholarqa.models import ToolRequest
+from scholarqa.trace.trace_writer import GCSWriter, LocalWriter
 
 
 class EventTrace:
@@ -67,10 +66,11 @@ class EventTrace:
         self.cluster["model"] = cluster_json.models[0]
         self.total_cost += cluster_json.tot_cost
 
-    def trace_inline_citation_following_event(self, paper_summaries_extd: Dict[str, Any]):
+    def trace_inline_citation_following_event(self, paper_summaries_extd: Dict[str, Any], quotes_metadata: Dict[str, List[Dict[str, Any]]]):
         for quote_obj in self.quotes["quotes"]:
             quote_obj["snippets"] = paper_summaries_extd[quote_obj["key"]].get("quote", quote_obj["snippets"])
             quote_obj["inline_citations"] = paper_summaries_extd[quote_obj["key"]].get("inline_citations", dict())
+            quote_obj["metadata"] = quotes_metadata.get(quote_obj["key"], [])
 
     def trace_summary_event(self, json_summary: List[Dict[str, Any]], cost_result: CostAwareLLMResult):
         self.summary = {"sections": json_summary, "cost": cost_result.tot_cost}
