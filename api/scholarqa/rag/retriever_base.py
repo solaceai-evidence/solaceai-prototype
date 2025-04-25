@@ -53,9 +53,10 @@ class FullTextRetriever(AbstractRetriever):
                 res_map["title"] = paper["title"]
                 res_map["text"] = snippet["text"]
                 res_map["score"] = fields["score"]
-                res_map["section_title"] = snippet["snippetKind"] if snippet["snippetKind"] != "body" else snippet.get(
-                    "section",
-                    "body")
+                res_map["section_title"] = snippet["snippetKind"]
+                if snippet["snippetKind"] == "body":
+                    if section := snippet.get("section"):
+                        res_map["section_title"] = section
                 if "snippetOffset" in snippet and snippet["snippetOffset"].get("start"):
                     res_map["char_start_offset"] = snippet["snippetOffset"]["start"]
                 else:
