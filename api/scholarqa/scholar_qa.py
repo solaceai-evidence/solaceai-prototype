@@ -273,7 +273,8 @@ class ScholarQA:
                                     # check if the sentence offset is within the range of the quote
                                     # the sentence can be completely or partially inside the quote
                                     if (lookup_idx < soff["end"] <= lookup_end) or (
-                                            lookup_idx <= soff["start"] < lookup_end):
+                                            lookup_idx <= soff["start"] < lookup_end)\
+                                            or (soff["start"] <= lookup_idx and lookup_end <= soff["end"]):
                                         curr_quote_map["sentence_offsets"].append(soff)
                             if sentence.get("ref_mentions"):
                                 for sref in sentence["ref_mentions"]:
