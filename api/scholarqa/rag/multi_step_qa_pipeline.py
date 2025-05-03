@@ -58,7 +58,7 @@ class MultiStepQAPipeline:
         messages = [USER_PROMPT_PAPER_LIST_FORMAT.format(query, v) for k, v in tup_items.items()]
         completion_results = batch_llm_completion(self.llm_model, messages=messages, system_prompt=sys_prompt,
                                                   max_workers=self.batch_workers, max_tokens=4096,
-                                                  fallback=self.fallback_llm)
+                                                  fallback=self.fallback_llm, reasoning_effort="low")
         quotes = [
             cr.content if cr.content != "None" and not cr.content.startswith("None\n") and not cr.content.startswith(
                 "None ")
@@ -84,9 +84,10 @@ class MultiStepQAPipeline:
         try:
             response = llm_completion(user_prompt=user_prompt,
                                       system_prompt=sys_prompt, fallback=None, model=self.llm_model,
-                                      max_tokens=4096,
-                                      response_format={"response_schema": ClusterPlan.model_json_schema(
-                                          ref_template="/$defs/{model}")}
+                                      max_completion_tokens=4096,
+                                      max_tokens=4096+1024,
+                                      response_format= ClusterPlan,
+                                      reasoning_effort="low"
                                       )
         except Exception as e:
             logger.warning(f"Error while clustering with {self.llm_model}: {e}, trying to fall back to GPT-4o.")
@@ -138,6 +139,7 @@ class MultiStepQAPipeline:
                 filled_in_prompt = PROMPT_ASSEMBLE_NO_QUOTES_SUMMARY.format(**fill_in_prompt_args)
 
             response = llm_completion(user_prompt=filled_in_prompt, model=self.llm_model, fallback=self.fallback_llm,
-                                      max_tokens=4096)
+                                      max_completion_tokens=4096,
+                                      max_tokens=4096 + 1024, reasoning_effort="low")
             existing_sections.append(response.content)
             yield response
