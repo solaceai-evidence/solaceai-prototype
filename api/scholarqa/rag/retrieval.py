@@ -21,8 +21,10 @@ class AbsPaperFinder(AbstractRetriever):
 
 class PaperFinder(AbsPaperFinder):
     snippet_srch_fields = ["text", "snippetKind", "snippetOffset", "section", "annotations.refMentions",
-                           "annotations.sentences.start","annotations.sentences.end"]
-    def __init__(self, retriever: AbstractRetriever, context_threshold: float = 0.0, n_rerank: int = -1, max_date: Optional[str] = None):
+                           "annotations.sentences.start", "annotations.sentences.end"]
+
+    def __init__(self, retriever: AbstractRetriever, context_threshold: float = 0.0, n_rerank: int = -1,
+                 max_date: Optional[str] = None):
         self.retriever = retriever
         self.context_threshold = context_threshold
         self.n_rerank = n_rerank
@@ -40,7 +42,18 @@ class PaperFinder(AbsPaperFinder):
     def retrieve_additional_papers(self, query: str, **filter_kwargs) -> List[Dict[str, Any]]:
         if self.max_date:
             # S2 API doesnt have insertedBefore for this endpoint, so use publicationDateOrYear:
-            filter_kwargs.update({"publicationDateOrYear": ':{}'.format(self.max_date)})
+            if year_filter := filter_kwargs.pop("year", None):
+                # if year filter is present, we need to remove it from the kwargs and resolve it to publicationDateOrYear
+                date_start, date_end = year_filter.split("-") # YYYY-YYYY
+                max_year = self.max_date.split("-")[0] #YYYY-MM
+                # restrict both start and end to max_year and if end is max_year, set it to max_date
+                date_start, date_end = min(date_start, max_year), min(date_end,
+                                                                      max_year) if date_end != max_year else self.max_date
+                filter_kwargs.update({"publicationDateOrYear": '{}:{}'.format(date_start, date_end)})
+
+            else:
+                filter_kwargs.update({"publicationDateOrYear": ':{}'.format(self.max_date)})
+
         return self.retriever.retrieve_additional_papers(query, **filter_kwargs)
 
     def rerank(self, query: str, retrieved_ctxs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
