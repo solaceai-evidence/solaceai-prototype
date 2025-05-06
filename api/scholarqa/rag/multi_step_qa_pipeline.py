@@ -58,7 +58,7 @@ class MultiStepQAPipeline:
         messages = [USER_PROMPT_PAPER_LIST_FORMAT.format(query, v) for k, v in tup_items.items()]
         completion_results = batch_llm_completion(self.llm_model, messages=messages, system_prompt=sys_prompt,
                                                   max_workers=self.batch_workers, max_tokens=4096,
-                                                  fallback=self.fallback_llm, reasoning_effort="low")
+                                                  fallback=self.fallback_llm)
         quotes = [
             cr.content if cr.content != "None" and not cr.content.startswith("None\n") and not cr.content.startswith(
                 "None ")
@@ -82,21 +82,16 @@ class MultiStepQAPipeline:
 
         user_prompt = make_prompt(query, per_paper_summaries)
         try:
+            #params for reasoning mode: max_completion_tokens=4096, max_tokens=4096+1024, reasoning_effort="low"
             response = llm_completion(user_prompt=user_prompt,
                                       system_prompt=sys_prompt, fallback=None, model=self.llm_model,
-                                      max_completion_tokens=4096,
-                                      max_tokens=4096+1024,
-                                      response_format= ClusterPlan,
-                                      reasoning_effort="low"
-                                      )
-        except Exception as e:
-            logger.warning(f"Error while clustering with {self.llm_model}: {e}, trying to fall back to GPT-4o.")
-            response = llm_completion(user_prompt=user_prompt,
-                                      system_prompt=sys_prompt, fallback=None, model=GPT_4o,
                                       max_tokens=4096,
-                                      response_format=ClusterPlan
+                                      response_format= ClusterPlan
                                       )
-        return json.loads(response.content), response
+            return json.loads(response.content), response
+        except Exception as e:
+            logger.warning(f"Error while clustering with {self.llm_model}: {e}")
+            raise e
 
     def generate_iterative_summary(self, query: str, per_paper_summaries_extd: Dict[str, Dict[str, Any]],
                                    plan: Dict[str, Any],
@@ -139,7 +134,6 @@ class MultiStepQAPipeline:
                 filled_in_prompt = PROMPT_ASSEMBLE_NO_QUOTES_SUMMARY.format(**fill_in_prompt_args)
 
             response = llm_completion(user_prompt=filled_in_prompt, model=self.llm_model, fallback=self.fallback_llm,
-                                      max_completion_tokens=4096,
-                                      max_tokens=4096 + 1024, reasoning_effort="low")
+                                      max_tokens=4096)
             existing_sections.append(response.content)
             yield response
