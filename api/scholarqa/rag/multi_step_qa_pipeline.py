@@ -82,20 +82,16 @@ class MultiStepQAPipeline:
 
         user_prompt = make_prompt(query, per_paper_summaries)
         try:
+            #params for reasoning mode: max_completion_tokens=4096, max_tokens=4096+1024, reasoning_effort="low"
             response = llm_completion(user_prompt=user_prompt,
                                       system_prompt=sys_prompt, fallback=None, model=self.llm_model,
                                       max_tokens=4096,
-                                      response_format={"response_schema": ClusterPlan.model_json_schema(
-                                          ref_template="/$defs/{model}")}
+                                      response_format= ClusterPlan
                                       )
+            return json.loads(response.content), response
         except Exception as e:
-            logger.warning(f"Error while clustering with {self.llm_model}: {e}, trying to fall back to GPT-4o.")
-            response = llm_completion(user_prompt=user_prompt,
-                                      system_prompt=sys_prompt, fallback=None, model=GPT_4o,
-                                      max_tokens=4096,
-                                      response_format=ClusterPlan
-                                      )
-        return json.loads(response.content), response
+            logger.warning(f"Error while clustering with {self.llm_model}: {e}")
+            raise e
 
     def generate_iterative_summary(self, query: str, per_paper_summaries_extd: Dict[str, Dict[str, Any]],
                                    plan: Dict[str, Any],

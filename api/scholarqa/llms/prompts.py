@@ -78,7 +78,8 @@ The last thing you output is an assignment of each quote to a dimension like so:
 {{"name": "dimension name 3", "format": "synthesis or list", "quotes": []}},  # empty because we didn't find any supporting quotes
 ...
 ]
-}} 
+}}
+Dont add unnecessary linebreaks or spaces to the output.
 """
 
 USER_PROMPT_QUERY_FORMAT = """
