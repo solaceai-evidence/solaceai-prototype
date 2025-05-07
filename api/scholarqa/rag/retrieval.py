@@ -47,8 +47,7 @@ class PaperFinder(AbsPaperFinder):
                 date_start, date_end = year_filter.split("-") # YYYY-YYYY
                 max_year = self.max_date.split("-")[0] #YYYY-MM
                 # restrict both start and end to max_year and if end is max_year, set it to max_date
-                date_start, date_end = min(date_start, max_year), min(date_end,
-                                                                      max_year) if date_end != max_year else self.max_date
+                date_start, date_end = min(date_start, max_year), date_end if date_end and date_end < max_year else self.max_date
                 filter_kwargs.update({"publicationDateOrYear": '{}:{}'.format(date_start, date_end)})
 
             else:
