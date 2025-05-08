@@ -1,16 +1,12 @@
 import logging
-import os
-import time
-import requests
 import json
-
 from pydantic import BaseModel
-
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 from scholarqa.table_generation.prompts import ATTRIBUTE_PROMPT, SYSTEM_PROMPT
 from scholarqa.utils import get_paper_metadata
-from scholarqa.llms.litellm_helper import batch_llm_completion
+from scholarqa.llms.litellm_helper import CostAwareLLMCaller, CostReportingArgs, llm_completion
+from scholarqa.llms.constants import GPT_4o
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +55,13 @@ def generate_final_prompt(query: str, formatted_paper_info: str) -> str:
     return final_prompt
 
 
-def generate_attribute_suggestions(corpus_ids: List[str], model: str = 'openai/gpt-4o-2024-08-06', query: str = None) -> Dict:
+def generate_attribute_suggestions(
+        corpus_ids: List[str], 
+        model: str = GPT_4o, 
+        query: str = None,
+        llm_caller: CostAwareLLMCaller = None,
+        cost_args: CostReportingArgs = None,
+    ) -> Dict:
     """
     Entry point to the column suggestion generation process.
     """
@@ -77,23 +79,26 @@ def generate_attribute_suggestions(corpus_ids: List[str], model: str = 'openai/g
     final_prompt = generate_final_prompt(user_query, formatted_paper_info)
 
     # Step 5: Prompt the LLM to produce column suggestions
-    output = batch_llm_completion(model=model, messages=[final_prompt], system_prompt=SYSTEM_PROMPT, response_format=ColumnSuggestions)[0]
-    column_suggestions = json.loads(output.content)["columns"]
+    column_suggestion_params = {
+        "user_prompt": final_prompt,
+        "system_prompt": SYSTEM_PROMPT,
+        "response_format": ColumnSuggestions,
+        "model": model,
+    }
+    output = llm_caller.call_method(
+        cost_args=cost_args,
+        method=llm_completion,
+        **column_suggestion_params,
+    )
+    column_suggestions = json.loads(output.result.content)["columns"]
     cost_dict = {
-        "cost_value": output.cost,
+        "cost_value": output.result.cost,
         "tokens": {
-            "total": output.total_tokens,
-            "prompt": output.input_tokens,
-            "completion": output.output_tokens
+            "total": output.result.total_tokens,
+            "prompt": output.result.input_tokens,
+            "completion": output.result.output_tokens
         },
-        "model": output.model,
+        "model": output.result.model,
     }
 
     return {"columns": column_suggestions, "cost": cost_dict}
-
-# if __name__ == "__main__":
-#     output = generate_attribute_suggestions(
-#         corpus_ids=["5258236", "116997379", "4392433"],
-#     )
-#     print(output["columns"])
-#     print(output["cost"])
