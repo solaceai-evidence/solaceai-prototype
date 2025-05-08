@@ -7,10 +7,10 @@ import uuid
 import itertools
 from concurrent.futures import ThreadPoolExecutor
 
-from tool.table_generation.table_model import TableWidget, TableColumn, TableRow, TableCell
-from tool.table_generation.column_suggestion import generate_attribute_suggestions
-from tool.table_generation.value_generation import generate_value_suggestions
-from tool.utils import get_paper_metadata
+from scholarqa.table_generation.table_model import TableWidget, TableColumn, TableRow, TableCell
+from scholarqa.table_generation.column_suggestion import generate_attribute_suggestions
+from scholarqa.table_generation.value_generation import generate_value_suggestions
+from scholarqa.utils import get_paper_metadata
 
 MAX_THREADS = 10
 

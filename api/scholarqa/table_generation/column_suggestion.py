@@ -8,9 +8,9 @@ from pydantic import BaseModel
 
 from typing import List, Dict, Optional
 
-from tool.table_generation.prompts import ATTRIBUTE_PROMPT, SYSTEM_PROMPT
-from tool.utils import get_paper_metadata
-from tool.llms.litellm_helper import batch_llm_completion
+from scholarqa.table_generation.prompts import ATTRIBUTE_PROMPT, SYSTEM_PROMPT
+from scholarqa.utils import get_paper_metadata
+from scholarqa.llms.litellm_helper import batch_llm_completion
 
 logger = logging.getLogger(__name__)
 

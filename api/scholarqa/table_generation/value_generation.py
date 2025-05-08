@@ -9,11 +9,11 @@ from pydantic import BaseModel
 import itertools
 from concurrent.futures import ThreadPoolExecutor
 
-from tool.table_generation.prompts import *
-from tool.utils import get_paper_metadata
-from tool.llms.constants import *
-from tool.llms.litellm_helper import batch_llm_completion
-from tool.rag.retrieval import PublicPaperFinder
+from scholarqa.table_generation.prompts import *
+from scholarqa.utils import get_paper_metadata
+from scholarqa.llms.constants import *
+from scholarqa.llms.litellm_helper import batch_llm_completion
+from scholarqa.rag.retrieval import PublicPaperFinder
 
 class PaperQAAnswer(BaseModel):
     answer: str
