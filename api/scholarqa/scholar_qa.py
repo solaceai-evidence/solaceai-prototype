@@ -400,7 +400,7 @@ class ScholarQA:
         task_result = self.run_qa_pipeline(tool_request, inline_tags)
         return task_result.model_dump()
 
-    task_id = self.task_id if self.task_id else self.tool_request.task_id
+    def gen_table_thread(self, user_id: str, query: str, dim: Dict[str, Any],
                          cit_ids: List[int], tlist: List[Any]) -> Thread:
         def call_table_generator(didx: int, payload: Dict[str, Any]):
             logger.info(
@@ -416,7 +416,8 @@ class ScholarQA:
                 value_model=payload["value_model"],
             )
             tlist[dim["idx"]] = table
-        
+            
+        task_id = self.task_id if self.task_id else self.tool_request.task_id
         payload = {
             "task_id": task_id,
             "user_id": user_id,
