@@ -147,9 +147,15 @@ def run_paper_qa(
     the paper's abstract.
     """
     try:
+        # Restrict snippet search only to the paper we're currently 
+        # generating values for. Also drop formatting instructions
+        # from the question for the retrieval function.
+        filter_kwargs = {
+            "paperIds" : f"CorpusId:{corpus_id}"
+        }
         snippets = paper_finder.retrieve_passages(
-        query=question, 
-        corpus_ids=[corpus_id]
+            query=question.split("Only return the answer. ")[0], 
+            **filter_kwargs,
         )
         if snippets:
             paper_title = snippets[0]["title"]

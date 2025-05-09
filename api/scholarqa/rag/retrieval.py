@@ -30,20 +30,11 @@ class PaperFinder(AbsPaperFinder):
         self.n_rerank = n_rerank
         self.max_date = max_date
 
-    def retrieve_passages(self, query: str,  corpus_ids: Optional[List[str | int]]=None, **filter_kwargs) -> List[Dict[str, Any]]:
+    def retrieve_passages(self, query: str, **filter_kwargs) -> List[Dict[str, Any]]:
         """Retrieve relevant passages along with scores from an index for the given query"""
         filter_kwargs.update({
             "fields": ",".join([f"snippet.{f}" for f in self.snippet_srch_fields])
         })
-        if corpus_ids is not None:
-            if any(cid is None or cid == "None" for cid in corpus_ids):
-                raise ValueError(
-                    "corpus_ids contains None or 'None', which is not allowed."
-                )
-            formatted_corpus_ids = [f"CorpusId:{cid}" for cid in corpus_ids]
-            filter_kwargs.update({
-                "paperIds" : ",".join(formatted_corpus_ids)
-            })
         if self.max_date:
             filter_kwargs.update({"insertedBefore": '{}'.format(self.max_date)})
         return self.retriever.retrieve_passages(query, **filter_kwargs)
