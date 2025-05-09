@@ -1,7 +1,4 @@
-import os
 from typing import List, Dict, Optional
-import requests
-import logging
 import uuid
 
 import itertools
@@ -12,12 +9,8 @@ from scholarqa.table_generation.column_suggestion import generate_attribute_sugg
 from scholarqa.table_generation.value_generation import generate_value_suggestions
 from scholarqa.utils import get_paper_metadata
 from scholarqa.rag.retrieval import PaperFinder
-from scholarqa.rag.retriever_base import FullTextRetriever
 from scholarqa.llms.constants import GPT_4o
 from scholarqa.llms.litellm_helper import CostAwareLLMCaller, CostReportingArgs
-
-from scholarqa.config.config_setup import LogsConfig
-from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
 
 class TableGenerator:
     def __init__(
@@ -215,24 +208,3 @@ class TableGenerator:
             )
             table_cells[cell_id] = cell
         return table_cells
-
-if __name__ == '__main__':
-    retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
-    logger = logging.getLogger(__name__)
-    logger.info("initializing the log configs")
-    logs_config = LogsConfig(llm_cache_dir="lib_llm_cache")
-    logs_config.init_formatter()
-    state_mgr = LocalStateMgrClient(logs_config.log_dir)
-    table_generator = TableGenerator(
-        paper_finder=PaperFinder(retriever=retriever),
-        llm_caller=CostAwareLLMCaller(state_mgr=state_mgr),
-    )
-    print(table_generator.llm_caller)
-    table = table_generator.run_table_generation(
-        thread_id=uuid.uuid4().hex,
-        user_id="test_user",
-        original_query="What AI work has been done in answering science questions? Add year and citation columns",
-        section_title="Applications and Specialized Systems",
-        corpus_ids=[214594294, 204915921, 220250086, 40382019, 206561353, 234119176, 2598611, 20813703, 221800820],
-    )
-    print(table)

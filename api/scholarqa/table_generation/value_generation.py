@@ -16,6 +16,8 @@ from scholarqa.llms.constants import *
 from scholarqa.rag.retrieval import PaperFinder
 from scholarqa.llms.litellm_helper import CostAwareLLMCaller, CostReportingArgs, llm_completion
 
+logger = logging.getLogger(__name__)
+
 class PaperQAAnswer(BaseModel):
     answer: str
     exceprts: List[str]
@@ -98,7 +100,7 @@ def get_value_from_abstract(
         try:
             response = get_paper_metadata([corpus_id])
         except Exception as e:
-            print(e)
+            logger.error(f"Error while retrieving paper metadata for corpus ID {corpus_id}: {str(e)}")
         retry_num += 1
         time.sleep(retry_num * 5)
     response_content = response[corpus_id]
@@ -209,6 +211,7 @@ def run_paper_qa(
                 "cost": cost,
             }
     except Exception as e:
+        logger.error(f"Exception while hitting vespa snippet search endpoint: {str(e)}")
         response_simplified = {"error": f"Exception while hitting vespa snippet search endpoint: {str(e)}"}
     return response_simplified
 

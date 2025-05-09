@@ -49,8 +49,6 @@ def generate_final_prompt(query: str, formatted_paper_info: str) -> str:
     Given the formatted paper information, and an optional user query,
     generate the final column suggestion prompt to be sent to the LLM.
     """
-    if query == "":
-        print("Did not receive a query from the tool, defaulting to...")
     final_prompt = ATTRIBUTE_PROMPT.format(query, 10, formatted_paper_info)
     return final_prompt
 
