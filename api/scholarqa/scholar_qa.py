@@ -43,6 +43,7 @@ class ScholarQA:
             multi_step_pipeline: MultiStepQAPipeline = None,
             state_mgr: AbsStateMgrClient = None,
             logs_config: LogsConfig = None,
+            run_table_generation: bool = True,
             **kwargs
     ):
         if logs_config:
@@ -70,6 +71,7 @@ class ScholarQA:
 
         self.tool_request = None
         self.table_generator = TableGenerator(paper_finder=paper_finder, llm_caller=self.llm_caller)
+        self.run_table_generation = run_table_generation
 
     def update_task_state(
             self,
@@ -554,7 +556,7 @@ class ScholarQA:
 
                 json_summary.append(section_json)
                 self.postprocess_json_output(json_summary, quotes_meta=quotes_metadata)
-                if section_json["format"] == "list" and section_json["citations"]:
+                if section_json["format"] == "list" and section_json["citations"] and self.run_table_generation:
                     cluster_json.result["dimensions"][idx]["idx"] = idx
                     cit_ids = [int(c["paper"]["corpus_id"]) for c in section_json["citations"]]
                     tthread = self.gen_table_thread(task_id, user_id, query, cluster_json.result["dimensions"][idx], cit_ids,
