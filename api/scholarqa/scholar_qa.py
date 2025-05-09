@@ -23,6 +23,8 @@ from scholarqa.state_mgmt.local_state_mgr import AbsStateMgrClient, LocalStateMg
 from scholarqa.trace.event_traces import EventTrace
 from scholarqa.utils import get_paper_metadata, NUMERIC_META_FIELDS, CATEGORICAL_META_FIELDS, get_ref_author_str, \
     make_int
+from scholarqa.table_generation.table_model import TableWidget
+from scholarqa.table_generation.table_generator import TableGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +69,7 @@ class ScholarQA:
             self.multi_step_pipeline = multi_step_pipeline
 
         self.tool_request = None
+        self.table_generator = TableGenerator(paper_finder=paper_finder, llm_caller=self.llm_caller)
 
     def update_task_state(
             self,
@@ -395,9 +398,36 @@ class ScholarQA:
         task_result = self.run_qa_pipeline(tool_request, inline_tags)
         return task_result.model_dump()
 
-    def gen_table_thread(self, user_id: str, query: str, dim: Dict[str, Any],
+    def gen_table_thread(self, task_id: str, user_id: str, query: str, dim: Dict[str, Any],
                          cit_ids: List[int], tlist: List[Any]) -> Thread:
-        return None
+        def call_table_generator(didx: int, payload: Dict[str, Any]):
+            logger.info(
+                "Received table generation request for topic: " + payload["section_title"]
+            )
+            print(payload["task_id"])
+            table = self.table_generator.run_table_generation(
+                thread_id=payload["task_id"],
+                user_id=payload["user_id"],
+                original_query=payload["query"],
+                section_title=payload["section_title"],
+                corpus_ids=payload["cit_ids"],
+                column_model=payload["column_model"],
+                value_model=payload["value_model"],
+            )
+            tlist[dim["idx"]] = table
+        
+        payload = {
+            "task_id": task_id,
+            "user_id": user_id,
+            "query": query,
+            "section_title": dim["name"],
+            "cit_ids": cit_ids,
+            "column_model": GPT_4o,
+            "value_model": GPT_4o,
+        }
+        tthread = Thread(target=call_table_generator, args=(dim["idx"], payload,))
+        tthread.start()
+        return tthread
 
     def get_user_msg_id(self):
         return self.tool_request.user_id, self.task_id
@@ -527,7 +557,7 @@ class ScholarQA:
                 if section_json["format"] == "list" and section_json["citations"]:
                     cluster_json.result["dimensions"][idx]["idx"] = idx
                     cit_ids = [int(c["paper"]["corpus_id"]) for c in section_json["citations"]]
-                    tthread = self.gen_table_thread(user_id, query, cluster_json.result["dimensions"][idx], cit_ids,
+                    tthread = self.gen_table_thread(task_id, user_id, query, cluster_json.result["dimensions"][idx], cit_ids,
                                                     tables)
                     if tthread:
                         table_threads.append(tthread)
