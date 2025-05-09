@@ -8,20 +8,17 @@ from typing import List, Dict
 from pydantic import BaseModel
 import itertools
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 
 from scholarqa.table_generation.prompts import *
 from scholarqa.utils import get_paper_metadata
 from scholarqa.llms.constants import *
-from scholarqa.llms.litellm_helper import batch_llm_completion
-from scholarqa.rag.retrieval import PublicPaperFinder
+from scholarqa.rag.retrieval import PaperFinder
+from scholarqa.llms.litellm_helper import CostAwareLLMCaller, CostReportingArgs, llm_completion
 
 class PaperQAAnswer(BaseModel):
     answer: str
     exceprts: List[str]
-
-# Creating a dummy paper_finder object to run snippet search
-# Maybe it should be moved to utils? Is 20 passages enough?
-paper_finder = PublicPaperFinder('ai2-scholar-qa', 20, 20)
 
 def get_cost_object(completion: CompletionResult) -> dict:
     cost_dict = {
@@ -35,7 +32,13 @@ def get_cost_object(completion: CompletionResult) -> dict:
     }
     return cost_dict
 
-def get_metadata_columns(question: str, metadata: dict, model: str):
+def get_metadata_columns(
+        question: str, 
+        metadata: dict, 
+        model: str,
+        llm_caller: CostAwareLLMCaller = None,
+        cost_args: CostReportingArgs = None,
+    ):
     """
     Given a question and metadata from a research paper, prompt
     an LLM to answer the question using the metadata provided. 
@@ -43,13 +46,28 @@ def get_metadata_columns(question: str, metadata: dict, model: str):
     """
     prompt = VALUE_GENERATION_FROM_METADATA.format(question)
     prompt += f"Metadata: {metadata}"
-    output =  batch_llm_completion(
-        model=model, 
-        messages=[prompt], 
-        system_prompt=SYSTEM_PROMPT, 
-    )[0]
-    response = output.content
-    cost_dict = get_cost_object(output)
+    cur_cost_args = deepcopy(cost_args)
+    corpus_id = metadata.get("corpusId", None)
+    cur_cost_args = CostReportingArgs(
+        task_id=cost_args.task_id,
+        user_id=cost_args.user_id,
+        msg_id=cost_args.msg_id,
+        description=cost_args.description + f" for corpus ID {corpus_id}",
+        model=cost_args.model,
+    )
+    value_generation_params = {
+        "user_prompt": prompt,
+        "system_prompt": SYSTEM_PROMPT,
+        "model": model,
+        "fallback": GPT_4o,
+    }
+    output = llm_caller.call_method(
+        cost_args=cur_cost_args,
+        method=llm_completion,
+        **value_generation_params,
+    )
+    response = output.result.content
+    cost_dict = get_cost_object(output.result)
     response_simplified = {
         "question": question,
         "answer": response,
@@ -61,7 +79,13 @@ def get_metadata_columns(question: str, metadata: dict, model: str):
     return response_simplified
 
 
-def get_value_from_abstract(question: str, corpus_id: str, model: str):
+def get_value_from_abstract(
+        question: str, 
+        corpus_id: str, 
+        model: str,
+        llm_caller: CostAwareLLMCaller = None,
+        cost_args: CostReportingArgs = None,
+    ):
     """
     Given a query and a paper's corpus ID, retrieve an answer
     to the query based on the paper abstract. We use this as a
@@ -82,17 +106,37 @@ def get_value_from_abstract(question: str, corpus_id: str, model: str):
     abstract = response_content["abstract"] if "abstract" in response_content and response_content["abstract"] else None
     # Step 2: Prompt LLM to produce a cell value using the paper abstract
     prompt = VALUE_GENERATION_FROM_ABSTRACT + f"Paper title:{title}\nPaper abstract: {abstract}\nQuestion: {question}\nAnswer:"
-    output =  batch_llm_completion(
-        model=model, 
-        messages=[prompt], 
-        system_prompt=SYSTEM_PROMPT, 
-    )[0]
-    value = output.content
-    cost_dict = get_cost_object(output)
+    cur_cost_args = CostReportingArgs(
+        task_id=cost_args.task_id,
+        user_id=cost_args.user_id,
+        msg_id=cost_args.msg_id,
+        description=cost_args.description + f" for corpus ID {corpus_id}",
+        model=cost_args.model,
+    )
+    value_generation_params = {
+        "user_prompt": prompt,
+        "system_prompt": SYSTEM_PROMPT,
+        "model": model,
+        "fallback": GPT_4o,
+    }
+    output = llm_caller.call_method(
+        cost_args=cur_cost_args,
+        method=llm_completion,
+        **value_generation_params,
+    )
+    value = output.result.content
+    cost_dict = get_cost_object(output.result)
     return value, cost_dict
 
 
-def run_paper_qa(question: str, corpus_id: str, model: str):
+def run_paper_qa(
+        question: str, 
+        corpus_id: str, 
+        model: str,
+        paper_finder: PaperFinder = None,
+        llm_caller: CostAwareLLMCaller = None,
+        cost_args: CostReportingArgs = None,
+    ):
     """
     Given a query and a paper's corpus ID, retrieve an answer
     to the query from the paper full-text. This function relies
@@ -103,7 +147,7 @@ def run_paper_qa(question: str, corpus_id: str, model: str):
     the paper's abstract.
     """
     try:
-        snippets = paper_finder.snippet_search(
+        snippets = paper_finder.retrieve_passages(
         query=question, 
         corpus_ids=[corpus_id]
         )
@@ -115,22 +159,41 @@ def run_paper_qa(question: str, corpus_id: str, model: str):
             prompt = VESPAQA_PROMPT.replace('[TITLE]', paper_title)
             prompt = prompt.replace('[SNIPPETS]', concatenated_snippets)
             prompt = prompt.replace('[QUESTION]', question)
-            output =  batch_llm_completion(
-                model=model, 
-                messages=[prompt], 
-                system_prompt=SYSTEM_PROMPT,
-                response_format=PaperQAAnswer, 
-            )[0]
+            cur_cost_args = CostReportingArgs(
+                task_id=cost_args.task_id,
+                user_id=cost_args.user_id,
+                msg_id=cost_args.msg_id,
+                description=cost_args.description + f" for corpus ID {corpus_id}",
+                model=cost_args.model,
+            )
+            value_generation_params = {
+                "user_prompt": prompt,
+                "system_prompt": SYSTEM_PROMPT,
+                "model": model,
+                "fallback": GPT_4o,
+                "response_format": PaperQAAnswer, 
+            }
+            output = llm_caller.call_method(
+                cost_args=cur_cost_args,
+                method=llm_completion,
+                **value_generation_params,
+            )
             response_simplified = {
                 "question": question,
-                "answer": output.content,
+                "answer": output.result.content,
                 "corpusId": corpus_id,
                 "source": "vespa-snippets",
                 "evidenceId": None, # TODO: Figure out what to do here?
-                "cost": get_cost_object(output),
+                "cost": get_cost_object(output.result),
             }
         else:
-            response, cost = get_value_from_abstract(question=question, corpus_id=corpus_id, model=model)
+            response, cost = get_value_from_abstract(
+                question=question, 
+                corpus_id=corpus_id, 
+                model=model,
+                llm_caller=llm_caller,
+                cost_args=cost_args,
+            )
             response_simplified = {
                 "question": question,
                 "answer": response,
@@ -150,6 +213,9 @@ def generate_value_suggestions(
         corpus_ids: List[str],
         is_metadata: bool = False,
         model: str = "openai/gpt-4o-2024-08-06",
+        paper_finder: PaperFinder = None,
+        llm_caller: CostAwareLLMCaller = None,
+        cost_args: CostReportingArgs = None,
 ) -> Dict:
     """
     Entry point to the cell value generation process.
@@ -163,7 +229,9 @@ def generate_value_suggestions(
     total_cost = 0.0
 
     # Setting #threads to parallelize value generation
-    MAX_THREADS = 10
+    MAX_THREADS = 1
+    # Setting snippeet search retrieval limit to 10 passages per paper
+    paper_finder.retriever.n_retrieval = 10
 
     # Step 1: First, we check if the column to be populated is metadata-based.
     if is_metadata == "True":
@@ -181,7 +249,14 @@ def generate_value_suggestions(
         # In addition to answers and costs, we also store corpus IDs for all papers
         # that have answers for the query (i.e., non-N/A values).
         with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            responses = list(executor.map(get_metadata_columns, itertools.repeat(question), results, itertools.repeat(model)))
+            responses = list(executor.map(
+                get_metadata_columns, 
+                itertools.repeat(question), 
+                results, 
+                itertools.repeat(model),
+                itertools.repeat(llm_caller),
+                itertools.repeat(cost_args),
+            ))
             raw_values = {y: x["answer"] if "answer" in x else "N/A" for x,y in zip(responses, corpus_ids)}
             non_na_corpus_ids = [x for x, y in raw_values.items() if y != 'N/A']
             per_cell_costs = {y: x.get("cost", None) for x,y in zip(responses, corpus_ids)}
@@ -205,7 +280,15 @@ def generate_value_suggestions(
         non_na_corpus_ids = []
     
         with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            responses = list(executor.map(run_paper_qa, itertools.repeat(paperqa_query), corpus_ids, itertools.repeat(model)))
+            responses = list(executor.map(
+                run_paper_qa, 
+                itertools.repeat(paperqa_query), 
+                corpus_ids, 
+                itertools.repeat(model),
+                itertools.repeat(paper_finder),
+                itertools.repeat(llm_caller),
+                itertools.repeat(cost_args),
+            ))
             raw_values = {y: x["answer"] if "answer" in x else "No response" for x,y in zip(responses, corpus_ids)}
             non_na_corpus_ids = [x for x, y in raw_values.items() if y != 'N/A']
             evidence_ids = {y: x["evidenceId"] for x,y in zip(responses, corpus_ids) if "evidenceId" in x}
@@ -237,20 +320,3 @@ def generate_value_suggestions(
             cell_values.append(cell_value)
 
     return {"cell_values": cell_values, "cost": per_cell_costs}
-
-# if __name__ == "__main__":
-#     output = generate_value_suggestions(
-#         column_name="Feature Invariance", 
-#         column_def="The degree to which the proposed method is robust to changes in scale, translation, rotation, illumination changes, and perspective transformations. Invariance is crucial for accurate object recognition across different visual conditions. ",
-#         corpus_ids=["5258236", "116997379", "4392433"],
-#     )
-#     print(output["cell_values"])
-#     print(output["cost"])
-#     output = generate_value_suggestions(
-#         column_name="Year", 
-#         column_def="The year of publication of the paper",
-#         corpus_ids=["5258236", "116997379", "4392433"],
-#         is_metadata="True",
-#     )
-#     print(output["cell_values"])
-#     print(output["cost"])
