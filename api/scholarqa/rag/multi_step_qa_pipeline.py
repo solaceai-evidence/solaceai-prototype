@@ -48,7 +48,7 @@ class MultiStepQAPipeline:
         self.llm_model = llm_model
         self.fallback_llm = fallback_llm
         self.batch_workers = batch_workers
-        self.llm_kwargs = llm_kwargs if llm_kwargs else {"max_tokens": 4096}
+        self.llm_kwargs = llm_kwargs if llm_kwargs else {"max_tokens": 4096*4}
 
 
     def step_select_quotes(self, query: str, scored_df: pd.DataFrame, sys_prompt: str) -> Tuple[
