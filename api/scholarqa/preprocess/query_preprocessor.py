@@ -48,13 +48,13 @@ def validate(query: str) -> None:
     logger.info(f"{query} is valid")
 
 
-def decompose_query(query: str, decomposer_llm_model: str) -> Tuple[LLMProcessedQuery, CompletionResult]:
+def decompose_query(query: str, decomposer_llm_model: str, **llm_kwargs) -> Tuple[LLMProcessedQuery, CompletionResult]:
     search_filters = dict()
     decomp_query_res = None
     try:
         # decompose query to get llm re-written and keyword query with filters
         decomp_query_res = llm_completion(user_prompt=query, system_prompt=QUERY_DECOMPOSER_PROMPT,
-                                          model=decomposer_llm_model, max_tokens=4096, response_format=DecomposedQuery)
+                                          model=decomposer_llm_model, response_format=DecomposedQuery, **llm_kwargs)
         decomposed_query = json.loads(decomp_query_res.content)
         decomposed_query = {k: str(v) if type(v) == int else v for k, v in decomposed_query.items()}
         decomposed_query = DecomposedQuery(**decomposed_query)

@@ -44,6 +44,7 @@ class ScholarQA:
             state_mgr: AbsStateMgrClient = None,
             logs_config: LogsConfig = None,
             run_table_generation: bool = True,
+            llm_kwargs: Dict[str, Any] = None,
             **kwargs
     ):
         if logs_config:
@@ -63,9 +64,10 @@ class ScholarQA:
         self.decomposer_llm = kwargs.get("decomposer_llm", self.llm_model)
         self.state_mgr = state_mgr if state_mgr else LocalStateMgrClient(self.logs_config.log_dir)
         self.llm_caller = CostAwareLLMCaller(self.state_mgr)
+        self.llm_kwargs = llm_kwargs if llm_kwargs else dict()
         if not multi_step_pipeline:
             logger.info(f"Creating a new MultiStepQAPipeline with model: {llm_model} for all the steps")
-            self.multi_step_pipeline = MultiStepQAPipeline(self.llm_model, fallback_llm=fallback_llm)
+            self.multi_step_pipeline = MultiStepQAPipeline(self.llm_model, fallback_llm=fallback_llm, **self.llm_kwargs)
         else:
             self.multi_step_pipeline = multi_step_pipeline
 
@@ -98,9 +100,10 @@ class ScholarQA:
             validate(query)
         # Decompose the query to get filters like year, venue, fos, citations, etc along with a re-written
         # version of the query and a query suitable for keyword search.
-
+        llm_args = self.llm_kwargs if self.llm_kwargs else {"max_tokens": 4096*2}
         return self.llm_caller.call_method(
-            cost_args=cost_args, method=decompose_query, query=query, decomposer_llm_model=self.decomposer_llm
+            cost_args=cost_args, method=decompose_query, query=query, decomposer_llm_model=self.decomposer_llm,
+            **llm_args
         )
 
     @traceable(name="Retrieval: Find relevant paper passages for the query")
@@ -559,7 +562,7 @@ class ScholarQA:
                 if section_json["format"] == "list" and section_json["citations"] and self.run_table_generation:
                     cluster_json.result["dimensions"][idx]["idx"] = idx
                     cit_ids = [int(c["paper"]["corpus_id"]) for c in section_json["citations"]]
-                    tthread = self.gen_table_thread(task_id, user_id, query, cluster_json.result["dimensions"][idx], cit_ids,
+                    tthread = self.gen_table_thread(user_id, query, cluster_json.result["dimensions"][idx], cit_ids,
                                                     tables)
                     if tthread:
                         table_threads.append(tthread)
