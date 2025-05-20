@@ -402,7 +402,12 @@ class ScholarQA:
         self.logs_config.task_id = task_id
         logger.info("New task")
         tool_request = ToolRequest(task_id=task_id, query=query, user_id="lib_user")
-        task_result = self.run_qa_pipeline(tool_request, inline_tags)
+        try:
+            task_result = self.run_qa_pipeline(tool_request, inline_tags)
+        except Exception as e:
+            logger.warning(f"Error while running task: {e}, invalidating llm cache and retrying")
+            self.multi_step_pipeline.llm_kwargs["cache"] = {"no-cache": True}
+            task_result = self.run_qa_pipeline(tool_request, inline_tags)
         return task_result.model_dump()
 
     def gen_table_thread(self, user_id: str, query: str, dim: Dict[str, Any],
