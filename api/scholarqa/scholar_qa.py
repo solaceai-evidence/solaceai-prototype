@@ -100,7 +100,9 @@ class ScholarQA:
             validate(query)
         # Decompose the query to get filters like year, venue, fos, citations, etc along with a re-written
         # version of the query and a query suitable for keyword search.
-        llm_args = self.llm_kwargs if self.llm_kwargs else {"max_tokens": 4096*2}
+        llm_args = {"max_tokens": 4096*2}
+        if self.llm_kwargs:
+            llm_args.update(self.llm_kwargs)
         return self.llm_caller.call_method(
             cost_args=cost_args, method=decompose_query, query=query, decomposer_llm_model=self.decomposer_llm,
             **llm_args
