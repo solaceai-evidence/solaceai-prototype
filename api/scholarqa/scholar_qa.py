@@ -588,7 +588,7 @@ class ScholarQA:
         logger.info(f"Adhoc Table generation wait time: {time() - start:.2f}")
 
         for sidx in range(len(json_summary)):
-            json_summary[sidx]["table"] = tables[sidx] if tables[sidx] else None
+            json_summary[sidx]["table"] = tables[sidx].to_dict() if tables[sidx] else None
             generated_sections[sidx].table = tables[sidx] if tables[sidx] else None
         self.postprocess_json_output(json_summary, quotes_meta=quotes_metadata)
         event_trace.trace_summary_event(json_summary, all_sections)

@@ -3,7 +3,7 @@ import logging
 import re
 from collections import namedtuple
 from multiprocessing import Queue
-from typing import Tuple, List
+from typing import Tuple, List, Optional, Union
 
 from litellm import moderation
 from pydantic import BaseModel, Field
@@ -21,7 +21,7 @@ class DecomposedQuery(BaseModel):
     earliest_search_year: str = Field(description="The earliest year to search for papers")
     latest_search_year: str = Field(description="The latest year to search for papers")
     venues: str = Field(description="Comma separated list of venues to search for papers")
-    authors: List[str] = Field(description="List of authors to search for papers")
+    authors: Union[List[str]|str] = Field(description="List of authors to search for papers", default=[])
     field_of_study: str = Field(description="Comma separated list of field of study to search for papers")
     rewritten_query: str = Field(description="The rewritten simplified query")
     rewritten_query_for_keyword_search: str = Field(description="The rewritten query for keyword search")
