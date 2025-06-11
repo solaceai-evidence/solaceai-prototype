@@ -72,6 +72,7 @@ class ScholarQA:
             self.multi_step_pipeline = multi_step_pipeline
 
         self.tool_request = None
+        self.table_llm = kwargs.get("table_llm", self.llm_model)
         self.table_generator = TableGenerator(paper_finder=paper_finder, llm_caller=self.llm_caller)
         self.run_table_generation = run_table_generation
 
@@ -434,8 +435,8 @@ class ScholarQA:
             "query": query,
             "section_title": dim["name"],
             "cit_ids": cit_ids,
-            "column_model": GPT_4o,
-            "value_model": GPT_4o,
+            "column_model": self.table_llm,
+            "value_model": self.table_llm,
         }
         tthread = Thread(target=call_table_generator, args=(dim["idx"], payload,))
         tthread.start()
