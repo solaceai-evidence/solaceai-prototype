@@ -2,7 +2,7 @@ from typing import List, Optional, Any
 
 from nora_lib.tasks.models import AsyncTaskState as BaseAsyncTaskState
 from pydantic import BaseModel, Field
-from table_generation.table_model import TableWidget
+from scholarqa.table_generation.table_model import TableWidget
 
 
 class Author(BaseModel):
