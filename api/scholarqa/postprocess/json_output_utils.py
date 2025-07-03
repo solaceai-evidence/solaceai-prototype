@@ -85,12 +85,14 @@ def pop_ref_data(ref_str_id, ref_corpus_id, fixed_quote, curr_paper_metadata) ->
     curr_ref["paper"] = dict()
     curr_ref["paper"]["corpus_id"] = make_int(ref_corpus_id)
     if curr_paper_metadata:
-        if not (curr_paper_metadata.get("isOpenAccess") and curr_paper_metadata.get("openAccessPdf")):
-            if curr_paper_metadata.get("abstract"):
-                curr_ref["snippets"] = [s for s in curr_ref["snippets"] if
-                                        s[:20] not in curr_paper_metadata["abstract"]]
-            if not curr_ref["snippets"]:
-                curr_ref["snippets"] = ["Please click on the paper title to read the abstract on Semantic Scholar."]
+        #Commenting out the open access check as we switch to s2 api for the open access logic
+
+        # if not (curr_paper_metadata.get("isOpenAccess") and curr_paper_metadata.get("openAccessPdf")):
+        #     if curr_paper_metadata.get("abstract"):
+        #         curr_ref["snippets"] = [s for s in curr_ref["snippets"] if
+        #                                 s[:100] not in curr_paper_metadata["abstract"]]
+        #     if not curr_ref["snippets"]:
+        #         curr_ref["snippets"] = ["Please click on the paper title to read the abstract on Semantic Scholar."]
 
         curr_ref["score"] = curr_paper_metadata.get("relevance_judgement", 0)
         curr_ref["paper"]["title"] = curr_paper_metadata["title"]

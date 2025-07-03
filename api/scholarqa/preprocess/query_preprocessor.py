@@ -3,7 +3,7 @@ import logging
 import re
 from collections import namedtuple
 from multiprocessing import Queue
-from typing import Tuple, List
+from typing import Tuple, List, Optional, Union
 
 from litellm import moderation
 from pydantic import BaseModel, Field
@@ -21,7 +21,7 @@ class DecomposedQuery(BaseModel):
     earliest_search_year: str = Field(description="The earliest year to search for papers")
     latest_search_year: str = Field(description="The latest year to search for papers")
     venues: str = Field(description="Comma separated list of venues to search for papers")
-    authors: List[str] = Field(description="List of authors to search for papers")
+    authors: Union[List[str]|str] = Field(description="List of authors to search for papers", default=[])
     field_of_study: str = Field(description="Comma separated list of field of study to search for papers")
     rewritten_query: str = Field(description="The rewritten simplified query")
     rewritten_query_for_keyword_search: str = Field(description="The rewritten query for keyword search")
@@ -48,13 +48,13 @@ def validate(query: str) -> None:
     logger.info(f"{query} is valid")
 
 
-def decompose_query(query: str, decomposer_llm_model: str) -> Tuple[LLMProcessedQuery, CompletionResult]:
+def decompose_query(query: str, decomposer_llm_model: str, **llm_kwargs) -> Tuple[LLMProcessedQuery, CompletionResult]:
     search_filters = dict()
     decomp_query_res = None
     try:
         # decompose query to get llm re-written and keyword query with filters
         decomp_query_res = llm_completion(user_prompt=query, system_prompt=QUERY_DECOMPOSER_PROMPT,
-                                          model=decomposer_llm_model, max_tokens=4096, response_format=DecomposedQuery)
+                                          model=decomposer_llm_model, response_format=DecomposedQuery, **llm_kwargs)
         decomposed_query = json.loads(decomp_query_res.content)
         decomposed_query = {k: str(v) if type(v) == int else v for k, v in decomposed_query.items()}
         decomposed_query = DecomposedQuery(**decomposed_query)

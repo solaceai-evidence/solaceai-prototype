@@ -2,6 +2,7 @@ from typing import List, Optional, Any
 
 from nora_lib.tasks.models import AsyncTaskState as BaseAsyncTaskState
 from pydantic import BaseModel, Field
+from scholarqa.table_generation.table_model import TableWidget
 
 
 class Author(BaseModel):
@@ -59,7 +60,7 @@ class GeneratedSection(BaseModel):
     citations: List[CitationSrc] = Field(default=None, description=(
         "The citations used in the generated section"
     ))
-    table: Optional[Any] = Field(default=None, description=("Table widget object for sections with list format"))
+    table: Optional[TableWidget] = Field(default=None, description=("Table widget object for sections with list format"))
 
 
 # TODO: define your result data

@@ -44,6 +44,7 @@ class ScholarQA:
             state_mgr: AbsStateMgrClient = None,
             logs_config: LogsConfig = None,
             run_table_generation: bool = True,
+            llm_kwargs: Dict[str, Any] = None,
             **kwargs
     ):
         if logs_config:
@@ -63,13 +64,15 @@ class ScholarQA:
         self.decomposer_llm = kwargs.get("decomposer_llm", self.llm_model)
         self.state_mgr = state_mgr if state_mgr else LocalStateMgrClient(self.logs_config.log_dir)
         self.llm_caller = CostAwareLLMCaller(self.state_mgr)
+        self.llm_kwargs = llm_kwargs if llm_kwargs else dict()
         if not multi_step_pipeline:
             logger.info(f"Creating a new MultiStepQAPipeline with model: {llm_model} for all the steps")
-            self.multi_step_pipeline = MultiStepQAPipeline(self.llm_model, fallback_llm=fallback_llm)
+            self.multi_step_pipeline = MultiStepQAPipeline(self.llm_model, fallback_llm=fallback_llm, **self.llm_kwargs)
         else:
             self.multi_step_pipeline = multi_step_pipeline
 
         self.tool_request = None
+        self.table_llm = kwargs.get("table_llm", self.llm_model)
         self.table_generator = TableGenerator(paper_finder=paper_finder, llm_caller=self.llm_caller)
         self.run_table_generation = run_table_generation
 
@@ -98,9 +101,12 @@ class ScholarQA:
             validate(query)
         # Decompose the query to get filters like year, venue, fos, citations, etc along with a re-written
         # version of the query and a query suitable for keyword search.
-
+        llm_args = {"max_tokens": 4096*2}
+        if self.llm_kwargs:
+            llm_args.update(self.llm_kwargs)
         return self.llm_caller.call_method(
-            cost_args=cost_args, method=decompose_query, query=query, decomposer_llm_model=self.decomposer_llm
+            cost_args=cost_args, method=decompose_query, query=query, decomposer_llm_model=self.decomposer_llm,
+            **llm_args
         )
 
     @traceable(name="Retrieval: Find relevant paper passages for the query")
@@ -397,7 +403,12 @@ class ScholarQA:
         self.logs_config.task_id = task_id
         logger.info("New task")
         tool_request = ToolRequest(task_id=task_id, query=query, user_id="lib_user")
-        task_result = self.run_qa_pipeline(tool_request, inline_tags)
+        try:
+            task_result = self.run_qa_pipeline(tool_request, inline_tags)
+        except Exception as e:
+            logger.warning(f"Error while running task: {e}, invalidating llm cache and retrying")
+            self.multi_step_pipeline.llm_kwargs["cache"] = {"no-cache": True}
+            task_result = self.run_qa_pipeline(tool_request, inline_tags)
         return task_result.model_dump()
 
     def gen_table_thread(self, user_id: str, query: str, dim: Dict[str, Any],
@@ -424,8 +435,8 @@ class ScholarQA:
             "query": query,
             "section_title": dim["name"],
             "cit_ids": cit_ids,
-            "column_model": GPT_4o,
-            "value_model": GPT_4o,
+            "column_model": self.table_llm,
+            "value_model": self.table_llm,
         }
         tthread = Thread(target=call_table_generator, args=(dim["idx"], payload,))
         tthread.start()
@@ -559,7 +570,7 @@ class ScholarQA:
                 if section_json["format"] == "list" and section_json["citations"] and self.run_table_generation:
                     cluster_json.result["dimensions"][idx]["idx"] = idx
                     cit_ids = [int(c["paper"]["corpus_id"]) for c in section_json["citations"]]
-                    tthread = self.gen_table_thread(task_id, user_id, query, cluster_json.result["dimensions"][idx], cit_ids,
+                    tthread = self.gen_table_thread(user_id, query, cluster_json.result["dimensions"][idx], cit_ids,
                                                     tables)
                     if tthread:
                         table_threads.append(tthread)
@@ -578,7 +589,7 @@ class ScholarQA:
         logger.info(f"Adhoc Table generation wait time: {time() - start:.2f}")
 
         for sidx in range(len(json_summary)):
-            json_summary[sidx]["table"] = tables[sidx] if tables[sidx] else None
+            json_summary[sidx]["table"] = tables[sidx].to_dict() if tables[sidx] else None
             generated_sections[sidx].table = tables[sidx] if tables[sidx] else None
         self.postprocess_json_output(json_summary, quotes_meta=quotes_metadata)
         event_trace.trace_summary_event(json_summary, all_sections)
