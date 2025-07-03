@@ -63,6 +63,7 @@ class TableGenerator:
             llm_caller=self.llm_caller,
             column_num=column_num,
         )
+        column_cost = output.get("cost", {})
         
         # Step 2: Create a new table data structure with suggested columns.
         # While creating a column, also create requests to call the value
@@ -119,18 +120,27 @@ class TableGenerator:
             ])
 
         # Step 4: Run value generation requests for all columns in parallel and add cells to the table
+        all_cell_costs = []
         with ThreadPoolExecutor(max_workers=self.max_threads) as executor:
-            new_cells = list(executor.map(
+            output = list(executor.map(
                 self.generate_values,  
                 itertools.repeat(row_id_map),
                 value_gen_requests,
             ))
-            table.cells = {k: v for d in new_cells for k, v in d.items()}
+            for item in output:
+                new_cells = item.get("cells", {})
+                cell_costs = item.get("cost", {})
+                table.cells.update(new_cells)
+                all_cell_costs.append(cell_costs)
 
         if run_subselection:
             table = self.subselect_columns_and_rows(table)
+        final_cost_dict = {
+            "column_cost": column_cost,
+            "cell_cost": all_cell_costs,
+        }
 
-        return table
+        return table, final_cost_dict
     
     """
     Functions to only select a subset of informative 
@@ -203,6 +213,7 @@ class TableGenerator:
         column_id = request.pop("column_id")
         output = generate_value_suggestions(**request)
         generated_values = output.get("cell_values", [])
+        cell_costs = output.get("cost", {})
         table_cells = {}
         for value in generated_values:
             cell_id = f"{row_id_map[int(value['corpusId'])]}_{column_id}"
@@ -213,4 +224,8 @@ class TableGenerator:
                 metadata=value.get('metadata', None),
             )
             table_cells[cell_id] = cell
-        return table_cells
+        output ={
+            "cells": table_cells,
+            "cost": cell_costs, 
+        }
+        return output
