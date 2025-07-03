@@ -192,7 +192,7 @@ def run_paper_qa(
                 "answer": json.loads(output.result.content)["answer"],
                 "corpusId": corpus_id,
                 "source": "vespa-snippets",
-                "evidenceId": json.loads(output.result.content)["exceprts"],
+                "evidenceId": json.loads(output.result.content).get("exceprts", []),
                 "cost": get_cost_object(output.result),
             }
             print(response_simplified)
