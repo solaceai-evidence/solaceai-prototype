@@ -13,4 +13,6 @@ CompletionResult = namedtuple("CompletionCost",
 
 CostReportingArgs = namedtuple("CostReportingArgs", ["task_id", "user_id", "msg_id", "description", "model"])
 
-CostAwareLLMResult = namedtuple("CostAwareLLMResult", ["result", "tot_cost", "models"])
+TokenUsage = namedtuple("TokenUsage", ["input", "output", "total"])
+
+CostAwareLLMResult = namedtuple("CostAwareLLMResult", ["result", "tot_cost", "models", "tokens"])

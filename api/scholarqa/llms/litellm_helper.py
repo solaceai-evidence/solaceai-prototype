@@ -28,11 +28,19 @@ class CostAwareLLMCaller:
         completion_models = [cost.model for cost in completion_costs]
         return result, completion_costs, completion_models
 
+    def parse_usage_args(self, method_result: Union[Tuple[float, TokenUsage], float]) -> Tuple[float, TokenUsage]:
+        if isinstance(method_result, tuple):
+            total_cost, tokens = method_result
+        else:
+            total_cost, tokens = method_result, TokenUsage(input=0, output=0, total=0)
+        return total_cost, tokens
+
     def call_method(self, cost_args: CostReportingArgs, method: Callable, **kwargs) -> CostAwareLLMResult:
         method_result = method(**kwargs)
         result, completion_costs, completion_models = self.parse_result_args(method_result)
-        total_cost = self.state_mgr.report_llm_usage(completion_costs=completion_costs, cost_args=cost_args)
-        return CostAwareLLMResult(result=result, tot_cost=total_cost, models=completion_models)
+        llm_usage = self.state_mgr.report_llm_usage(completion_costs=completion_costs, cost_args=cost_args)
+        total_cost, tokens = self.parse_usage_args(llm_usage)
+        return CostAwareLLMResult(result=result, tot_cost=total_cost, models=completion_models, tokens=tokens)
 
     def call_iter_method(self, cost_args: CostReportingArgs, gen_method: Callable, **kwargs) -> Generator[
         Any, None, CostAwareLLMResult]:
@@ -43,8 +51,9 @@ class CostAwareLLMCaller:
             all_completion_models.extend(completion_models)
             all_results.append(result)
             yield result
-        total_cost = self.state_mgr.report_llm_usage(completion_costs=all_completion_costs, cost_args=cost_args)
-        return CostAwareLLMResult(result=all_results, tot_cost=total_cost, models=all_completion_models)
+        llm_usage = self.state_mgr.report_llm_usage(completion_costs=all_completion_costs, cost_args=cost_args)
+        total_cost, tokens = self.parse_usage_args(llm_usage)
+        return CostAwareLLMResult(result=all_results, tot_cost=total_cost, models=all_completion_models, tokens=tokens)
 
 
 def success_callback(kwargs, completion_response, start_time, end_time):

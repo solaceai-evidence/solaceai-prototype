@@ -1,4 +1,4 @@
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 
 from nora_lib.tasks.models import AsyncTaskState as BaseAsyncTaskState
 from pydantic import BaseModel, Field
@@ -70,6 +70,7 @@ class TaskResult(BaseModel):
         description="The generated iterations of the answer"
     )
     cost: float = Field(description="The overall cost of the task", default=0.0)
+    tokens: Dict[str, int] = Field(description="The tokens used to generate the answer")
 
 
 class ToolResponse(BaseModel):
