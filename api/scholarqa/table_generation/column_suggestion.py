@@ -95,7 +95,8 @@ def generate_attribute_suggestions(
         "tokens": {
             "total": output.result.total_tokens,
             "prompt": output.result.input_tokens,
-            "completion": output.result.output_tokens
+            "completion": output.result.output_tokens,
+            "reasoning": output.result.reasoning_tokens
         },
         "model": output.result.model,
     }

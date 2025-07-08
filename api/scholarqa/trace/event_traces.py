@@ -33,7 +33,7 @@ class EventTrace:
         self.cluster = dict()
         self.summary = dict()
         self.total_cost = 0.0
-        self.tokens = {"input": 0, "output": 0, "total": 0}
+        self.tokens = {"input": 0, "output": 0, "total": 0, "reasoning": 0}
 
     def trace_decomposition_event(self, decomposed_query: CostAwareLLMResult):
         self.decomposed_query = decomposed_query.result._asdict()
@@ -98,6 +98,7 @@ class EventTrace:
                     self.tokens["input"] += column_cost["tokens"]["prompt"]
                     self.tokens["output"] += column_cost["tokens"]["completion"]
                     self.tokens["total"] += column_cost["tokens"]["total"]
+                    self.tokens["reasoning"] += column_cost["tokens"].get("reasoning", 0)
 
                 cell_cost = tcost.get("cell_cost", 0.0)
                 if cell_cost:
@@ -109,6 +110,7 @@ class EventTrace:
                             self.tokens["input"] += v["tokens"]["prompt"]
                             self.tokens["output"] += v["tokens"]["completion"]
                             self.tokens["total"] += v["tokens"]["total"]
+                            self.tokens["reasoning"] += v["tokens"].get("reasoning", 0)
 
 
     def persist_trace(self, logs_config: LogsConfig):

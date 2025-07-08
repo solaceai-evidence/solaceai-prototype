@@ -32,7 +32,7 @@ class CostAwareLLMCaller:
         if isinstance(method_result, tuple):
             total_cost, tokens = method_result
         else:
-            total_cost, tokens = method_result, TokenUsage(input=0, output=0, total=0)
+            total_cost, tokens = method_result, TokenUsage(input=0, output=0, total=0, reasoning=0)
         return total_cost, tokens
 
     def call_method(self, cost_args: CostReportingArgs, method: Callable, **kwargs) -> CostAwareLLMResult:
@@ -90,11 +90,15 @@ def batch_llm_completion(model: str, messages: List[str], system_prompt: str = N
             res_cost = 0.0
 
         res_usage = res.usage
+        reasoning_tokens = 0 if not (res_usage.completion_tokens_details and
+                                     res_usage.completion_tokens_details.reasoning_tokens) else \
+            res_usage.completion_tokens_details.reasoning_tokens
         res_str = res["choices"][0]["message"]["content"].strip()
         cost_tuple = CompletionResult(content=res_str, model=res["model"],
                                       cost=res_cost if not res.get("cache_hit") else 0.0,
                                       input_tokens=res_usage.prompt_tokens,
-                                      output_tokens=res_usage.completion_tokens, total_tokens=res_usage.total_tokens)
+                                      output_tokens=res_usage.completion_tokens, total_tokens=res_usage.total_tokens,
+                                      reasoning_tokens=reasoning_tokens)
         results.append(cost_tuple)
     return results
 
@@ -116,6 +120,9 @@ def llm_completion(user_prompt: str, system_prompt: str = None, fallback=GPT_4o,
         res_cost = 0.0
 
     res_usage = response.usage
+    reasoning_tokens = 0 if not (res_usage.completion_tokens_details and
+                                 res_usage.completion_tokens_details.reasoning_tokens) else \
+        res_usage.completion_tokens_details.reasoning_tokens
     res_str = response["choices"][0]["message"]["content"]
     if res_str is None:
         logger.warning("Content returned as None, checking for response in tool_calls...")
@@ -123,5 +130,6 @@ def llm_completion(user_prompt: str, system_prompt: str = None, fallback=GPT_4o,
     cost_tuple = CompletionResult(content=res_str.strip(), model=response.model,
                                   cost=res_cost if not response.get("cache_hit") else 0.0,
                                   input_tokens=res_usage.prompt_tokens,
-                                  output_tokens=res_usage.completion_tokens, total_tokens=res_usage.total_tokens)
+                                  output_tokens=res_usage.completion_tokens, total_tokens=res_usage.total_tokens,
+                                  reasoning_tokens=reasoning_tokens)
     return cost_tuple

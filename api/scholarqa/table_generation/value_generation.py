@@ -28,7 +28,8 @@ def get_cost_object(completion: CompletionResult) -> dict:
         "tokens": {
             "total": completion.total_tokens,
             "prompt": completion.input_tokens,
-            "completion": completion.output_tokens
+            "completion": completion.output_tokens,
+            "reasoning": completion.reasoning_tokens
         },
         "model": completion.model,
     }

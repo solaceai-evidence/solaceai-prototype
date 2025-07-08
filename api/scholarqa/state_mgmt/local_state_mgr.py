@@ -60,7 +60,8 @@ class LocalStateMgrClient(AbsStateMgrClient):
         token_usage = TokenUsage(
             input=sum([cost.input_tokens for cost in completion_costs]),
             output=sum([cost.output_tokens for cost in completion_costs]),
-            total=sum([cost.total_tokens for cost in completion_costs])
+            total=sum([cost.total_tokens for cost in completion_costs]),
+            reasoning=sum([cost.reasoning_tokens for cost in completion_costs])
         )
         return tot_cost, token_usage
 
