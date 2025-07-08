@@ -82,13 +82,34 @@ class EventTrace:
             quote_obj["inline_citations"] = paper_summaries_extd[quote_obj["key"]].get("inline_citations", dict())
             quote_obj["metadata"] = quotes_metadata.get(quote_obj["key"], [])
 
-    def trace_summary_event(self, json_summary: List[Dict[str, Any]], cost_result: CostAwareLLMResult):
-        self.summary = {"sections": json_summary, "cost": cost_result.tot_cost, "tokens": cost_result.tokens._asdict()}
+    def trace_summary_event(self, json_summary: List[Dict[str, Any]], cost_result: CostAwareLLMResult, tab_costs: List[Dict] = None):
+        self.summary = {"sections": json_summary, "cost": cost_result.tot_cost, "tokens": cost_result.tokens._asdict(), "table_costs": tab_costs}
         for idx, section in enumerate(self.summary["sections"]):
             section["model"] = cost_result.models[idx]
         self.total_cost += cost_result.tot_cost
         for k, v in self.tokens.items():
             self.tokens[k] += self.summary["tokens"][k]
+
+        if tab_costs:
+            for tcost in tab_costs:
+                column_cost = tcost.get("column_cost", 0.0)
+                if column_cost:
+                    self.total_cost += column_cost["cost_value"]
+                    self.tokens["input"] += column_cost["tokens"]["prompt"]
+                    self.tokens["output"] += column_cost["tokens"]["completion"]
+                    self.tokens["total"] += column_cost["tokens"]["total"]
+
+                cell_cost = tcost.get("cell_cost", 0.0)
+                if cell_cost:
+                    for ccost in cell_cost:
+                        if not isinstance(ccost, dict):
+                            continue
+                        for v in ccost.values():
+                            self.total_cost += v["cost_value"]
+                            self.tokens["input"] += v["tokens"]["prompt"]
+                            self.tokens["output"] += v["tokens"]["completion"]
+                            self.tokens["total"] += v["tokens"]["total"]
+
 
     def persist_trace(self, logs_config: LogsConfig):
         trace_writer = GCSWriter(bucket_name=logs_config.event_trace_loc) if logs_config.tracing_mode == "gcs" \
