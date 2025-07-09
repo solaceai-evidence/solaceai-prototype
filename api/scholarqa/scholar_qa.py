@@ -426,7 +426,7 @@ class ScholarQA:
                 column_model=payload["column_model"],
                 value_model=payload["value_model"],
             )
-            tlist[dim["idx"]] = table
+            tlist[dim["idx"]] = (table, costs)
             
         task_id = self.task_id if self.task_id else self.tool_request.task_id
         payload = {
@@ -587,11 +587,18 @@ class ScholarQA:
         for tthread in table_threads:
             tthread.join()
         logger.info(f"Adhoc Table generation wait time: {time() - start:.2f}")
-
+        tcosts = []
         for sidx in range(len(json_summary)):
-            json_summary[sidx]["table"] = tables[sidx].to_dict() if tables[sidx] else None
-            generated_sections[sidx].table = tables[sidx] if tables[sidx] else None
+            tables_val = None
+            if tables[sidx]:
+                if type(tables[sidx]) == tuple:
+                    tables_val, tcost = tables[sidx]
+                    tcosts.append(tcost)
+                else:
+                    tables_val = tables[sidx]
+            json_summary[sidx]["table"] = tables_val.to_dict() if tables_val else None
+            generated_sections[sidx].table = tables_val if tables_val else None
         self.postprocess_json_output(json_summary, quotes_meta=quotes_metadata)
-        event_trace.trace_summary_event(json_summary, all_sections)
+        event_trace.trace_summary_event(json_summary, all_sections, tcosts)
         event_trace.persist_trace(self.logs_config)
-        return TaskResult(sections=generated_sections, cost=event_trace.total_cost)
+        return TaskResult(sections=generated_sections, cost=event_trace.total_cost, tokens=event_trace.tokens)

@@ -28,7 +28,8 @@ def get_cost_object(completion: CompletionResult) -> dict:
         "tokens": {
             "total": completion.total_tokens,
             "prompt": completion.input_tokens,
-            "completion": completion.output_tokens
+            "completion": completion.output_tokens,
+            "reasoning": completion.reasoning_tokens
         },
         "model": completion.model,
     }
@@ -186,7 +187,7 @@ def run_paper_qa(
                 method=llm_completion,
                 **value_generation_params,
             )
-            print(json.loads(output.result.content))
+            # print(json.loads(output.result.content))
             response_simplified = {
                 "question": question,
                 "answer": json.loads(output.result.content)["answer"],
@@ -195,7 +196,7 @@ def run_paper_qa(
                 "evidenceId": json.loads(output.result.content).get("exceprts", []),
                 "cost": get_cost_object(output.result),
             }
-            print(response_simplified)
+            # print(response_simplified)
         else:
             response, cost = get_value_from_abstract(
                 question=question, 

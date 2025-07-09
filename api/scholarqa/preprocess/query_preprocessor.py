@@ -8,7 +8,8 @@ from typing import Tuple, List, Optional, Union
 from litellm import moderation
 from pydantic import BaseModel, Field
 
-from scholarqa.llms.litellm_helper import llm_completion, CompletionResult
+from scholarqa.llms.litellm_helper import llm_completion
+from scholarqa.llms.constants import CompletionResult
 from scholarqa.llms.prompts import QUERY_DECOMPOSER_PROMPT
 
 logger = logging.getLogger(__name__)
