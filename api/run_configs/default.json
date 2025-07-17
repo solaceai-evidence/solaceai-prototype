@@ -21,7 +21,7 @@
       "context_threshold": 0.5
     },
     "pipeline_args": {
-      "validate": true,
+      "validate": false,
       "llm": "anthropic/claude-3-7-sonnet-20250219",
       "fallback_llm": "openai/gpt-4o",
       "decomposer_llm": "anthropic/claude-3-7-sonnet-20250219"
