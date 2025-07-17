@@ -14,8 +14,11 @@ ENV WATCHFILES_FORCE_POLLING true
 
 # Install Python dependencies
 COPY requirements.txt .
+COPY reranker_requirements.txt .
 RUN pip install -U pip
 RUN pip install -r requirements.txt
+RUN pip install -r reranker_requirements.txt
+RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
 
 ENV PYTHONPATH /api
 # Copy over the source code
