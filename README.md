@@ -1,4 +1,3 @@
-
 # Ai2 Scholar QA
 
 <img width="1050" alt="image" src="https://github.com/user-attachments/assets/2d7ccc15-2cd8-4316-bec6-ed2a1509f27b" />
@@ -26,59 +25,59 @@
 
 This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and can be run as local docker containers or embedded into another application as a [python package](https://pypi.org/project/ai2-scholar-qa).
 
-
-
-
 - [Ai2 Scholar QA](#ai2-scholar-qa)
-    + [Overview](#overview)
-      - [Retrieval:](#retrieval)
-      - [Multi-step Generation:](#multi-step-generation)
-    + [Setup](#common-setup)
-      - [Environment Variables](#environment-variables)
-    + [Webapp](#web-app)
-      - [Application Configuration](#application-configuration)
-      - [docker-compose.yaml](#docker-composeyaml)
-      - [Running the Webapp](#running-the-webapp)
-      - [Startup](#startup)
-      - [UI](#ui)
-      - [Backend](#backend)
-    + [Async API](#async-api)
-    + [Python Package](#python-package)
-    + [Custom Pipeline](#custom-pipeline)
-      - [API end points](#api-end-points)
-      - [ScholarQA class](#scholarqa-class)
-      - [Pipeline Components](#pipeline-components)
-    + [Citation](#citation)
+
+  - [Overview](#overview)
+    - [Retrieval:](#retrieval)
+    - [Multi-step Generation:](#multi-step-generation)
+  - [Setup](#common-setup)
+    - [Environment Variables](#environment-variables)
+  - [Webapp](#web-app)
+    - [Application Configuration](#application-configuration)
+    - [docker-compose.yaml](#docker-composeyaml)
+    - [Running the Webapp](#running-the-webapp)
+    - [Startup](#startup)
+    - [UI](#ui)
+    - [Backend](#backend)
+  - [Async API](#async-api)
+  - [Python Package](#python-package)
+  - [Custom Pipeline](#custom-pipeline)
+    - [API end points](#api-end-points)
+    - [ScholarQA class](#scholarqa-class)
+    - [Pipeline Components](#pipeline-components)
+  - [Citation](#citation)
 
 - ### Overview
 
 ![image](https://github.com/user-attachments/assets/f5824b8e-8c9e-4c12-8a40-efb62b9e5e58)
-  
-Ai2 Scholar QA is a system for answering scientific queries and generating literature reviews by gathering evidence from multiple documents across our corpus (11M+ full text and 100M+ abstracts) and synthesizing an organized report with evidence for each claim. Based on the RAG architecture, Scholar QA has a retrieval component and a three step generator pipeline. 
 
-* #### Retrieval: 
-    The retrieval component consists of two sub-components:
-  
-    i. _Retriever_ - Based on the user query, relevant evidence passages are fetched using the Semantic Scholar public api's snippet/search end point which looks up an index of open source papers. Further, we also use the api's keyword search to suppliement the results from the index with paper abstracts. The user query is first pre-processed to extract metadata for filtering the candidate papers and re-phrasing the query as needed with the help of an LLM - [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L221).
+Ai2 Scholar QA is a system for answering scientific queries and generating literature reviews by gathering evidence from multiple documents across our corpus (11M+ full text and 100M+ abstracts) and synthesizing an organized report with evidence for each claim. Based on the RAG architecture, Scholar QA has a retrieval component and a three step generator pipeline.
+
+- #### Retrieval:
+
+  The retrieval component consists of two sub-components:
+
+  i. _Retriever_ - Based on the user query, relevant evidence passages are fetched using the Semantic Scholar public api's snippet/search end point which looks up an index of open source papers. Further, we also use the api's keyword search to suppliement the results from the index with paper abstracts. The user query is first pre-processed to extract metadata for filtering the candidate papers and re-phrasing the query as needed with the help of an LLM - [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L221).
 
   ii. _Reranker_ - The results from the retriever are then reranked with [mixedbread-ai/mxbai-rerank-large-v1](https://huggingface.co/mixedbread-ai/mxbai-rerank-large-v1) and top k passages are retained and aggregated at the paper-level to combine all the passages from a single paper.
-  
+
 These components are encapsulated in the [PaperFinder](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/rag/retrieval.py#L21) class.
 
-* #### Multi-step Generation:
+- #### Multi-step Generation:
+
   The generation pipeline uses an LLM (Claude Sonnet 3.7 default) and comprises of three steps:
 
   i. _Quote Extraction_ - The user query along with the aggregated passages from the retrieval component are used to extract the exact quotes relevant to answering the query - [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L2) .
 
   ii. _Planning and Clustering_ - First, an organization outline is generated for the report with sections headings and the corresponding format of the section. The quotes from step (i) are clustered and assigned to each heading - [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L52).
 
-  iii. _Summary Generation_ -  Each section is generated based on the quotes assigned to that section and all the prior section text generated in the report - [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L97).
-  
-  These steps are encapsulated in the [MultiStepQAPipeline](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/rag/multi_step_qa_pipeline.py#L50C7-L50C26) class. For sections that are determined to have a list format, we also generate literature review tables that compare and contrast all papers referenced in that section. We generate these tables using the pipeline proposed by the [ArxivDIGESTables paper](https://arxiv.org/pdf/2410.22360), which is available [here](https://github.com/bnewm0609/arxivDIGESTables/tree/main). 
+  iii. _Summary Generation_ - Each section is generated based on the quotes assigned to that section and all the prior section text generated in the report - [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L97).
+
+  These steps are encapsulated in the [MultiStepQAPipeline](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/rag/multi_step_qa_pipeline.py#L50C7-L50C26) class. For sections that are determined to have a list format, we also generate literature review tables that compare and contrast all papers referenced in that section. We generate these tables using the pipeline proposed by the [ArxivDIGESTables paper](https://arxiv.org/pdf/2410.22360), which is available [here](https://github.com/bnewm0609/arxivDIGESTables/tree/main).
 
 Both PaperFinder and MultiStepQAPipeline are in turn wrapped inside [ScholarQA](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/scholar_qa.py#L27), which is the main class powering our system.
 
-  For more info please refer to our [blogpost](allenai.org/blog/ai2-scholarqa).
+For more info please refer to our [blogpost](allenai.org/blog/ai2-scholarqa).
 
 The code is in this repo can be used as a Dockerized web app, an Async API or as a Python library. We start with the common configuration setup required for both the modes and then describe each mode separately below.
 
@@ -86,28 +85,29 @@ The code is in this repo can be used as a Dockerized web app, an Async API or as
 
 * #### Environment Variables
 
-Ai2 Scholar QA requires Semantic Scholar api and LLMs for its core functionality of retrieval and generation. So please ensure to create a ``.env``  file in the root directory with OR include in your runtime environment directly the following variables:
+Ai2 Scholar QA requires Semantic Scholar api and LLMs for its core functionality of retrieval and generation. So please ensure to create a `.env` file in the root directory with OR include in your runtime environment directly the following variables:
 
 ```
-export S2_API_KEY=  
+export S2_API_KEY=
 export ANTHROPIC_API_KEY=
 export OPENAI_API_KEY=
 ```
 
-``S2_API_KEY`` : Used to retrieve the relevant [paper passages](https://api.semanticscholar.org/api-docs/#tag/Snippet-Text/operation/get_snippet_search) , [keyword search results](https://api.semanticscholar.org/api-docs/#tag/Paper-Data/operation/get_graph_paper_relevance_search) and [associated metadata](https://api.semanticscholar.org/api-docs/#tag/Paper-Data/operation/post_graph_get_papers) via the Semantic Scholar public api.
+`S2_API_KEY` : Used to retrieve the relevant [paper passages](https://api.semanticscholar.org/api-docs/#tag/Snippet-Text/operation/get_snippet_search) , [keyword search results](https://api.semanticscholar.org/api-docs/#tag/Paper-Data/operation/get_graph_paper_relevance_search) and [associated metadata](https://api.semanticscholar.org/api-docs/#tag/Paper-Data/operation/post_graph_get_papers) via the Semantic Scholar public api.
 
-``ANTHROPIC_API_KEY`` : Ai2 Scholar QA uses Anthropic's [Claude 3.7 Sonnet](https://www.anthropic.com/news/claude-3-7-sonnet) as the primary LLM for generation, but any model served by litellm from the providers listed [here](https://docs.litellm.ai/docs/completion/json_mode#pass-in-json_schema) will work. Please configure the corresponding api key here.
-`OPENAI_API_KEY`: OpenAI's [GPT 4o](https://openai.com/index/gpt-4o-and-more-tools-to-chatgpt-free/) is configured as the fallback llm. 
+`ANTHROPIC_API_KEY` : Ai2 Scholar QA uses Anthropic's [Claude 3.7 Sonnet](https://www.anthropic.com/news/claude-3-7-sonnet) as the primary LLM for generation, but any model served by litellm from the providers listed [here](https://docs.litellm.ai/docs/completion/json_mode#pass-in-json_schema) will work. Please configure the corresponding api key here.
+`OPENAI_API_KEY`: OpenAI's [GPT 4o](https://openai.com/index/gpt-4o-and-more-tools-to-chatgpt-free/) is configured as the fallback llm.
 
-**Note:** We also use OpenAI's [text moderation api](https://platform.openai.com/docs/guides/moderation/overview#:~:text=The%20moderation%20endpoint%20is%20free%20to%20use%20when%20monitoring%20the%20inputs%20and%20outputs%20of%20OpenAI%20APIs.%20We%20currently%20disallow%20other%20use%20cases.)  to validate and filter harmful queries. If you don't have access to an OpenAI api key, this feature will be disabled.
+**Note:** We also use OpenAI's [text moderation api](https://platform.openai.com/docs/guides/moderation/overview#:~:text=The%20moderation%20endpoint%20is%20free%20to%20use%20when%20monitoring%20the%20inputs%20and%20outputs%20of%20OpenAI%20APIs.%20We%20currently%20disallow%20other%20use%20cases.) to validate and filter harmful queries. If you don't have access to an OpenAI api key, this feature will be disabled.
 
 If you use [Modal](https://modal.com/) to serve your models, please configure `MODAL_TOKEN` and `MODAL_TOKEN_SECRET` here as well.
 
 - ### Web App
 
 * #### Application Configuration
-The web app is initialized with a json config outlining the logging and pipeline attributes to be used at runtime. 
-Please refer to [default.json](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/run_configs/default.json) for the default runtime config.
+  The web app is initialized with a json config outlining the logging and pipeline attributes to be used at runtime.
+  Please refer to [default.json](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/run_configs/default.json) for the default runtime config.
+
 ```json
 {
   "logs": {
@@ -146,6 +146,7 @@ The config is used to populate the [AppConfig](https://github.com/allenai/ai2-sc
 It wraps the logging and pipeline instances which are initialized with the config and are outlined below:
 
 **Logging**
+
 ```python
 class LogsConfig(BaseModel):
     log_dir: str = Field(default="logs", description="Directory to store logs, event traces and litellm cache")
@@ -155,22 +156,23 @@ class LogsConfig(BaseModel):
     tracing_mode: Literal["local", "gcs"] = Field(default="local",
                                                   description="Mode to store event traces (local or gcs)")
 ```
+
 **Note:**
 
-  i. Event Traces are json documents containing a trace of the entire
-  pipeline i.e. the results of retrieval, reranking, each step of the qa
-  pipeline and associated costs, if any.
- 
-  ii. llm_cache_dir is used to initialize the local disk cache for caching llm calls via [litellm](https://docs.litellm.ai/docs/caching/all_caches).
+i. Event Traces are json documents containing a trace of the entire
+pipeline i.e. the results of retrieval, reranking, each step of the qa
+pipeline and associated costs, if any.
 
-  iii. The traces are stored locally in `{log_dir}/{event_trace_loc}` by
-  default. They can also be persisted in a Google Cloud Storage (GCS)
-  bucket. Please set the `tracing_mode="gcs"` and `event_trace_loc=<GCS
-  bucket name>`  here and the `export
+ii. llm_cache_dir is used to initialize the local disk cache for caching llm calls via [litellm](https://docs.litellm.ai/docs/caching/all_caches).
+
+iii. The traces are stored locally in `{log_dir}/{event_trace_loc}` by
+default. They can also be persisted in a Google Cloud Storage (GCS)
+bucket. Please set the `tracing_mode="gcs"` and `event_trace_loc=<GCS
+  bucket name>` here and the `export
   GOOGLE_APPLICATION_CREDENTIALS=<Service Account Key json file path>`
-  in .`env`.
+in .`env`.
 
-  iv. By default, the working directory is `./api` , so the `log_dir` will be created inside it as a sub-directory unless the config is modified.
+iv. By default, the working directory is `./api` , so the `log_dir` will be created inside it as a sub-directory unless the config is modified.
 
 You can also activate Langsmith based log traces if you have an api key configured.
 Please add the following environment variables:
@@ -182,10 +184,10 @@ LANGCHAIN_ENDPOINT
 LANGCHAIN_PROJECT
 ```
 
-
 **Pipeline**
+
 ```python
-class RunConfig(BaseModel):  
+class RunConfig(BaseModel):
     retrieval_service: str = Field(default="public_api", description="Service to use for paper retrieval")
     retriever_args: dict = Field(default=None, description="Arguments for the retrieval service")
     reranker_service: str = Field(default="modal", description="Service to use for paper reranking")
@@ -196,40 +198,42 @@ class RunConfig(BaseModel):
 
 **Note:**
 
-  i. `*(retrieval, reranker)_service` can be used to indicate the type
-   of retrieval/reranker you want to instantiate. Ai2 Scholar QA uses the
-   `FullTextRetriever` and `ModalReranker` respectively, which are chosen based on the
-   default  `public_api` and `modal` config values respectively. To choose a
-   SentenceTransformers reranker, replace `modal` with `cross_encoder` or
-   `biencoder` or define your own types.
- 
-  ii. `*(retriever, reranker, paper_finder, pipeline)_args` are used to
-   initialize the corresponding instances of the pipeline components. eg.
-   ``retriever = FullTextRetriever(**run_config.retriever_args)``. You
-   can initialize multiple runs and customize your pipeline.
+i. `*(retrieval, reranker)_service` can be used to indicate the type
+of retrieval/reranker you want to instantiate. Ai2 Scholar QA uses the
+`FullTextRetriever` and `ModalReranker` respectively, which are chosen based on the
+default `public_api` and `modal` config values respectively. To choose a
+SentenceTransformers reranker, replace `modal` with `cross_encoder` or
+`biencoder` or define your own types.
 
-  iii.  If the `reranker_args` are not defined, the app resorts to using only the retrieval service.
+ii. `*(retriever, reranker, paper_finder, pipeline)_args` are used to
+initialize the corresponding instances of the pipeline components. eg.
+`retriever = FullTextRetriever(**run_config.retriever_args)`. You
+can initialize multiple runs and customize your pipeline.
 
-* #### docker-compose.yaml
-The web app initializes 4 docker containers - one each for the API, GUI, nginx proxy and sonar with their own Dockerfiles.
-The api container config can also be used to declare environment variables - 
+iii. If the `reranker_args` are not defined, the app resorts to using only the retrieval service.
+
+- #### docker-compose.yaml
+  The web app initializes 4 docker containers - one each for the API, GUI, nginx proxy and sonar with their own Dockerfiles.
+  The api container config can also be used to declare environment variables -
+
 ```yaml
-api:  
-build: ./api  
-volumes:  
-- ./api:/api  
-- ./secret:/secret  
-environment:  
-# This ensures that errors are printed as they occur, which  
-# makes debugging easier.  
-- PYTHONUNBUFFERED=1  
-- LOG_LEVEL=INFO
-- CONFIG_PATH=run_configs/default.json  
-ports:  
-- 8000:8000  
-env_file:  
-- .env
+api:
+build: ./api
+volumes:
+  - ./api:/api
+  - ./secret:/secret
+environment:
+  # This ensures that errors are printed as they occur, which
+  # makes debugging easier.
+  - PYTHONUNBUFFERED=1
+  - LOG_LEVEL=INFO
+  - CONFIG_PATH=run_configs/default.json
+ports:
+  - 8000:8000
+env_file:
+  - .env
 ```
+
 `environment.CONFIG_PATH` indicates the path of the application configuration json file.
 `env_file` indicates the path of the file with environment variables.
 
@@ -239,11 +243,14 @@ Please refer to [DOCKER.md](https://github.com/allenai/ai2-scholarqa-lib/blob/ma
 for more info on setting up the docker app.
 
 i. Clone the repo
+
 ```bash
-git clone git@github.com:allenai/ai2-scholarqa-lib.git
-cd ai2-scholarqa-lib
+git clone git@github.com:solaceai-evidence/solaceai-prototype.git
+cd solaceai-prototype
 ```
+
 ii. Run docker-compose
+
 ```bash
 docker compose up --build
 ```
@@ -254,6 +261,7 @@ You can get the verbose output with the following command:
 ```bash
 docker compose build --progress plain
 ```
+
 Below we show videos of app startup, the UI and also backend logging while processing a user query.
 
 #### Startup
@@ -269,7 +277,7 @@ https://github.com/user-attachments/assets/baed8710-2161-4fbf-b713-3a2dcf46ac61
 https://github.com/user-attachments/assets/f9a1b39f-36c8-41c4-a0ac-10046ded0593
 
 - ### Async API
-The Ai2 Scholar QA UI is powered by an async api at the back end in [app.py](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/scholarqa/app.py) which is run from [dev.sh](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/dev.sh).
+  The Ai2 Scholar QA UI is powered by an async api at the back end in [app.py](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/scholarqa/app.py) which is run from [dev.sh](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/dev.sh).
 
 i. The `query_corpusqa` end point is first called with the `query`, and a uuid as the `user_id`, adn it returns a `task_id`.
 
@@ -279,8 +287,7 @@ i. The `query_corpusqa` end point is first called with the `query`, and a uuid a
 
 ii. Subsequently, the `query_corpusqa` is then polled to get the updated status of the async task until the task status is not `COMPLETED`
 
-[Sample response](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/sample_response) 
-
+[Sample response](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/sample_response)
 
 - ### Python Package
 
@@ -311,7 +318,7 @@ reranker = CrossEncoderScores(model_name_or_path="mixedbread-ai/mxbai-rerank-lar
 
 
 #Reranker if deployed on Modal, modal_app_name and modal_api_name are modal specific arguments.
-#Please refer https://github.com/allenai/ai2-scholarqa-lib/blob/aps/readme_fixes/docs/MODAL.md for more info 
+#Please refer https://github.com/allenai/ai2-scholarqa-lib/blob/aps/readme_fixes/docs/MODAL.md for more info
 reranker = ModalReranker(app_name='<modal_app_name>', api_name='<modal_api_name>', batch_size=256, gen_options=dict())
 
 #wraps around the retriever with `retrieve_passages()` and `retrieve_additional_papers()`, and reranker with rerank()
@@ -377,16 +384,18 @@ answer = list(scholar_qa.step_gen_iterative_summary(query, per_paper_summaries_e
 ```
 
 - ### Custom Pipeline
+
 * #### API end points
+
   The api end points in app.py can be extended with a fastapi APIRouter in another script.
   eg. `custom_app.py`
-  
+
   ```python
   from fastapi import APIRouter, FastAPI
   from scholarqa.app import create_app as create_app_base
   from scholarqa.app import app_config
   from scholarqa.models import ToolRequest
-  
+
   def create_app() -> FastAPI:
     app = create_app_base()
     custom_router = APIRouter()
@@ -407,19 +416,21 @@ answer = list(scholar_qa.step_gen_iterative_summary(query, per_paper_summaries_e
   To run `custom_app.py`, simply replace `scholarqa.app:create_app` in dev.sh with `<package>.custom_app:create_app`
 
 * #### ScholarQA class
+
   To extend the existing ScholarQA functionality in a new class you can either create a sub class of ScholarQA or a new class altogether.
   Either way, `lazy_load_scholarqa` in app.py should be reimplemented in the new api script to ensure the correct class is initialized.
 
 * #### Pipeline Components
+
   The components of the pipeline are individually extensible.
   We have the following abstract classes that can be extended to achieve desired customization for retrieval:
-  
+
   - [AbstractRetriever](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/retriever_base.py#L10)
   - [AbstractReranker](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/reranker/reranker_base.py#L15)
   - [AbsPaperFinder](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/retrieval.py#L14)
 
   and the MultiStepQAPipeline can be extended/modified as needed for generation.
-  
+
 * #### Modal deployment
   If you would prefer to serve your models via modal, please refer to [MODAL.md](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/MODAL.md) for more info and sample code that we used to deploy the reranker model in the live demo.
 
@@ -432,4 +443,3 @@ answer = list(scholar_qa.step_gen_iterative_summary(query, per_paper_summaries_e
   year={2025},
   url={https://api.semanticscholar.org/CorpusID:277786810}
   ```
-
