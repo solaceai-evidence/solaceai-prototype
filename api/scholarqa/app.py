@@ -16,7 +16,7 @@ from scholarqa.models import (
     TaskResult,
     ToolRequest,
     ToolResponse,
-    TaskStep
+    TaskStep,
 )
 from scholarqa.rag.reranker.modal_engine import ModalReranker
 from scholarqa.rag.reranker.reranker_base import RERANKER_MAPPING
@@ -44,13 +44,23 @@ def lazy_load_state_mgr_client():
 def lazy_load_scholarqa(task_id: str, sqa_class: Type[T] = ScholarQA, **sqa_args) -> T:
     retriever = FullTextRetriever(**run_config.retriever_args)
     if run_config.reranker_args:
-        reranker = RERANKER_MAPPING[run_config.reranker_service](**run_config.reranker_args)
-        paper_finder = PaperFinderWithReranker(retriever, reranker, **run_config.paper_finder_args)
+        reranker = RERANKER_MAPPING[run_config.reranker_service](
+            **run_config.reranker_args
+        )
+        paper_finder = PaperFinderWithReranker(
+            retriever, reranker, **run_config.paper_finder_args
+        )
     else:
         paper_finder = PaperFinder(retriever, **run_config.paper_finder_args)
 
-    return sqa_class(paper_finder=paper_finder, task_id=task_id, state_mgr=app_config.state_mgr_client,
-                     logs_config=logs_config, **run_config.pipeline_args, **sqa_args)
+    return sqa_class(
+        paper_finder=paper_finder,
+        task_id=task_id,
+        state_mgr=app_config.state_mgr_client,
+        logs_config=logs_config,
+        **run_config.pipeline_args,
+        **sqa_args,
+    )
 
 
 # setup logging config and local litellm cache
@@ -87,9 +97,7 @@ def _estimate_task_length(tool_request: ToolRequest) -> str:
     update on async tasks. This can just be a static guess, but you
     have access to the request if you want to do something fancier.
     """
-    return (
-        "~3 minutes"
-    )
+    return "~3 minutes"
 
 
 ###########################################################################
@@ -98,7 +106,7 @@ def _estimate_task_length(tool_request: ToolRequest) -> str:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(root_path="/api")
+    app = FastAPI()
 
     @app.get("/")
     def root(request: Request):
@@ -110,7 +118,7 @@ def create_app() -> FastAPI:
 
     @app.post("/query_corpusqa")
     def use_tool(
-            tool_request: ToolRequest,
+        tool_request: ToolRequest,
     ) -> Union[AsyncToolResponse, ToolResponse]:
         if not app_config.state_mgr_client:
             app_config.state_mgr_client = lazy_load_state_mgr_client()
@@ -131,8 +139,9 @@ def create_app() -> FastAPI:
             estimated_time=estimated_time,
             task_status=TASK_STATUSES["STARTED"],
             task_result=None,
-            steps=[started_task_step]
+            steps=[started_task_step],
         )
+
     app.state.use_tool_fn = use_tool
     return app
 
@@ -142,15 +151,21 @@ def _start_async_task(task_id: str, tool_request: ToolRequest) -> str:
     estimated_time = _estimate_task_length(tool_request)
     tool_request.task_id = task_id
     task_state_manager = app_config.state_mgr_client.get_state_mgr(tool_request)
-    started_task_step = TaskStep(description=TASK_STATUSES["STARTED"], start_timestamp=time(),
-                                 estimated_timestamp=time() + TIMEOUT)
+    started_task_step = TaskStep(
+        description=TASK_STATUSES["STARTED"],
+        start_timestamp=time(),
+        estimated_timestamp=time() + TIMEOUT,
+    )
     task_state = AsyncTaskState(
         task_id=task_id,
         estimated_time=estimated_time,
         task_status=TASK_STATUSES["STARTED"],
         task_result=None,
-        extra_state={"query": tool_request.query, "start": time(),
-                     "steps": [started_task_step]},
+        extra_state={
+            "query": tool_request.query,
+            "start": time(),
+            "steps": [started_task_step],
+        },
     )
     task_state_manager.write_state(task_state)
 
@@ -182,7 +197,7 @@ def _start_async_task(task_id: str, tool_request: ToolRequest) -> str:
 
 
 def _handle_async_task_check_in(
-        tool_req: ToolRequest,
+    tool_req: ToolRequest,
 ) -> Union[ToolResponse | AsyncToolResponse]:
     """
     For tasks that will take a while to complete, we issue a task id
@@ -231,31 +246,42 @@ def _handle_async_task_check_in(
 
         if "start" in task_state.extra_state and "end" in task_state.extra_state:
             try:
-                cost = task_state.task_result["cost"] if type(
-                    task_state.task_result) == dict else task_state.task_result.cost
+                cost = (
+                    task_state.task_result["cost"]
+                    if type(task_state.task_result) == dict
+                    else task_state.task_result.cost
+                )
             except Exception as e:
-                logger.warning(f"Error occurred while parsing cost from the response: {e}")
+                logger.warning(
+                    f"Error occurred while parsing cost from the response: {e}"
+                )
                 cost = 0.0
             logger.info(
                 f"completed in {task_state.extra_state['end'] - task_state.extra_state['start']} seconds, "
-                f"cost: ${cost}")
+                f"cost: ${cost}"
+            )
         return ToolResponse(
             task_id=task_state.task_id,
             query=task_state.extra_state["query"],
             task_result=task_state.task_result,
         )
 
-    if task_state.task_status not in {TASK_STATUSES["COMPLETED"],
-                                      TASK_STATUSES["FAILED"]} and "start" in task_state.extra_state:
+    if (
+        task_state.task_status
+        not in {TASK_STATUSES["COMPLETED"], TASK_STATUSES["FAILED"]}
+        and "start" in task_state.extra_state
+    ):
         elapsed = time() - task_state.extra_state["start"]
         if elapsed > TIMEOUT:
             task_state.task_status = TASK_STATUSES["FAILED"]
             task_state.extra_state["error"] = f"Task timed out after {TIMEOUT} seconds"
             task_state_manager.write_state(task_state)
-            logger.info(f"timed out after {time() - task_state.extra_state['start']} seconds.")
+            logger.info(
+                f"timed out after {time() - task_state.extra_state['start']} seconds."
+            )
             raise HTTPException(
-                status_code=500,
-                detail=f"Task timed out after {TIMEOUT} seconds.")
+                status_code=500, detail=f"Task timed out after {TIMEOUT} seconds."
+            )
 
     return AsyncToolResponse(
         task_id=task_state.task_id,
