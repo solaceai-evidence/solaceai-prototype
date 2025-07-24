@@ -7,14 +7,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 #Help generate the rest of the file
-name = "ai2-scholar-qa"
-version = "0.6.15"
+name = "solaceai-prototype"
+version = "0.7.0"
 readme = "README.md"
 license = {text = 'Apache-2.0'}
 description = "Python package to embed the Ai2 Scholar QA functionality in another application"
 authors = [{ name = "Amanpreet Singh", email = "amanpreets@allenai.org" },
            { name = "Sergey Feldman", email = "sergey@allenai.org"},
-            { name = "Joseph Chang", email = "josephc@allenai.org"}]
+            { name = "Joseph Chang", email = "josephc@allenai.org"},
+            { name = "Jesus Dominguez", email = "jesus.dominguez@kcl.ac.uk"}]
 
 dependencies = [
     "fastapi==0.115.8",
@@ -24,7 +25,7 @@ dependencies = [
     "python-json-logger==2.0.4",
     "uvicorn[standard]",
     "nora_lib==1.0.0",
-    "modal==0.67.40",
+    "modal==1.0.2",
     "pandas",
     "jsonlines",
     "googlesearch-python",

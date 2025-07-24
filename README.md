@@ -134,7 +134,7 @@ If you use [Modal](https://modal.com/) to serve your models, please configure `M
     },
     "paper_finder_args": {
       "n_rerank": 50,
-      "context_threshold": 0.5
+      "context_threshold": 0.0
     },
     "pipeline_args": {
       "validate": true,
@@ -319,7 +319,7 @@ Update your `run_configs/default.json` to use the HTTP microservice:
     },
     "paper_finder_args": {
       "n_rerank": 50,
-      "context_threshold": 0.5
+      "context_threshold": 0.0
     },
     "pipeline_args": {
       "validate": false,
@@ -462,7 +462,7 @@ reranker = ModalReranker(app_name='<modal_app_name>', api_name='<modal_api_name>
 
 #wraps around the retriever with `retrieve_passages()` and `retrieve_additional_papers()`, and reranker with rerank()
 #any modifications to the retrieval output can be made here
-paper_finder =  PaperFinderWithReranker(retriever, reranker, n_rerank=50, context_threshold=0.5)
+paper_finder =  PaperFinderWithReranker(retriever, reranker, n_rerank=50, context_threshold=0.0)
 
 #For wrapper class with MultiStepQAPipeline integrated
 scholar_qa = ScholarQA(paper_finder=paper_finder, llm_model=CLAUDE_37_SONNET) #llm_model can be any litellm model
