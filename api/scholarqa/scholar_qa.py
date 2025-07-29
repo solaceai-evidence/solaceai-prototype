@@ -13,7 +13,8 @@ from langsmith import traceable
 from scholarqa.config.config_setup import LogsConfig
 from scholarqa.llms.constants import CostAwareLLMResult, GPT_4o, CLAUDE_4_SONNET
 from scholarqa.llms.litellm_helper import (
-    CLAUDE_37_SONNET,
+    CLAUDE_4_SONNET,
+    GPT_4o,
     CostAwareLLMCaller,
     CostReportingArgs,
 )
@@ -54,8 +55,11 @@ OPEN_BRACKET_PATTERN = (
 )
 
 
+# Main class for ScholarQA
+# This class orchestrates the entire QA pipeline, from query decomposition to final answer generation.
 class ScholarQA:
-
+    # Constructor for ScholarQA.
+    # Initializes the necessary components such as paper finder, LLM model, state manager, and multi-step pipeline.
     def __init__(
         self,
         # Required for webapp since a new process is created for each request, for library task_id can be None initially and assigned for each request as below
@@ -106,6 +110,8 @@ class ScholarQA:
         )
         self.run_table_generation = run_table_generation
 
+    # Updates the task state in the state manager.
+    # This method is used to log the progress of the task and update the estimated time for each step.
     def update_task_state(
         self,
         status: str,
@@ -124,6 +130,8 @@ class ScholarQA:
                 task_estimated_time,
             )
 
+    # Preprocess the user query to validate and decompose it.
+    # This method checks if the query is valid and then decomposes it to extract filters and rewritten queries.
     @traceable(name="Preprocessing: Validate and decompose user query")
     def preprocess_query(
         self,
@@ -146,6 +154,8 @@ class ScholarQA:
             **llm_args,
         )
 
+    # Find relevant papers based on the processed query.
+    # This method retrieves relevant paper passages from the Semantic Scholar index and additional papers using a keyword search.
     @traceable(name="Retrieval: Find relevant paper passages for the query")
     def find_relevant_papers(
         self, llm_processed_query: LLMProcessedQuery, **kwargs
@@ -188,6 +198,8 @@ class ScholarQA:
 
         return snippet_results, search_api_results
 
+    # Rerank the retrieved candidates and aggregate them at the paper level.
+    # This method further refines the retrieved passages to focus on the most relevant papers.
     @traceable(name="Retrieval: Rerank the passages and aggregate at paper level")
     def rerank_and_aggregate(
         self,
@@ -223,6 +235,8 @@ class ScholarQA:
         logger.info("Reranking w. formatting time: %.2f", time() - start)
         return agg_df, paper_metadata
 
+    # Step 1: Extract relevant quotes from paper passages or filter them based on relevance.
+    # This method processes the scored DataFrame to extract salient key statements from the papers.
     @traceable(name="Generation: Extract relevant quotes from paper passages or filter")
     def step_select_quotes(
         self,
@@ -263,6 +277,8 @@ class ScholarQA:
         )
         return per_paper_summaries
 
+    # Step 2: Cluster the extracted quotes into meaningful dimensions.
+    # This method organizes the quotes into clusters based on their content.
     @traceable(name="Generation: Cluster quotes to generate an organization plan")
     def step_clustering(
         self,
@@ -294,6 +310,8 @@ class ScholarQA:
         )
         return cluster_json
 
+    # Step 3: Generate an iterative summary based on the clustered quotes.
+    # This method assembles the final answer by generating a summary that includes the relevant quotes and their citations.
     @traceable(name="Generation: Generate an iterative summary")
     def step_gen_iterative_summary(
         self,
@@ -331,6 +349,8 @@ class ScholarQA:
             )
         return return_val
 
+    # Step 4: Extract inline citations from the generated summary.
+    # This method maps the quotes extracted in step 1 to their full-length versions in the retrieval DataFrame and generates inline citations.
     @staticmethod
     def passage_to_quotes_metadata(
         retrieval_df: pd.DataFrame,
@@ -492,6 +512,8 @@ class ScholarQA:
 
         return quotes_metadata
 
+    # Retrieve the metadata of the quote inline citations if not already present and update the quotes from string,
+    # to a dict of {"quote": quote, "inline_citations": {ref_str: abstract, ... }}.
     def populate_citations_metadata(
         self,
         avl_paper_metadata: Dict[str, Dict[str, Any]],
@@ -568,6 +590,9 @@ class ScholarQA:
         avl_paper_metadata.update(additional_metadata)
         return per_paper_summaries
 
+    # Extract inline citations from the quotes and populate the summaries with the citations metadata.
+    # This method processes the scored DataFrame and the per-paper summaries to extract inline citations and
+    # populate the summaries with the citations metadata.
     def extract_quote_citations(
         self,
         score_df: pd.DataFrame,
@@ -597,6 +622,9 @@ class ScholarQA:
                     qmap["quote"] = quote_parts[idx]
         return per_paper_summaries_extd, quotes_metadata
 
+    # Convert a JSON section to a GeneratedSection object.
+    # This method extracts the title, TLDR, text, and citations from the JSON section
+    # and creates a GeneratedSection object.
     @staticmethod
     def get_gen_sections_from_json(section: Dict[str, Any]) -> GeneratedSection:
         try:
@@ -612,11 +640,18 @@ class ScholarQA:
             logger.error(f"Error while converting json to TaskResult: {e}")
             raise e
 
+    # Post-process the JSON output to convert it into a structured format.
+    # This method is a placeholder and can be extended to perform additional processing on the JSON output
+    # if needed.
     def postprocess_json_output(
         self, json_summary: List[Dict[str, Any]], **kwargs
     ) -> None:
         pass
 
+    #   Answer a query by running the QA pipeline.
+    #   This method takes a query, runs the QA pipeline, and returns the result.
+    #   If an error occurs, it invalidates the LLM cache and retries the pipeline.
+    #   The result is returned as a dictionary containing the task ID, query, and other
     def answer_query(self, query: str, inline_tags: bool = True) -> Dict[str, Any]:
         task_id = str(uuid4())
         self.logs_config.task_id = task_id
@@ -632,6 +667,12 @@ class ScholarQA:
             task_result = self.run_qa_pipeline(tool_request, inline_tags)
         return task_result.model_dump()
 
+    # Generate a table in a separate thread.
+    # This method creates a thread to run the table generation process, allowing it to run concurrently
+    # with other tasks. It takes the user ID, query, dimension, citation IDs, and a list to store the results.
+    # The thread will call the table generator to create a table based on the provided parameters.
+    # The results are stored in the provided list at the index specified by the dimension's index.
+    # The method returns the thread object for further management if needed
     def gen_table_thread(
         self,
         user_id: str,
@@ -676,9 +717,18 @@ class ScholarQA:
         tthread.start()
         return tthread
 
+    # Get the user ID and message ID for the current task.
+    # This method retrieves the user ID and task ID from the tool request.
+    # If the task ID is not set, it uses the task ID from the tool request.
+    # The method returns a tuple containing the user ID and task ID.
     def get_user_msg_id(self):
         return self.tool_request.user_id, self.task_id
 
+    # Run the QA pipeline to process the user query and generate a response.
+    # This method orchestrates the entire QA process, including query decomposition, retrieval,
+    # reranking, quote extraction, clustering, and summary generation.
+    # It uses the tool request to get the query and user ID, and it updates the task state
+    # at each step to reflect the progress of the task.
     @traceable(run_type="tool", name="ai2_scholar_qa_trace")
     def run_qa_pipeline(self, req: ToolRequest, inline_tags=False) -> TaskResult:
         """

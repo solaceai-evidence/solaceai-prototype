@@ -34,7 +34,7 @@ This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and c
     - [Multi-step Generation:](#multi-step-generation)
   - [Setup](#common-setup)
     - [Environment Variables](#environment-variables)
-  - [Webapp](#web-app)
+  - [Webapp](#web-app) 
     - [Application Configuration](#application-configuration)
     - [docker-compose.yaml](#docker-composeyaml)
     - [Running the Webapp](#running-the-webapp)
