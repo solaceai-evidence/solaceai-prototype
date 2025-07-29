@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   sonar:
     build: ./sonar
@@ -42,3 +42,12 @@ services:
     depends_on:
       - ui
       - api
+  reranker:
+    build:
+      context: ./reranker_service
+    container_name: reranker_service
+    ports:
+      - "8001:8001" # Adjust if your reranker runs on a different port
+    restart: unless-stopped
+    # environment:
+    #   - VAR=VALUE  # Add any needed env vars here

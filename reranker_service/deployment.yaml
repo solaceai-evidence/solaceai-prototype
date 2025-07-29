@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reranker-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: reranker-service
+  template:
+    metadata:
+      labels:
+        app: reranker-service
+    spec:
+      containers:
+      - name: reranker-service
+        image: <your-dockerhub-username>/reranker-service:latest
+        ports:
+        - containerPort: 8001
+        resources:
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reranker-service
+spec:
+  selector:
+    app: reranker-service
+  ports:
+    - protocol: TCP
+      port: 8001
+      targetPort: 8001
+  type: ClusterIP
