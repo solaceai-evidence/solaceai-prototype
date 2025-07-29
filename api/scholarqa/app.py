@@ -28,7 +28,7 @@ from typing import Type, TypeVar
 
 logger = logging.getLogger(__name__)
 
-TIMEOUT = 240
+TIMEOUT = 600  # TODO: changed to 10 minutes instead of 4
 
 async_context = multiprocessing.get_context("fork")
 

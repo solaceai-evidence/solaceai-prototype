@@ -80,6 +80,26 @@ class CostAwareLLMCaller:
             tokens=tokens,
         )
 
+    def call_llm_api(self, prompt, model, api_key=None, **kwargs):
+        logger.info(f"Calling LLM API with model={model}, prompt={prompt[:100]}...")
+        import litellm
+
+        # Prepare messages for chat models
+        messages = [{"role": "user", "content": prompt}]
+        # Use the provided api_key or fallback to environment variable
+        api_key = (
+            api_key or os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY")
+        )
+
+        response = litellm.completion(
+            model=model,
+            messages=messages,
+            api_key=api_key,
+            **kwargs,
+        )
+        logger.info(f"LLM API response received: {str(response)[:200]}...")
+        return response
+
 
 def success_callback(kwargs, completion_response, start_time, end_time):
     """required callback method to update the response object with cache hit/miss info"""

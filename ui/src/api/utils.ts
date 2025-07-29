@@ -124,6 +124,7 @@ export const sendFeedback= async (
 }
 
 export const createTask = async (query: string, optin: boolean, userId: string) => {
+  console.log(`[createTask] Sending LLM query:`, { query, optin, userId }); // <-- Add this log
   const response = await fetch(BACKEND_ENDPOINT, {
     ...BACKEND_DEFAULT_INIT,
     body: JSON.stringify({
