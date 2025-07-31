@@ -119,12 +119,12 @@ class RemoteReranker(AbstractReranker):
         self.fallback_reranker = None
 
         # Build URL from environment variables and service name
-        port = os.getenv("RERANKER_SERVICE_PORT", "8001")
+        port = os.getenv("RERANKER_SERVICE_PORT", "8002")  # Default to internal port
         endpoint = "/rerank"  # Fixed endpoint
 
-        # Map service names to container names
+        # Map service names to container names (docker-compose service names)
         service_mapping = {
-            "reranker-service": "reranker_service",
+            "reranker-service": "reranker",  # Maps to docker-compose service name
             # Future: "modal": "modal_service"
         }
 

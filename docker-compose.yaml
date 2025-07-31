@@ -18,7 +18,7 @@ services:
       - LITELLM_LOG=WARNING
       - CONFIG_PATH=run_configs/default.json
       # Reranker service configuration
-      - RERANKER_SERVICE_PORT=8001
+      - RERANKER_SERVICE_PORT=8002  # Internal container port for docker network
     ports:
       - 8000:8000
     env_file:

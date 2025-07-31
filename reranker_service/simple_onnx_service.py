@@ -19,12 +19,15 @@ app = FastAPI(title="Literature Review Reranker", version="1.0.0")
 
 class RerankRequest(BaseModel):
     query: str
-    documents: List[str]
+    passages: List[str]  # Use 'passages' to match RemoteReranker interface
+    documents: Optional[List[str]] = None  # Keep 'documents' for backward compatibility
+    batch_size: Optional[int] = 32
     top_k: Optional[int] = None
 
 
 class RerankResponse(BaseModel):
     results: List[Dict[str, Any]]
+    scores: List[float]  # Add scores for RemoteReranker compatibility
     processing_time: float
 
 
@@ -166,11 +169,26 @@ async def health_check():
 async def rerank_documents(request: RerankRequest):
     """Rerank documents for literature review."""
     try:
+        # Support both 'passages' (RemoteReranker) and 'documents' (backward compatibility)
+        documents = request.passages or request.documents or []
+        
+        if not documents:
+            raise HTTPException(status_code=400, detail="Either 'passages' or 'documents' must be provided")
+        
         results, processing_time = reranker.rerank(
-            query=request.query, documents=request.documents, top_k=request.top_k
+            query=request.query,
+            documents=documents,
+            top_k=request.top_k
         )
+        
+        # Extract scores for RemoteReranker compatibility
+        scores = [result["score"] for result in results]
 
-        return RerankResponse(results=results, processing_time=processing_time)
+        return RerankResponse(
+            results=results,
+            scores=scores,
+            processing_time=processing_time
+        )
 
     except Exception as e:
         logger.error(f"❌ Reranking failed: {e}")
@@ -180,7 +198,7 @@ async def rerank_documents(request: RerankRequest):
 if __name__ == "__main__":
     import uvicorn
 
-    port = int(os.getenv("PORT", "8002"))  # Use 8002 to avoid conflicts
+    port = int(os.getenv("PORT", "8002"))  # Use 8002 for container compatibility
     host = os.getenv("HOST", "0.0.0.0")
 
     logger.info(f"🚀 Starting Literature Review Reranker on {host}:{port}")
