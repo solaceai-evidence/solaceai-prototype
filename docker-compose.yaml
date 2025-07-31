@@ -50,7 +50,7 @@ services:
     build:
       context: ./reranker_service
       dockerfile: Dockerfile
-    container_name: simple-reranker-service
+    container_name: reranker-service
     ports:
       - "8001:8002" # Map external 8001 to internal 8002
     restart: unless-stopped

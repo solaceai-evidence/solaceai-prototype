@@ -9,15 +9,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
-COPY requirements_simple.txt .
-RUN pip install --no-cache-dir -r requirements_simple.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY simple_onnx_service.py .
-COPY convert_simple.py .
-
-# Convert model on first run (downloads from HuggingFace)
-RUN python3 convert_simple.py || echo "Model conversion will happen at runtime"
+# Copy the high-performance reranker service
+COPY reranker.py .
 
 # Expose port
 EXPOSE 8002
@@ -26,9 +23,9 @@ EXPOSE 8002
 ENV PYTHONPATH=/app
 ENV PORT=8002
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+# Health check with longer startup time for model loading
+HEALTHCHECK --interval=30s --timeout=15s --start-period=180s --retries=3 \
     CMD curl -f http://localhost:8002/health || exit 1
 
-# Run the application
-CMD ["python", "simple_onnx_service.py"]
+# Run the high-performance reranker
+CMD ["python", "reranker.py"]

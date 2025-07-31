@@ -1,0 +1,12 @@
+{
+  "query": "climate emergency and global warming effects",
+  "passages": [
+    "Climate change poses significant risks to global ecosystems and human society.",
+    "The economy grew by 3% last quarter according to latest reports.",
+    "Rising sea levels threaten coastal communities worldwide.",
+    "New smartphone technology features improved battery life and processing power.",
+    "Extreme weather events are becoming more frequent due to climate change.",
+    "Investment in renewable energy sources is crucial for sustainability."
+  ],
+  "batch_size": 32
+}
