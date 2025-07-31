@@ -1,0 +1,20 @@
+feat: Add GPU-accelerated ONNX reranker with docker-compose integration
+
+- Add simple_onnx_service.py with Optimum ONNX model support
+- Implement dual API compatibility (passages/documents fields)
+- Configure docker-compose with GPU reranker service  
+- Fix RemoteReranker timeout and service discovery
+- Add health checks and proper error handling
+- Successfully tested with 241-passage climate emergency query
+
+Performance improvements:
+- ONNX model loading with accuracy-focused configuration
+- Container networking and service discovery
+- Increased timeout to 300s for large document batches
+- Fallback to CrossEncoder if ONNX fails
+
+Integration validation:
+- All docker containers healthy
+- GPU reranker service responding  
+- End-to-end query processing working
+- 241 passages sent for reranking successfully

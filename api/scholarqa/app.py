@@ -18,7 +18,7 @@ from scholarqa.models import (
     ToolResponse,
     TaskStep,
 )
-from scholarqa.rag.reranker.modal_engine import ModalReranker
+#from scholarqa.rag.reranker.modal_engine import ModalReranker
 from scholarqa.rag.reranker.reranker_base import RERANKER_MAPPING
 from scholarqa.rag.retrieval import PaperFinderWithReranker, PaperFinder
 from scholarqa.rag.retriever_base import FullTextRetriever
@@ -28,7 +28,7 @@ from typing import Type, TypeVar
 
 logger = logging.getLogger(__name__)
 
-TIMEOUT = 240
+TIMEOUT = 600  # TODO: changed to 10 minutes instead of 4
 
 async_context = multiprocessing.get_context("fork")
 
