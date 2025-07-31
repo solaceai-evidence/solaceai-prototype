@@ -99,23 +99,37 @@ class AccuracyFocusedReranker:
         except Exception as e:
             raise RuntimeError(f"Both ONNX and CrossEncoder failed: {e}")
 
-    def rerank(self, query: str, documents: List[str], top_k: Optional[int] = None):
-        """Rerank documents for literature review accuracy."""
+    def rerank(self, query: str, documents: List[str], batch_size: int = 32, top_k: Optional[int] = None):
+        """
+        Rerank documents using efficient batch processing.
+        Follows original Modal implementation pattern.
+        """
         import time
 
         start_time = time.time()
 
         if hasattr(self.model, "predict"):
-            # CrossEncoder fallback
+            # CrossEncoder fallback - use proper batch processing like original Modal
             pairs = [(query, doc) for doc in documents]
-            scores = self.model.predict(pairs)
+            scores = self.model.predict(
+                pairs,
+                convert_to_tensor=True,
+                show_progress_bar=False,  # Disable progress bar in production
+                batch_size=batch_size,  # Key: use batch_size from run_config!
+            ).tolist()
         else:
-            # Optimum ONNX model
+            # ONNX model - implement batch processing to match Modal performance
             scores = []
-            for doc in documents:
-                inputs = self.tokenizer(
-                    query,
-                    doc,
+            
+            # Process in batches instead of one-by-one
+            for i in range(0, len(documents), batch_size):
+                batch_docs = documents[i:i + batch_size]
+                batch_pairs = [(query, doc) for doc in batch_docs]
+                
+                # Tokenize the entire batch at once
+                batch_inputs = self.tokenizer(
+                    [pair[0] for pair in batch_pairs],  # queries
+                    [pair[1] for pair in batch_pairs],  # documents
                     padding="max_length",
                     truncation=True,
                     max_length=512,
@@ -123,27 +137,35 @@ class AccuracyFocusedReranker:
                 )
 
                 with torch.no_grad():
-                    outputs = self.model(**inputs)
-                    score = outputs.logits.squeeze().item()
-                    scores.append(score)
+                    batch_outputs = self.model(**batch_inputs)
+                    batch_scores = batch_outputs.logits.squeeze().tolist()
+                    
+                    # Handle single item case
+                    if isinstance(batch_scores, float):
+                        batch_scores = [batch_scores]
+                    
+                    scores.extend(batch_scores)
 
-        # Create results
+        processing_time = time.time() - start_time
+        docs_per_sec = len(documents) / processing_time if processing_time > 0 else 0
+        
+        logger.info(f"✅ Processed {len(documents)} documents in {processing_time:.2f}s ({docs_per_sec:.1f} docs/sec) with batch_size={batch_size}")
+
+        # Create results maintaining input order (like other rerankers)
         results = []
         for i, (doc, score) in enumerate(zip(documents, scores)):
             results.append({"document": doc, "score": float(score), "rank": i})
 
-        # Sort by score (descending)
-        results.sort(key=lambda x: x["score"], reverse=True)
+        # For detailed results, create a sorted version for ranking
+        sorted_results = sorted(results, key=lambda x: x["score"], reverse=True)
+        
+        # Update ranks based on sorted order
+        score_to_rank = {result["score"]: i for i, result in enumerate(sorted_results)}
+        for result in results:
+            result["rank"] = score_to_rank[result["score"]]
 
-        # Update ranks after sorting
-        for i, result in enumerate(results):
-            result["rank"] = i
-
-        # Apply top_k if specified
-        if top_k:
-            results = results[:top_k]
-
-        processing_time = time.time() - start_time
+        # Apply top_k to sorted results if specified (for detailed output)
+        final_sorted_results = sorted_results[:top_k] if top_k else sorted_results
 
         return results, processing_time
 
@@ -179,7 +201,10 @@ async def rerank_documents(request: RerankRequest):
             )
 
         results, processing_time = reranker.rerank(
-            query=request.query, documents=documents, top_k=request.top_k
+            query=request.query, 
+            documents=documents, 
+            batch_size=request.batch_size or 32,  # Use batch_size from run_config
+            top_k=request.top_k
         )
 
         # Extract scores for RemoteReranker compatibility
