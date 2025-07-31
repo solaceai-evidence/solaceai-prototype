@@ -171,23 +171,22 @@ async def rerank_documents(request: RerankRequest):
     try:
         # Support both 'passages' (RemoteReranker) and 'documents' (backward compatibility)
         documents = request.passages or request.documents or []
-        
+
         if not documents:
-            raise HTTPException(status_code=400, detail="Either 'passages' or 'documents' must be provided")
-        
+            raise HTTPException(
+                status_code=400,
+                detail="Either 'passages' or 'documents' must be provided",
+            )
+
         results, processing_time = reranker.rerank(
-            query=request.query,
-            documents=documents,
-            top_k=request.top_k
+            query=request.query, documents=documents, top_k=request.top_k
         )
-        
+
         # Extract scores for RemoteReranker compatibility
         scores = [result["score"] for result in results]
 
         return RerankResponse(
-            results=results,
-            scores=scores,
-            processing_time=processing_time
+            results=results, scores=scores, processing_time=processing_time
         )
 
     except Exception as e:

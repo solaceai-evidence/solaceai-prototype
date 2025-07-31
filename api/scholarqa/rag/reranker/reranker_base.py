@@ -156,7 +156,7 @@ class RemoteReranker(AbstractReranker):
                     "passages": passages,
                     "batch_size": self.batch_size,
                 },
-                timeout=30,  # Add timeout for robustness
+                timeout=300,  # Increase timeout to 5 minutes for large batches
             )
             resp.raise_for_status()
             scores = resp.json()["scores"]
