@@ -37,6 +37,16 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
+# ML Model files (too large for git)
+*.onnx
+*.bin
+*.safetensors
+onnx_model/
+**/onnx_model/
+models/
+**/models/
+.cache/
+
 # Unit test / coverage reports
 htmlcov/
 .tox/

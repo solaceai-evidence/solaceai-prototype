@@ -1,13 +1,34 @@
-FROM python:3.10.14-slim-bullseye
+FROM python:3.11-slim
 
+# Set working directory
 WORKDIR /app
 
-# Update system packages to address vulnerabilities
-RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy requirements and install Python dependencies
+COPY requirements_simple.txt .
+RUN pip install --no-cache-dir -r requirements_simple.txt
 
-COPY reranker_service.py .
+# Copy application code
+COPY simple_onnx_service.py .
+COPY convert_simple.py .
 
-CMD ["uvicorn", "reranker_service:app", "--host", "0.0.0.0", "--port", "8001"]
+# Convert model on first run (downloads from HuggingFace)
+RUN python3 convert_simple.py || echo "Model conversion will happen at runtime"
+
+# Expose port
+EXPOSE 8002
+
+# Environment variables
+ENV PYTHONPATH=/app
+ENV PORT=8002
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD curl -f http://localhost:8002/health || exit 1
+
+# Run the application
+CMD ["python", "simple_onnx_service.py"]

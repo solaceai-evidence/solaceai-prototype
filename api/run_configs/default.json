@@ -15,7 +15,7 @@
     "reranker_service": "remote",
     "reranker_args": {
       "service_name": "reranker-service",
-      "batch_size": 32
+      "batch_size": 12
     },
     "reranker_fallback_configs": {
       "crossencoder": {
