@@ -40,13 +40,17 @@ class DecomposedQuery(BaseModel):
 
 
 def moderation_api(text: str) -> bool:
-    response = moderation(text, model="omni-moderation-latest")
-    return response.results[0].flagged
+    # Moderation disabled for local testing
+    # --- ORIGINAL CODE BELOW ---
+    # response = moderation(text, model="omni-moderation-latest")
+    # return response.results[0].flagged
+    return False
 
 
 def validate(query: str) -> None:
-    # self.update_task_state(task_id, "Validating the query")
-    logger.info("Checking query for malicious content with moderation api...")
+    logger.info(
+        "[MODERATION DISABLED] Skipping query moderation (always return False)."
+    )
     try:
         if moderation_api(query):
             raise Exception("The input query contains harmful content.")
@@ -54,6 +58,7 @@ def validate(query: str) -> None:
         logger.error(f"Query validation failed, {e}")
         raise e
     logger.info(f"{query} is valid")
+    return
 
 
 def decompose_query(

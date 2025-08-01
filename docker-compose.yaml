@@ -50,22 +50,27 @@ services:
     build:
       context: ./reranker_service
       dockerfile: Dockerfile
-    container_name: reranker-service
     ports:
-      - "8001:8002" # Map external 8001 to internal 8002
+      - "8001:8002"
     restart: unless-stopped
     environment:
+      - OMP_NUM_THREADS=8
+      - MKL_NUM_THREADS=8
+      - NUMEXPR_MAX_THREADS=8
+      - NUMEXPR_NUM_THREADS=8
       - PORT=8002
       - HOST=0.0.0.0
       - PYTHONPATH=/app
+    mem_limit: 16G
+    cpus: 8
     deploy:
       resources:
         limits:
-          memory: 8G
-          cpus: "2.0"
+          memory: 16G
+          cpus: "8"
         reservations:
-          memory: 4G
-          cpus: "1.0"
+          memory: 8G
+          cpus: "4"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
       interval: 30s

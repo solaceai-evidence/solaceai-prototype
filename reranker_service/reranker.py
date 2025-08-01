@@ -1,15 +1,3 @@
-"""
-High-Performance Reranker Service
-The single, optimized reranker implementation for maximum effectiveness.
-
-Key Features:
-- Fast CrossEncoder implementation (proven to work)
-- Proper batch processing like original Modal service
-- Device detection for optimal hardware utilization
-- API compatibility with existing ScholarQA workflow
-- Optimized for 15x+ performance improvement vs ONNX
-"""
-
 import os
 import time
 import logging
@@ -48,12 +36,14 @@ class RerankResponse(BaseModel):
 class HighPerformanceReranker:
     """
     High-performance reranker using the fastest, most effective approach.
-    
+
     This implementation uses CrossEncoder (not ONNX) because:
     - ONNX was achieving 0.1 docs/sec (100x slower than expected)
     - CrossEncoder with proper batching achieves 10-30 docs/sec
     - Original Modal implementation used CrossEncoder successfully
-    """    def __init__(self):
+    """
+
+    def __init__(self):
         self.model = None
         self.device = self._detect_optimal_device()
         self._load_model()
@@ -80,7 +70,9 @@ class HighPerformanceReranker:
 
             # Use the same model as the original Modal implementation
             model_name = "mixedbread-ai/mxbai-rerank-large-v1"
-            logger.info(f"📖 Loading {model_name} (CrossEncoder, optimized for large batches)")
+            logger.info(
+                f"📖 Loading {model_name} (CrossEncoder, optimized for large batches)"
+            )
 
             # Configure for optimal performance on detected device
             if self.device == "cpu":
@@ -124,7 +116,9 @@ class HighPerformanceReranker:
         if doc_count > 200:
             # Use larger batches for better throughput on large sets
             batch_size = min(64, batch_size * 2)
-            logger.info(f"🔧 Large document set detected ({doc_count}), using batch_size={batch_size}")
+            logger.info(
+                f"🔧 Large document set detected ({doc_count}), using batch_size={batch_size}"
+            )
         elif doc_count > 100:
             batch_size = min(48, batch_size + 16)
 

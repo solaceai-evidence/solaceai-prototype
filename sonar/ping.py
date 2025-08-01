@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# The sonar service allows for the framework to check if the system is alive and reachable, often used for monitoring or load balancer health checks.
 import requests
 import time
 import math
@@ -32,8 +32,8 @@ def scan():
     print("⚓️ Ahoy!")
     print("")
     print(
-        "Your application is starting and will be available at " +
-        "http://localhost:8080 when it's ready."
+        "Your application is starting and will be available at "
+        + "http://localhost:8080 when it's ready."
     )
     print("")
 
@@ -51,13 +51,13 @@ def scan():
     last_check = time.perf_counter()
     is_api_live = False
     is_ui_live = False
-    while (is_api_live != True or is_ui_live != True):
+    while is_api_live != True or is_ui_live != True:
         if term is True:
             break
         # We don't use `time.sleep()`, as that'd prevent us from being able
         # to break the loop quickly in the event of a SIGTERM.
         now = time.perf_counter()
-        if (now - last_check >= 5):
+        if now - last_check >= 5:
             last_check = now
             if not is_api_live:
                 is_api_live = is_ok("http://api:8000")
