@@ -21,7 +21,13 @@ class AbstractReranker(ABC):
 class SentenceTransformerEncoder:
     def __init__(self, model_name_or_path: str):
         from sentence_transformers import SentenceTransformer
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+        logger.info(f"Initializing SentenceTransformerEncoder model: {model_name_or_path} on device: {device}")
         self.model = SentenceTransformer(model_name_or_path, revision=None, device=device)
 
     def encode(self, sentences: List[str]):
@@ -35,6 +41,7 @@ class SentenceTransformerEncoder:
 # https://huggingface.co/avsolatorio/GIST-large-Embedding-v0
 class BiEncoderScores(AbstractReranker):
     def __init__(self, model_name_or_path: str):
+        logger.info(f"Initializing BiEncoder model: {model_name_or_path}")
         self.model = SentenceTransformerEncoder(model_name_or_path)
 
     def get_scores(self, query: str, passages: List[str]) -> List[float]:
@@ -49,8 +56,13 @@ class BiEncoderScores(AbstractReranker):
 class CrossEncoderScores(AbstractReranker):
     def __init__(self, model_name_or_path: str):
         from sentence_transformers import CrossEncoder
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(device)
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+        logger.info(f"Initializing CrossEncoder model: {model_name_or_path} on device: {device}")
         self.model = CrossEncoder(
             model_name_or_path,
             automodel_args={"torch_dtype": "float16"},
