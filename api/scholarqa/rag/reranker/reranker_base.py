@@ -99,3 +99,11 @@ RERANKER_MAPPING = {
     "biencoder": BiEncoderScores,
     "flag_embedding": FlagEmbeddingScores
 }
+
+# Import and add remote reranker - conditional import to avoid dependency issues in Docker
+try:
+    from .remote_reranker import RemoteRerankerClient
+    RERANKER_MAPPING["remote"] = RemoteRerankerClient
+except ImportError as e:
+    logger.warning(f"Remote reranker client not available: {e}")
+    # Remote reranker requires httpx which might not be in minimal Docker images
