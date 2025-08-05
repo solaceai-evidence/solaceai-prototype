@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   sonar:
     build: ./sonar
@@ -17,6 +17,8 @@ services:
       - PYTHONUNBUFFERED=1
       - LITELLM_LOG=WARNING
       - CONFIG_PATH=run_configs/default.json
+      # url of remote reranker service to be reached by the API container
+      - RERANKER_SERVICE_URL=http://host.docker.internal:8001
     ports:
       - 8000:8000
     env_file:

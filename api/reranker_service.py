@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Standalone Reranker Service - runs natively with GPU acceleration
+Standalone Reranker Service Server
 Designed to work alongside containerized main API
 """
 import logging
@@ -54,7 +54,7 @@ def get_reranker(reranker_type: str, model_name_or_path: str):
         reranker = reranker_class(model_name_or_path=model_name_or_path)
         
         _reranker_cache[cache_key] = reranker
-        logger.info(f"✅ Cached reranker: {cache_key}")
+        logger.info(f" Cached reranker: {cache_key}")
     
     return _reranker_cache[cache_key]
 
@@ -89,7 +89,7 @@ async def rerank_documents(request: RerankRequest):
         )
         
     except Exception as e:
-        logger.error(f"❌ Reranking error: {e}")
+        logger.error(f" Reranking error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
@@ -98,9 +98,7 @@ async def root():
     return {"message": "Solace AI Reranker Service", "docs": "/docs"}
 
 if __name__ == "__main__":
-    logger.info("🚀 Starting Solace AI Reranker Service")
-    logger.info("📡 This service provides GPU-accelerated reranking")
-    logger.info("🐳 Designed to work with containerized main API")
+    logger.info(" Starting Solace AI Reranker Service")
     
     # Run the service
     uvicorn.run(

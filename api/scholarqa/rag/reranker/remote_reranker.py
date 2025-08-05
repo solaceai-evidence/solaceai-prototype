@@ -1,6 +1,7 @@
 """
 Remote Reranker Client - integrates with existing reranker architecture
 """
+import os
 import logging
 from typing import List
 import httpx
@@ -11,11 +12,10 @@ logger = logging.getLogger(__name__)
 class RemoteRerankerClient(AbstractReranker):
     """Client for remote reranker service - maintains same interface as local rerankers"""
     
-    def __init__(self, service_url: str = "http://localhost:8001", 
-                 model_name_or_path: str = "mixedbread-ai/mxbai-rerank-large-v1", 
+    def __init__(self, model_name_or_path: str = "mixedbread-ai/mxbai-rerank-large-v1", 
                  reranker_type: str = "crossencoder", 
                  timeout: float = 60.0):
-        self.service_url = service_url.rstrip('/')
+        self.service_url = os.getenv("RERANKER_SERVICE_URL", "http://localhost:8001").rstrip('/')
         self.model_name_or_path = model_name_or_path
         self.reranker_type = reranker_type
         self.timeout = timeout
