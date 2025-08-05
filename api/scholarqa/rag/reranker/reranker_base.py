@@ -29,6 +29,7 @@ class SentenceTransformerEncoder:
             device = "cpu"
         logger.info(f"Initializing SentenceTransformerEncoder model: {model_name_or_path} on device: {device}")
         self.model = SentenceTransformer(model_name_or_path, revision=None, device=device)
+        self.device = device
 
     def encode(self, sentences: List[str]):
         return self.model.encode(sentences, show_progress_bar=True, convert_to_tensor=True)
@@ -43,6 +44,7 @@ class BiEncoderScores(AbstractReranker):
     def __init__(self, model_name_or_path: str):
         logger.info(f"Initializing BiEncoder model: {model_name_or_path}")
         self.model = SentenceTransformerEncoder(model_name_or_path)
+        self.device = self.model.device
 
     def get_scores(self, query: str, passages: List[str]) -> List[float]:
         query_embedding = self.model.encode([query])[0]
@@ -54,7 +56,7 @@ class BiEncoderScores(AbstractReranker):
 # Sentence Transformer supports Jina AI (https://huggingface.co/jinaai/jina-reranker-v2-base-multilingual)
 # and Mix Bread re-rankers (https://huggingface.co/mixedbread-ai/mxbai-rerank-large-v1)
 class CrossEncoderScores(AbstractReranker):
-    def __init__(self, model_name_or_path: str):
+    def __init__(self, model_name_or_path: str, batch_size: int = 128):
         from sentence_transformers import CrossEncoder
         if torch.cuda.is_available():
             device = "cuda"
@@ -65,10 +67,13 @@ class CrossEncoderScores(AbstractReranker):
         logger.info(f"Initializing CrossEncoder model: {model_name_or_path} on device: {device}")
         self.model = CrossEncoder(
             model_name_or_path,
-            automodel_args={"torch_dtype": "float16"},
+            automodel_args={"torch_dtype": "float16"} if device != "mps" else {},
             trust_remote_code=True,
             device=device,
         )
+        self.device = device
+        self.batch_size = batch_size
+        logger.info(f"CrossEncoder batch_size set to: {batch_size}")
 
     def get_tokenizer(self):
         return self.model.tokenizer
@@ -76,7 +81,7 @@ class CrossEncoderScores(AbstractReranker):
     def get_scores(self, query: str, passages: List[str]) -> List[float]:
         sentence_pairs = [[query, passage] for passage in passages]
         scores = self.model.predict(sentence_pairs, convert_to_tensor=True, show_progress_bar=True,
-                                    batch_size=128).tolist()
+                                    batch_size=self.batch_size).tolist()
         return [float(s) for s in scores]
 
 
