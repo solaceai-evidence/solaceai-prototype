@@ -292,3 +292,8 @@ def _handle_async_task_check_in(
         task_result=task_state.task_result,
         steps=task_state.extra_state.get("steps", []),
     )
+
+
+# Create the app instance for direct uvicorn usage (when not using --factory)
+# Docker uses --factory flag so this won't interfere
+app = create_app()

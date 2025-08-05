@@ -1,584 +1,311 @@
-# solaceai-prototype
+# Solace AI Scholar QA System
 
-<img width="1050" alt="image" src="https://github.com/user-attachments/assets/2d7ccc15-2cd8-4316-bec6-ed2a1509f27b" />
+## Overview
 
-<p align="center">
-  <a href="https://qa.allen.ai/chat">
-    <img alt="Live App" src="https://img.shields.io/badge/Ai2-qa.allen.ai-white?labelColor=teal&color=black">
-  </a>  
-  <a href="https://www.semanticscholar.org/paper/Ai2-Scholar-QA%3A-Organized-Literature-Synthesis-with-Singh-Chang/c815591e854afb83dc985fa3ff07506d6b25a1b4?utm_source=direct_link">
-    <img alt="Paper URL" src="https://img.shields.io/badge/Semantic%20Scholar-white?logo=semanticscholar&labelColor=%231857B6&color=black">
-  </a>
-  <a href="https://pypi.org/project/ai2-scholar-qa/">
-    <img alt="PyPI" src="https://img.shields.io/badge/PyPI-white?logo=PyPI&logoColor=white&labelColor=%233775A9&color=black">
-  </a>
-    <a href="https://huggingface.co/datasets/allenai/sqa_reranking_eval">
-    <img alt="HuggingFace Dataset" src="https://img.shields.io/badge/Dataset-white?logo=Hugging%20Face&logoColor=white&labelColor=%23FFD21E&color=black">
-  </a>
-    </a>
-    <a href="https://www.youtube.com/watch?v=augQU982aGQ&ab_channel=Ai2">
-    <img alt="Demo walkthrough" src="https://img.shields.io/badge/Youtube-white?logo=YouTube&logoColor=white&labelColor=%23FF0000&color=black">
-  </a>
-</p>
+The Solace AI Scholar QA System provides intelligent question-answering capabilities over a large corpus of academic papers. The system supports multiple deployment architectures to accommodate different performance requirements and infrastructure constraints.
 
-#
+## Supported Architectures
 
-This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and can be run as local docker containers or embedded into another application as a [python package](https://pypi.org/project/ai2-scholar-qa).
+### 1. Hybrid Architecture (Local Development with GPU Optimization)
 
-** NEW: HTTP Microservice Architecture** - We now provide a production-ready HTTP microservice architecture for scalable deployment with independent reranking services. See the [HTTP Microservice Architecture](#http-microservice-architecture-performance-optimized) section for details.
+The hybrid architecture combines containerized API services with a native reranker service to leverage GPU acceleration for optimal local development performance.
 
-- [solaceai-prototype](#solaceai-prototype)
+**Components:**
+- Containerized main API (Docker)
+- Native reranker service with GPU acceleration
+- Web UI (containerized)
 
-  - [Overview](#overview)
-    - [Retrieval:](#retrieval)
-    - [Multi-step Generation:](#multi-step-generation)
-  - [Setup](#common-setup)
-    - [Environment Variables](#environment-variables)
-  - [Webapp](#web-app) 
-    - [Application Configuration](#application-configuration)
-    - [docker-compose.yaml](#docker-composeyaml)
-    - [Running the Webapp](#running-the-webapp)
-    - [Startup](#startup)
-    - [UI](#ui)
-    - [Backend](#backend)
-  - [HTTP Microservice Architecture](#http-microservice-architecture-performance-optimized)
-  - [Async API](#async-api)
-  - [Python Package](#python-package)
-  - [Custom Pipeline](#custom-pipeline)
-    - [API end points](#api-end-points)
-    - [ScholarQA class](#scholarqa-class)
-    - [Pipeline Components](#pipeline-components)
-  - [Citation](#citation)
+**Prerequisites:**
+- Docker Desktop
+- Python 3.11+ with PyTorch GPU support
+- Conda or virtual environment
+- GPU-capable hardware (NVIDIA CUDA, Apple Silicon MPS, or CPU fallback)
 
-- ### Overview
+**Setup:**
 
-![image](https://github.com/user-attachments/assets/f5824b8e-8c9e-4c12-8a40-efb62b9e5e58)
+1. **Environment Configuration:**
+   ```bash
+   cp .env.example .env
+   # Edit .env to configure ports and service URLs
+   ```
 
-solaceai-prototype is a system for answering scientific queries and generating literature reviews by gathering evidence from multiple documents across our corpus (11M+ full text and 100M+ abstracts) and synthesizing an organized report with evidence for each claim. Based on the RAG architecture, solaceai-prototype has a retrieval component and a three step generator pipeline.
+2. **Install Native Dependencies:**
+   ```bash
+   # Create conda environment
+   conda create -n solaceai python=3.11
+   conda activate solaceai
+   
+   # Install PyTorch with appropriate GPU support
+   # For NVIDIA GPUs:
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+   
+   # For Apple Silicon (M1/M2/M3):
+   pip install torch torchvision torchaudio
+   
+   # For CPU-only:
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+   
+   # Install reranker dependencies
+   pip install -r reranker_requirements.txt
+   ```
 
-- #### Retrieval:
+3. **Start Hybrid Architecture:**
+   ```bash
+   chmod +x start_hybrid.sh
+   ./start_hybrid.sh
+   ```
 
-  The retrieval component consists of two sub-components:
+**Device Detection:**
+The system automatically detects and uses the best available device:
+- NVIDIA CUDA GPUs (preferred)
+- Apple Silicon MPS (Apple M1/M2/M3)
+- CPU (fallback)
 
-  i. _Retriever_ - Based on the user query, relevant evidence passages are fetched using the Semantic Scholar public api's snippet/search end point which looks up an index of open source papers. Further, we also use the api's keyword search to suppliement the results from the index with paper abstracts. The user query is first pre-processed to extract metadata for filtering the candidate papers and re-phrasing the query as needed with the help of an LLM - [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L221).
+**Configuration:**
+- Main API: `http://localhost:8000`
+- Native Reranker: `http://localhost:8001`
+- Web UI: `http://localhost:3000`
 
-  ii. _Reranker_ - The results from the retriever are then reranked with [mixedbread-ai/mxbai-rerank-large-v1](https://huggingface.co/mixedbread-ai/mxbai-rerank-large-v1) and top k passages are retained and aggregated at the paper-level to combine all the passages from a single paper.
+The hybrid approach provides:
+- GPU acceleration for reranking operations
+- Reduced latency through native service communication
+- Optimal performance for local development environments
 
-These components are encapsulated in the [PaperFinder](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/rag/retrieval.py#L21) class.
+### 2. Modal Cloud Architecture
 
-- #### Multi-step Generation:
+Deploy the system using Modal's serverless GPU infrastructure for production-scale workloads.
 
-  The generation pipeline uses an LLM (Claude Sonnet 3.7 default) and comprises of three steps:
+**Setup:**
+```bash
+# Install Modal CLI
+pip install modal-client
 
-  i. _Quote Extraction_ - The user query along with the aggregated passages from the retrieval component are used to extract the exact quotes relevant to answering the query - [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L2) .
+# Deploy reranker service
+modal deploy api/scholarqa/rag/reranker/modal_deploy/ai2-scholar-qa-reranker.py
 
-  ii. _Planning and Clustering_ - First, an organization outline is generated for the report with sections headings and the corresponding format of the section. The quotes from step (i) are clustered and assigned to each heading - [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L52).
-
-  iii. _Summary Generation_ - Each section is generated based on the quotes assigned to that section and all the prior section text generated in the report - [Prompt](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/llms/prompts.py#L97).
-
-  These steps are encapsulated in the [MultiStepQAPipeline](https://github.com/allenai/ai2-scholarqa-lib/blob/345b101e16d1dd62517fbd2df5f2ad6d8065af93/api/scholarqa/rag/multi_step_qa_pipeline.py#L50C7-L50C26) class. For sections that are determined to have a list format, we also generate literature review tables that compare and contrast all papers referenced in that section. We generate these tables using the pipeline proposed by the [ArxivDIGESTables paper](https://arxiv.org/pdf/2410.22360), which is available [here](https://github.com/bnewm0609/arxivDIGESTables/tree/main).
-
-Both PaperFinder and MultiStepQAPipeline are in turn wrapped inside [ScholarQA](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/scholar_qa.py#L27), which is the main class powering our system.
-
-For more info please refer to our [blogpost](allenai.org/blog/ai2-scholarqa).
-
-The code is in this repo can be used as a Dockerized web app, an Async API or as a Python library. We start with the common configuration setup required for both the modes and then describe each mode separately below.
-
-- ### Common Setup
-
-* #### Environment Variables
-
-solaceai-prototype requires Semantic Scholar api and LLMs for its core functionality of retrieval and generation. So please ensure to create a `.env` file in the root directory with OR include in your runtime environment directly the following variables:
-
-```
-export S2_API_KEY=
-export ANTHROPIC_API_KEY=
-export OPENAI_API_KEY=
+# Configure for Modal
+cp api/run_configs/modal.json api/run_configs/default.json
 ```
 
-`S2_API_KEY` : Used to retrieve the relevant [paper passages](https://api.semanticscholar.org/api-docs/#tag/Snippet-Text/operation/get_snippet_search) , [keyword search results](https://api.semanticscholar.org/api-docs/#tag/Paper-Data/operation/get_graph_paper_relevance_search) and [associated metadata](https://api.semanticscholar.org/api-docs/#tag/Paper-Data/operation/post_graph_get_papers) via the Semantic Scholar public api.
-
-`ANTHROPIC_API_KEY` : solaceai-prototype uses Anthropic's [Claude 3.7 Sonnet](https://www.anthropic.com/news/claude-3-7-sonnet) as the primary LLM for generation, but any model served by litellm from the providers listed [here](https://docs.litellm.ai/docs/completion/json_mode#pass-in-json_schema) will work. Please configure the corresponding api key here.
-`OPENAI_API_KEY`: OpenAI's [GPT 4o](https://openai.com/index/gpt-4o-and-more-tools-to-chatgpt-free/) is configured as the fallback llm.
-
-**Note:** We also use OpenAI's [text moderation api](https://platform.openai.com/docs/guides/moderation/overview#:~:text=The%20moderation%20endpoint%20is%20free%20to%20use%20when%20monitoring%20the%20inputs%20and%20outputs%20of%20OpenAI%20APIs.%20We%20currently%20disallow%20other%20use%20cases.) to validate and filter harmful queries. If you don't have access to an OpenAI api key, this feature will be disabled.
-
-If you use [Modal](https://modal.com/) to serve your models, please configure `MODAL_TOKEN` and `MODAL_TOKEN_SECRET` here as well.
-
-- ### Web App
-
-* #### Application Configuration
-  The web app is initialized with a json config outlining the logging and pipeline attributes to be used at runtime.
-  Please refer to [default.json](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/run_configs/default.json) for the default runtime config.
-
+**Configuration:**
 ```json
 {
-  "logs": {
-    "log_dir": "logs",
-    "llm_cache_dir": "llm_cache",
-    "event_trace_loc": "scholarqa_traces",
-    "tracing_mode": "local"
-  },
-  "run_config": {
-    "retrieval_service": "public_api",
-    "retriever_args": {
-      "n_retrieval": 256,
-      "n_keyword_srch": 20
-    },
-    "reranker_service": "modal",
-    "reranker_args": {
-      "app_name": "ai2-scholar-qa",
-      "api_name": "inference_api",
-      "batch_size": 256,
-      "gen_options": {}
-    },
-    "paper_finder_args": {
-      "n_rerank": 50,
-      "context_threshold": 0.0
-    },
-    "pipeline_args": {
-      "validate": true,
-      "llm": "anthropic/claude-3-5-sonnet-20241022",
-      "decomposer_llm": "anthropic/claude-3-5-sonnet-20241022"
-    }
+  "reranker_service": "modal",
+  "reranker_args": {
+    "app_name": "ai2-scholar-qa",
+    "api_name": "inference_api",
+    "batch_size": 256
   }
 }
 ```
 
-The config is used to populate the [AppConfig](https://github.com/allenai/ai2-scholarqa-lib/blob/c65c0917b64c501db397e01f34420c7167927da8/api/scholarqa/config/config_setup.py#L47) instance.
-It wraps the logging and pipeline instances which are initialized with the config and are outlined below:
+### 3. HTTP Microservice Architecture
 
-**Logging**
+Full containerized deployment with dedicated reranker microservices and load balancing.
 
-```python
-class LogsConfig(BaseModel):
-    log_dir: str = Field(default="logs", description="Directory to store logs, event traces and litellm cache")
-    llm_cache_dir: str = Field(default="llm_cache", description="Sub directory to cache llm calls")
-    event_trace_loc: str = Field(default="scholarqa_traces", description="Sub directory to store event traces"
-                                                                         "OR the GCS bucket name")
-    tracing_mode: Literal["local", "gcs"] = Field(default="local",
-                                                  description="Mode to store event traces (local or gcs)")
-```
-
-**Note:**
-
-i. Event Traces are json documents containing a trace of the entire
-pipeline i.e. the results of retrieval, reranking, each step of the qa
-pipeline and associated costs, if any.
-
-ii. llm_cache_dir is used to initialize the local disk cache for caching llm calls via [litellm](https://docs.litellm.ai/docs/caching/all_caches).
-
-iii. The traces are stored locally in `{log_dir}/{event_trace_loc}` by
-default. They can also be persisted in a Google Cloud Storage (GCS)
-bucket. Please set the `tracing_mode="gcs"` and `event_trace_loc=<GCS
-  bucket name>` here and the `export
-  GOOGLE_APPLICATION_CREDENTIALS=<Service Account Key json file path>`
-in .`env`.
-
-iv. By default, the working directory is `./api` , so the `log_dir` will be created inside it as a sub-directory unless the config is modified.
-
-You can also activate Langsmith based log traces if you have an api key configured.
-Please add the following environment variables:
-
-```
-LANGCHAIN_API_KEY
-LANGCHAIN_TRACING_V2
-LANGCHAIN_ENDPOINT
-LANGCHAIN_PROJECT
-```
-
-**Pipeline**
-
-```python
-class RunConfig(BaseModel):
-    retrieval_service: str = Field(default="public_api", description="Service to use for paper retrieval")
-    retriever_args: dict = Field(default=None, description="Arguments for the retrieval service")
-    reranker_service: str = Field(default="modal", description="Service to use for paper reranking")
-    reranker_args: dict = Field(default=None, description="Arguments for the reranker service")
-    paper_finder_args: dict = Field(default=None, description="Arguments for the paper finder service")
-    pipeline_args: dict = Field(default=None, description="Arguments for the Scholar QA pipeline service")
-```
-
-**Note:**
-
-i. `*(retrieval, reranker)_service` can be used to indicate the type
-of retrieval/reranker you want to instantiate. Ai2 Scholar QA supports multiple reranker options:
-
-- `modal`: Uses Modal cloud service (default)
-- `http`: Uses dedicated HTTP microservice (recommended for production)
-- `crossencoder`: Local SentenceTransformers CrossEncoder
-- `biencoder`: Local SentenceTransformers BiEncoder
-- `flag_embedding`: Local FlagEmbedding reranker
-
-ii. `*(retriever, reranker, paper_finder, pipeline)_args` are used to
-initialize the corresponding instances of the pipeline components. eg.
-`retriever = FullTextRetriever(**run_config.retriever_args)`. You
-can initialize multiple runs and customize your pipeline.
-
-iii. If the `reranker_args` are not defined, the app resorts to using only the retrieval service.
-
-- #### docker-compose.yaml
-  The web app initializes 4 docker containers - one each for the API, GUI, nginx proxy and sonar with their own Dockerfiles.
-  The api container config can also be used to declare environment variables -
-
-```yaml
-api:
-build: ./api
-volumes:
-  - ./api:/api
-  - ./secret:/secret
-environment:
-  # This ensures that errors are printed as they occur, which
-  # makes debugging easier.
-  - PYTHONUNBUFFERED=1
-  - LOG_LEVEL=INFO
-  - CONFIG_PATH=run_configs/default.json
-ports:
-  - 8000:8000
-env_file:
-  - .env
-```
-
-`environment.CONFIG_PATH` indicates the path of the application configuration json file.
-`env_file` indicates the path of the file with environment variables.
-
-- ### Running the Webapp
-
-Please refer to [DOCKER.md](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/DOCKER.md)
-for more info on setting up the docker app.
-
-i. Clone the repo
-
+**Setup:**
 ```bash
-git clone git@github.com:solaceai-evidence/solaceai-prototype.git
-cd solaceai-prototype
+# Deploy with scaling configuration
+docker-compose -f docker-compose.scale.yaml up -d
+
+# Scale API instances
+docker-compose -f docker-compose.scale.yaml up -d --scale api=3
 ```
 
-ii. Run docker-compose
-
-```bash
-docker compose up --build
-```
-
-The docker compose command takes a while to run the first time to install torch and related dependencies.
-You can get the verbose output with the following command:
-
-```bash
-docker compose build --progress plain
-```
-
-Below we show videos of app startup, the UI and also backend logging while processing a user query.
-
-#### Startup
-
-https://github.com/user-attachments/assets/7d6761d6-1e95-4dac-9aeb-a5a898a89fbe
-
-#### UI
-
-https://github.com/user-attachments/assets/baed8710-2161-4fbf-b713-3a2dcf46ac61
-
-#### Backend
-
-https://github.com/user-attachments/assets/f9a1b39f-36c8-41c4-a0ac-10046ded0593
-
-- ### HTTP Microservice Architecture (Performance Optimized)
-
-For production deployments requiring high performance and scalability, we provide an HTTP microservice architecture that separates the reranking service from the main API. This architecture provides several benefits:
-
-- **Scalability**: Independent scaling of reranking workloads
-- **Performance**: Dedicated resources for CPU-intensive reranking operations
-- **Cost Efficiency**: Optimized resource allocation without vendor lock-in
-- **Open Source**: No dependency on commercial services like Modal
-
-#### Architecture Components
-
-The microservice setup includes:
-
-1. **Load Balancer**: Nginx reverse proxy distributing requests across API instances
-2. **Multiple API Instances**: Horizontal scaling for query processing
-3. **Dedicated Reranker Service**: Standalone FastAPI service optimized for CPU reranking
-4. **Shared Configuration**: Centralized configuration management
-
-#### Configuration
-
-Update your `run_configs/default.json` to use the HTTP microservice:
-
+**Configuration:**
 ```json
 {
-  "run_config": {
-    "retrieval_service": "public_api",
-    "retriever_args": {
-      "n_retrieval": 256,
-      "n_keyword_srch": 20
-    },
-    "reranker_service": "http",
-    "reranker_args": {
-      "service_url": "http://reranker:8001",
-      "batch_size": 64,
-      "timeout": 300
-    },
-    "paper_finder_args": {
-      "n_rerank": 50,
-      "context_threshold": 0.0
-    },
-    "pipeline_args": {
-      "validate": false,
-      "llm": "openai/gpt-4o",
-      "decomposer_llm": "openai/gpt-4o-mini"
-    }
+  "reranker_service": "http",
+  "reranker_args": {
+    "service_url": "http://reranker:8001",
+    "batch_size": 64,
+    "timeout": 300
   }
 }
 ```
 
-#### Running the Microservice Architecture
+## Configuration Management
 
-```bash
-# Clone the repository
-git clone git@github.com:solaceai-evidence/solaceai-prototype.git
-cd solaceai-prototype
+### Reranker Service Configuration
 
-# Switch to the microservice branch
-git checkout http-microservice-reranker
+The system supports multiple reranker backends through configuration:
 
-# Build and start all services
-docker-compose -f docker-compose.scale.yaml up --build
-
-# Or start services individually:
-# 1. Start the reranker service first
-docker-compose -f docker-compose.scale.yaml up -d reranker
-
-# 2. Wait for model loading (check logs)
-docker-compose -f docker-compose.scale.yaml logs -f reranker
-
-# 3. Start API instances and load balancer
-docker-compose -f docker-compose.scale.yaml up -d nginx-lb api-1 api-2 api-3
-
-# 4. Start UI and monitoring
-docker-compose -f docker-compose.scale.yaml up -d ui sonar
+```json
+{
+  "reranker_service": "remote|modal|http|crossencoder",
+  "reranker_args": {
+    "model_name_or_path": "mixedbread-ai/mxbai-rerank-large-v1",
+    "batch_size": 64
+  }
+}
 ```
 
-#### Service Endpoints
+**Reranker Options:**
+- `remote`: Native service with GPU acceleration (hybrid architecture)
+- `modal`: Modal cloud deployment
+- `http`: Containerized microservice
+- `crossencoder`: Local in-process reranker
 
-- **Main Application**: http://localhost:8080 (via load balancer)
-- **Direct API Access**: http://localhost:8000 (single instance)
-- **Reranker Health Check**: http://localhost:8001/health
-- **Reranker Metrics**: http://localhost:8001/metrics
-- **UI**: http://localhost:3000 (in development mode)
-- **Monitoring**: http://localhost:8888
+### Rate Limiting Configuration
 
-#### Performance Optimizations
+For API providers with rate limits, configure appropriate concurrency:
 
-The HTTP microservice includes several optimizations:
+```json
+{
+  "pipeline_args": {
+    "max_workers": 3,
+    "request_timeout": 300
+  }
+}
+```
 
-- **CPU-Optimized Reranker**: Float32 precision, optimized batch sizes
-- **Multi-LLM Strategy**: Load balancing across OpenAI and Anthropic APIs
-- **Efficient Resource Usage**: Dedicated 8GB memory limit for reranker service
-- **Health Monitoring**: Built-in health checks and metrics endpoints
-
-#### Monitoring and Debugging
-
+**Environment Variables:**
 ```bash
-# Check service status
-docker-compose -f docker-compose.scale.yaml ps
+MAX_LLM_WORKERS=3
+LLM_REQUEST_TIMEOUT=300
+ANTHROPIC_RATE_LIMIT_RPM=45
+ANTHROPIC_RATE_LIMIT_TPM=25000
+```
 
-# View reranker logs
-docker-compose -f docker-compose.scale.yaml logs -f reranker
+## Performance Characteristics
 
-# Test reranker directly
+### Device-Specific Performance
+
+**NVIDIA GPU (CUDA):**
+- Reranking: High-throughput processing
+- Recommended batch size: 128-256
+- Memory: Dedicated GPU memory
+
+**Apple Silicon (MPS):**
+- Reranking: ~46 seconds for 241 passages
+- Recommended batch size: 64
+- Memory: Unified memory architecture
+
+**CPU Fallback:**
+- Reranking: Standard CPU processing
+- Recommended batch size: 32
+- Memory: System RAM
+
+### Modal Architecture Performance
+- Reranking: High-throughput GPU processing
+- Scaling: Automatic based on demand
+- Batch Size: 256+ (optimized for dedicated GPUs)
+
+## Development Workflow
+
+### Local Development (Hybrid)
+1. Start hybrid architecture: `./start_hybrid.sh`
+2. Access UI: `http://localhost:3000`
+3. Monitor reranker logs: `tail -f api/logs/reranker_service.log`
+4. Stop services: `Ctrl+C` in terminal
+
+### Testing Reranker Service
+```bash
+# Health check
 curl http://localhost:8001/health
 
-# Monitor resource usage
-docker stats
+# Test reranking
+curl -X POST "http://localhost:8001/rerank" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "machine learning",
+    "passages": ["Deep learning networks", "Weather forecast"],
+    "batch_size": 64
+  }'
 ```
 
-#### Scaling
+### Platform-Specific Commands
 
-To scale the system, adjust the number of API instances in `docker-compose.scale.yaml`:
+**Linux/macOS:**
+```bash
+# Check GPU availability
+python -c "import torch; print('CUDA:', torch.cuda.is_available()); print('MPS:', torch.backends.mps.is_available() if hasattr(torch.backends, 'mps') else False)"
 
-```yaml
-# Add more API instances for higher throughput
-api-4:
-  build: ./api
-  environment:
-    - CONFIG_PATH=run_configs/default.json
-    - WORKER_ID=4
-  volumes:
-    - ./api:/app
-    - ./api/logs:/app/logs
-  expose:
-    - "8000"
+# Start services
+./start_hybrid.sh
 ```
 
-Then update the load balancer configuration in `proxy/load-balancer.conf` to include the new instance.
+**Windows:**
+```cmd
+# Check GPU availability
+python -c "import torch; print('CUDA:', torch.cuda.is_available())"
 
-#### Backend
-
-https://github.com/user-attachments/assets/f9a1b39f-36c8-41c4-a0ac-10046ded0593
-
-- ### Async API
-  The solaceai-prototype UI is powered by an async api at the back end in [app.py](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/scholarqa/app.py) which is run from [dev.sh](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/dev.sh).
-
-i. The `query_corpusqa` end point is first called with the `query`, and a uuid as the `user_id`, adn it returns a `task_id`.
-
-<img width="1421" alt="image" src="https://github.com/user-attachments/assets/3b5792f0-04f9-4dbf-a704-d98beaf6e58b" />
-
-<img width="964" alt="image" src="https://github.com/user-attachments/assets/6cbb4d38-f1f4-4444-9b2d-4139ca28c514" />
-
-ii. Subsequently, the `query_corpusqa` is then polled to get the updated status of the async task until the task status is not `COMPLETED`
-
-[Sample response](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/sample_response)
-
-- ### Python Package
-
-```python
-conda create -n scholarqa python=3.11.3
-conda activate scholarqa
-pip install ai2-scholar-qa
-
-#to use sentence transformer models as re-ranker
-pip install 'ai2-scholar-qa[all]'
+# Start services (use Git Bash or WSL for shell scripts)
+bash start_hybrid.sh
 ```
 
-Both the webapp and the api are powered by the same pipeline represented by the [ScholarQA](https://github.com/allenai/ai2-scholarqa-lib/blob/main/api/scholarqa/scholar_qa.py) class. The pipeline consists of a retrieval component, `PaperFinder` which consists of a retriever and maybe a reranker and a 3 step generator component `MultiStepQAPipeline`. Each component is extensible and can be replaced by custom instances/classes as required.
+## Troubleshooting
 
-**Sample usage**
+### Common Issues
 
-```python
-from scholarqa.rag.reranker.reranker_base import CrossEncoderScores
-from scholarqa.rag.reranker.modal_engine import ModalReranker
-from scholarqa.rag.retrieval import PaperFinderWithReranker
-from scholarqa.rag.retriever_base import FullTextRetriever
-from scholarqa import ScholarQA
-from scholarqa.llms.constants import CLAUDE_37_SONNET
+**GPU Not Available:**
+- **NVIDIA**: Verify CUDA installation and PyTorch CUDA support
+- **Apple Silicon**: Ensure PyTorch version supports MPS
+- **Check**: `python -c "import torch; print(torch.cuda.is_available(), torch.backends.mps.is_available() if hasattr(torch.backends, 'mps') else False)"`
 
-#Retrieval class/steps
-retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20) #full text and keyword search
-reranker = CrossEncoderScores(model_name_or_path="mixedbread-ai/mxbai-rerank-large-v1") #sentence transformer
+**Rate Limiting Errors:**
+- Reduce `max_workers` in configuration
+- Increase `request_timeout` values
+- Monitor API usage quotas
 
+**Docker Issues:**
+- Ensure Docker Desktop is running
+- Check port availability: 
+  - Linux/macOS: `lsof -i :8000,8001,3000`
+  - Windows: `netstat -an | findstr :8000`
+- Rebuild containers: `docker-compose down && docker-compose up --build`
 
-#Reranker if deployed on Modal, modal_app_name and modal_api_name are modal specific arguments.
-#Please refer https://github.com/allenai/ai2-scholarqa-lib/blob/aps/readme_fixes/docs/MODAL.md for more info
-reranker = ModalReranker(app_name='<modal_app_name>', api_name='<modal_api_name>', batch_size=256, gen_options=dict())
+**Performance Issues:**
+- Monitor system resources during reranking
+- Adjust `batch_size` based on available memory
+- Consider switching to Modal for high-throughput requirements
 
-#wraps around the retriever with `retrieve_passages()` and `retrieve_additional_papers()`, and reranker with rerank()
-#any modifications to the retrieval output can be made here
-paper_finder =  PaperFinderWithReranker(retriever, reranker, n_rerank=50, context_threshold=0.0)
+**Platform-Specific Issues:**
 
-#For wrapper class with MultiStepQAPipeline integrated
-scholar_qa = ScholarQA(paper_finder=paper_finder, llm_model=CLAUDE_37_SONNET) #llm_model can be any litellm model
-print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
-```
+**Apple Silicon:**
+- Ensure Rosetta 2 is installed if needed: `softwareupdate --install-rosetta`
+- Use native ARM64 Docker images when possible
 
-**Pipeline steps (Modular usage)**
+**Windows:**
+- Use WSL2 for better Docker performance
+- Ensure Windows Subsystem for Linux is enabled
+- Consider using Git Bash for shell script execution
 
-Continuing from sample usage, below is a breakdown of the pipeline execution in the ScholarQA class.
+**Linux:**
+- Verify GPU drivers are properly installed
+- Check Docker permissions: `sudo usermod -aG docker $USER`
 
-```python
-from scholarqa import ScholarQA
-from scholarqa.rag.multi_step_qa_pipeline import MultiStepQAPipeline
-from scholarqa.llms.constants import CLAUDE_37_SONNET
-from scholarqa.llms.prompts import SYSTEM_PROMPT_QUOTE_PER_PAPER, SYSTEM_PROMPT_QUOTE_CLUSTER, PROMPT_ASSEMBLE_SUMMARY
-from scholarqa.utils import NUMERIC_META_FIELDS, CATEGORICAL_META_FIELDS
+## Production Deployment
 
-# Custom MultiStepQAPipeline class/steps with llm_model asa any litellm supported model
-mqa_pipeline = MultiStepQAPipeline(llm_model=CLAUDE_37_SONNET)
+For production deployments, consider:
 
-query = "Which is the 9th planet in our solar system?"
+1. **Modal Architecture**: Best for variable workloads with automatic scaling
+2. **HTTP Microservice**: Best for consistent workloads with predictable traffic
+3. **Hybrid Architecture**: Recommended only for development and local testing
 
-scholar_qa = ScholarQA(paper_finder=paper_finder, multi_step_pipeline=mqa_pipeline, llm_model=CLAUDE_37_SONNET)
+Configure appropriate monitoring, logging, and error handling for production environments.
 
-# Decompose the query to get filters like year, venue, fos, citations, etc along with
-# a re-written version of the query and a query suitable for keyword search.
-llm_processed_query = scholar_qa.preprocess_query(query)
+## API Documentation
 
-# Paper finder step - retrieve relevant paper passages from semantic scholar index and api
-full_text_src, keyword_srch_res = scholar_qa.find_relevant_papers(llm_processed_query.result)
-retrieved_candidates = full_text_src + keyword_srch_res
+Once services are running, access interactive API documentation:
+- Main API: `http://localhost:8000/docs`
+- Reranker Service: `http://localhost:8001/docs`
 
-# Rerank the retrieved candidates based on the query with a cross encoder
-# keyword search results are returned with associated metadata, metadata is retrieved separately for full text serach results
-keyword_srch_metadata = [
-    {k: v for k, v in paper.items() if k == "corpus_id" or k in NUMERIC_META_FIELDS or k in CATEGORICAL_META_FIELDS}
-    for paper in keyword_srch_res]
-reranked_df, paper_metadata = scholar_qa.rerank_and_aggregate(query, retrieved_candidates,
-                                                              filter_paper_metadata={str(paper["corpus_id"]): paper for
-                                                                                     paper in
-                                                                                     keyword_srch_metadata})
-# Step 1 - quote extraction
-per_paper_quotes = scholar_qa.step_select_quotes(query, reranked_df, sys_prompt=SYSTEM_PROMPT_QUOTE_PER_PAPER)
+## System Requirements
 
-# step 2: outline planning and clustering
-cluster_json = scholar_qa.step_clustering(query, per_paper_quotes.result, sys_prompt=SYSTEM_PROMPT_QUOTE_CLUSTER)
+### Minimum Requirements
+- **CPU**: 4+ cores
+- **RAM**: 8GB (16GB recommended)
+- **Storage**: 10GB free space
+- **Python**: 3.11+
+- **Docker**: 20.10+
 
-# Changing to expected format in the summary generation prompt
-plan_json = {f'{dim["name"]} ({dim["format"]})': dim["quotes"] for dim in cluster_json.result["dimensions"]}
+### Recommended for GPU Acceleration
+- **NVIDIA GPU**: 6GB+ VRAM (RTX 3060 or better)
+- **Apple Silicon**: M1/M2/M3 with 16GB+ unified memory
+- **Intel/AMD**: Recent CPU with AVX2 support for CPU acceleration
 
-# step 2.1: extend the clustered snippets in plan json with their inline citations
-per_paper_summaries_extd = scholar_qa.extract_quote_citations(reranked_df, per_paper_quotes.result, plan_json,
-                                                              paper_metadata)
-
-# step 3: generating output as per the outline
-answer = list(scholar_qa.step_gen_iterative_summary(query, per_paper_summaries_extd, plan_json,
-                                                    sys_prompt=PROMPT_ASSEMBLE_SUMMARY))
-```
-
-- ### Custom Pipeline
-
-* #### API end points
-
-  The api end points in app.py can be extended with a fastapi APIRouter in another script.
-  eg. `custom_app.py`
-
-  ```python
-  from fastapi import APIRouter, FastAPI
-  from scholarqa.app import create_app as create_app_base
-  from scholarqa.app import app_config
-  from scholarqa.models import ToolRequest
-
-  def create_app() -> FastAPI:
-    app = create_app_base()
-    custom_router = APIRouter()
-
-    @custom_router.post("/retrieval")
-    def retrieval(tool_request: ToolRequest, task_id: str):
-      scholar_qa = app_config.load_scholarqa(task_id)
-      #a re-written version of the query and a query suitable for keyword search.
-      llm_processed_query = scholar_qa.preprocess_query(tool_request.query)
-      full_text_src, keyword_srch_res = scholar_qa.find_relevant_papers(llm_processed_query.result)
-      retrieved_candidates = full_text_src + keyword_srch_res
-      return retrieved_candidates
-
-    app.include_router(custom_router)
-    return app.py
-  ```
-
-  To run `custom_app.py`, simply replace `scholarqa.app:create_app` in dev.sh with `<package>.custom_app:create_app`
-
-* #### ScholarQA class
-
-  To extend the existing ScholarQA functionality in a new class you can either create a sub class of ScholarQA or a new class altogether.
-  Either way, `lazy_load_scholarqa` in app.py should be reimplemented in the new api script to ensure the correct class is initialized.
-
-* #### Pipeline Components
-
-  The components of the pipeline are individually extensible.
-  We have the following abstract classes that can be extended to achieve desired customization for retrieval:
-
-  - [AbstractRetriever](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/retriever_base.py#L10)
-  - [AbstractReranker](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/reranker/reranker_base.py#L15)
-  - [AbsPaperFinder](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/retrieval.py#L14)
-
-  and the MultiStepQAPipeline can be extended/modified as needed for generation.
-
-* #### Modal deployment
-  If you would prefer to serve your models via modal, please refer to [MODAL.md](https://github.com/allenai/ai2-scholarqa-lib/blob/main/docs/MODAL.md) for more info and sample code that we used to deploy the reranker model in the live demo.
-
-- ### Citation
-  Please cite the work as follows:
-  ```bibtex
-  @inproceedings{Singh2025Ai2SQ,
-  title={Ai2 Scholar QA: Organized Literature Synthesis with Attribution},
-  author={Amanpreet Singh and Joseph Chee Chang and Chloe Anastasiades and Dany Haddad and Aakanksha Naik and Amber Tanaka and Angele Zamarron and Cecile Nguyen and Jena D. Hwang and Jason Dunkleberger and Matt Latzke and Smita Rao and Jaron Lochner and Rob Evans and Rodney Kinney and Daniel S. Weld and Doug Downey and Sergey Feldman},
-  year={2025},
-  url={https://api.semanticscholar.org/CorpusID:277786810}
-  ```
+### Network Requirements
+- Stable internet connection for API calls
+- Bandwidth: 1Mbps+ for external API services
+- Ports: 8000, 8001, 3000 available locally
