@@ -1,4 +1,4 @@
-version: "3"
+version: "3.8"
 services:
   sonar:
     build: ./sonar
@@ -18,7 +18,11 @@ services:
       - LITELLM_LOG=WARNING
       - CONFIG_PATH=run_configs/default.json
       # url of remote reranker service to be reached by the API container
-      - RERANKER_SERVICE_URL=http://host.docker.internal:${RERANKER_PORT}
+      - RERANKER_SERVICE_URL=http://host.docker.internal:${RERANKER_PORT:-8001}
+    extra_hosts:
+      # This allows the API container to reach the reranker service
+      # running on the host machine.
+      - "host.docker.internal:host-gateway"
     ports:
       - 8000:8000
     env_file:
