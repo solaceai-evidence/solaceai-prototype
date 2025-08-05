@@ -19,7 +19,7 @@ MAIN_API_URL = "http://localhost:8000"
 
 async def test_remote_reranker_service():
     """Test the standalone reranker service"""
-    logger.info("🧪 Testing Remote Reranker Service...")
+    logger.info(" Testing Remote Reranker Service...")
     
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -43,19 +43,19 @@ async def test_remote_reranker_service():
             rerank_response = await client.post(f"{RERANKER_SERVICE_URL}/rerank", json=test_data)
             result = rerank_response.json()
             
-            logger.info(f"✅ Rerank successful: {rerank_response.status_code}")
-            logger.info(f"📊 Scores: {result['scores']}")
-            logger.info(f"🖥️  Device: {result['device']}")
+            logger.info(f" Rerank successful: {rerank_response.status_code}")
+            logger.info(f" Scores: {result['scores']}")
+            logger.info(f"  Device: {result['device']}")
             
             return True
             
     except Exception as e:
-        logger.error(f"❌ Remote service test failed: {e}")
+        logger.error(f" Remote service test failed: {e}")
         return False
 
 async def test_main_api_with_remote():
     """Test main API configured to use remote reranker"""
-    logger.info("🧪 Testing Main API with Remote Reranker...")
+    logger.info(" Testing Main API with Remote Reranker...")
     
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
@@ -64,16 +64,16 @@ async def test_main_api_with_remote():
             logger.info(f"Main API Health: {health_response.status_code}")
             
             # Note: Add actual API endpoint tests here when available
-            logger.info("✅ Main API accessible")
+            logger.info(" Main API accessible")
             return True
             
     except Exception as e:
-        logger.error(f"❌ Main API test failed: {e}")
+        logger.error(f" Main API test failed: {e}")
         return False
 
 def start_reranker_service():
     """Start the reranker service in background"""
-    logger.info("🚀 Starting Reranker Service...")
+    logger.info(" Starting Reranker Service...")
     
     # Change to API directory
     api_dir = Path(__file__).parent
@@ -91,20 +91,20 @@ def start_reranker_service():
         time.sleep(5)
         
         if process.poll() is None:
-            logger.info("✅ Reranker service started")
+            logger.info(" Reranker service started")
             return process
         else:
             stdout, stderr = process.communicate()
-            logger.error(f"❌ Service failed to start: {stderr.decode()}")
+            logger.error(f" Service failed to start: {stderr.decode()}")
             return None
             
     except Exception as e:
-        logger.error(f"❌ Failed to start service: {e}")
+        logger.error(f" Failed to start service: {e}")
         return None
 
 async def main():
     """Main test orchestrator"""
-    logger.info("🏁 Starting Remote Reranker Architecture Tests")
+    logger.info(" Starting Remote Reranker Architecture Tests")
     
     # Start reranker service
     service_process = start_reranker_service()
@@ -117,19 +117,19 @@ async def main():
         service_ok = await test_remote_reranker_service()
         
         if service_ok:
-            logger.info("✅ Remote reranker service tests passed")
+            logger.info(" Remote reranker service tests passed")
             
             # Test main API (if running)
             # api_ok = await test_main_api_with_remote()
             
-            logger.info("🎉 All tests completed!")
+            logger.info(" All tests completed!")
         else:
-            logger.error("❌ Remote service tests failed")
+            logger.error(" Remote service tests failed")
             
     finally:
         # Cleanup
         if service_process:
-            logger.info("🛑 Stopping reranker service...")
+            logger.info(" Stopping reranker service...")
             service_process.terminate()
             service_process.wait()
 

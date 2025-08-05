@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def test_remote_client():
     """Test the remote reranker client"""
-    logger.info("🧪 Testing RemoteRerankerClient...")
+    logger.info(" Testing RemoteRerankerClient...")
     
     try:
         # Initialize remote client
@@ -39,7 +39,7 @@ def test_remote_client():
         # Get scores
         scores = client.get_scores(query, passages)
         
-        logger.info(f"✅ Scores received: {scores}")
+        logger.info(f" Scores received: {scores}")
         
         # Verify scores make sense
         assert len(scores) == len(passages), "Score count mismatch"
@@ -49,18 +49,18 @@ def test_remote_client():
         ml_scores = [scores[0], scores[2]]  # Random forests, SVMs
         other_scores = [scores[1], scores[3]]  # Weather, pizza
         
-        logger.info(f"📊 ML-related scores: {ml_scores}")
-        logger.info(f"📊 Other scores: {other_scores}")
+        logger.info(f" ML-related scores: {ml_scores}")
+        logger.info(f" Other scores: {other_scores}")
         
         if max(ml_scores) > max(other_scores):
-            logger.info("✅ Reranking appears to work correctly!")
+            logger.info(" Reranking appears to work correctly!")
         else:
-            logger.warning("⚠️ Unexpected score pattern")
+            logger.warning(" Unexpected score pattern")
         
         return True
         
     except Exception as e:
-        logger.error(f"❌ Remote client test failed: {e}")
+        logger.error(f" Remote client test failed: {e}")
         return False
 
 if __name__ == "__main__":

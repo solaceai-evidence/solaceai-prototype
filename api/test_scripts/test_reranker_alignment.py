@@ -57,27 +57,27 @@ def create_test_cases() -> List[Tuple[str, List[str]]]:
 def verify_score_alignment(query: str, passages: List[str], scores: List[float], 
                           reranker_name: str) -> bool:
     """Verify that scores align 1-1 with input passages"""
-    logger.info(f"\n🧪 Testing {reranker_name} with {len(passages)} passages")
+    logger.info(f"\n Testing {reranker_name} with {len(passages)} passages")
     logger.info(f"Query: '{query}'")
     
     # Basic length check
     if len(scores) != len(passages):
-        logger.error(f"❌ Length mismatch: {len(passages)} passages, {len(scores)} scores")
+        logger.error(f" Length mismatch: {len(passages)} passages, {len(scores)} scores")
         return False
     
-    logger.info(f"✅ Length match: {len(passages)} passages = {len(scores)} scores")
+    logger.info(f" Length match: {len(passages)} passages = {len(scores)} scores")
     
     # Score validation
     for i, (passage, score) in enumerate(zip(passages, scores)):
         if not isinstance(score, (int, float)):
-            logger.error(f"❌ Invalid score type at index {i}: {type(score)} - {score}")
+            logger.error(f" Invalid score type at index {i}: {type(score)} - {score}")
             return False
         
         if not (0.0 <= score <= 1.0):
-            logger.warning(f"⚠️ Score outside [0,1] range at index {i}: {score}")
+            logger.warning(f" Score outside [0,1] range at index {i}: {score}")
     
     # Display results for manual verification
-    logger.info("📊 Passage-Score Alignment:")
+    logger.info(" Passage-Score Alignment:")
     ranked_pairs = sorted(enumerate(zip(passages, scores)), key=lambda x: x[1][1], reverse=True)
     
     for rank, (original_idx, (passage, score)) in enumerate(ranked_pairs, 1):
@@ -89,15 +89,15 @@ def verify_score_alignment(query: str, passages: List[str], scores: List[float],
         max_score_idx = scores.index(max(scores))
         min_score_idx = scores.index(min(scores))
         
-        logger.info(f"🎯 Highest score passage: '{passages[max_score_idx][:100]}...'")
-        logger.info(f"🎯 Lowest score passage: '{passages[min_score_idx][:100]}...'")
+        logger.info(f" Highest score passage: '{passages[max_score_idx][:100]}...'")
+        logger.info(f" Lowest score passage: '{passages[min_score_idx][:100]}...'")
         
         # Check if scores show reasonable variation
         score_range = max(scores) - min(scores)
         if score_range < 0.01:
             logger.warning(f"⚠️ Very low score variation: {score_range:.6f}")
         else:
-            logger.info(f"✅ Good score variation: {score_range:.4f}")
+            logger.info(f" Good score variation: {score_range:.4f}")
     
     return True
 
@@ -119,7 +119,7 @@ def test_reranker(reranker_name: str, test_cases: List[Tuple[str, List[str]]]) -
                 model_name_or_path="mixedbread-ai/mxbai-rerank-large-v1"
             )
         
-        logger.info(f"✅ {reranker_name} reranker initialized")
+        logger.info(f" {reranker_name} reranker initialized")
         
         # Test all cases
         all_passed = True
@@ -132,23 +132,23 @@ def test_reranker(reranker_name: str, test_cases: List[Tuple[str, List[str]]]) -
                 all_passed = all_passed and passed
                 
                 if passed:
-                    logger.info(f"✅ Test case {case_idx} passed")
+                    logger.info(f" Test case {case_idx} passed")
                 else:
-                    logger.error(f"❌ Test case {case_idx} failed")
+                    logger.error(f" Test case {case_idx} failed")
                     
             except Exception as e:
-                logger.error(f"❌ Test case {case_idx} error: {e}")
+                logger.error(f" Test case {case_idx} error: {e}")
                 all_passed = False
         
         return all_passed
         
     except Exception as e:
-        logger.error(f"❌ Failed to initialize {reranker_name}: {e}")
+        logger.error(f" Failed to initialize {reranker_name}: {e}")
         return False
 
 def test_cross_reranker_consistency() -> bool:
     """Test that different rerankers produce consistent results for same input"""
-    logger.info(f"\n🔄 Testing Cross-Reranker Consistency")
+    logger.info(f"\n Testing Cross-Reranker Consistency")
     logger.info("=" * 50)
     
     test_query = "machine learning neural networks"
@@ -181,10 +181,10 @@ def test_cross_reranker_consistency() -> bool:
             scores = reranker.get_scores(test_query, test_passages)
             results[reranker_name] = scores
             
-            logger.info(f"✅ {reranker_name}: {[f'{s:.4f}' for s in scores]}")
+            logger.info(f" {reranker_name}: {[f'{s:.4f}' for s in scores]}")
             
         except Exception as e:
-            logger.warning(f"⚠️ {reranker_name} failed: {e}")
+            logger.warning(f" {reranker_name} failed: {e}")
     
     # Compare results
     if len(results) > 1:
@@ -192,7 +192,7 @@ def test_cross_reranker_consistency() -> bool:
         base_name = reranker_names[0]
         base_scores = results[base_name]
         
-        logger.info(f"\n📊 Consistency Analysis (vs {base_name}):")
+        logger.info(f"\n Consistency Analysis (vs {base_name}):")
         
         for other_name in reranker_names[1:]:
             other_scores = results[other_name]
@@ -202,7 +202,7 @@ def test_cross_reranker_consistency() -> bool:
             other_ranking = sorted(range(len(other_scores)), key=lambda i: other_scores[i], reverse=True)
             
             ranking_match = base_ranking == other_ranking
-            logger.info(f"   {other_name} vs {base_name}: {'✅ Same ranking' if ranking_match else '⚠️ Different ranking'}")
+            logger.info(f"   {other_name} vs {base_name}: {' Same ranking' if ranking_match else '⚠️ Different ranking'}")
             logger.info(f"     {base_name}: {base_ranking}")
             logger.info(f"     {other_name}: {other_ranking}")
     
@@ -210,12 +210,12 @@ def test_cross_reranker_consistency() -> bool:
 
 def main():
     """Main test runner"""
-    logger.info("🚀 Reranker Alignment Verification")
+    logger.info(" Reranker Alignment Verification")
     logger.info("="*50)
     
     # Create test cases
     test_cases = create_test_cases()
-    logger.info(f"📋 Created {len(test_cases)} test cases")
+    logger.info(f" Created {len(test_cases)} test cases")
     
     # Test available rerankers
     rerankers_to_test = ["crossencoder"]
@@ -229,9 +229,9 @@ def main():
                 rerankers_to_test.append("remote")
                 logger.info("✅ Remote reranker service detected")
             else:
-                logger.warning("⚠️ Remote reranker service not healthy")
+                logger.warning(" Remote reranker service not healthy")
     except Exception:
-        logger.warning("⚠️ Remote reranker service not available")
+        logger.warning(" Remote reranker service not available")
     
     # Run tests
     overall_success = True
@@ -248,11 +248,11 @@ def main():
     logger.info(f"\n🏁 Final Results")
     logger.info("="*30)
     if overall_success:
-        logger.info("✅ All alignment tests passed!")
-        logger.info("✅ 1-1 mapping verified for all rerankers")
+        logger.info(" All alignment tests passed!")
+        logger.info(" 1-1 mapping verified for all rerankers")
     else:
-        logger.error("❌ Some tests failed")
-        logger.error("❌ Check logs above for details")
+        logger.error(" Some tests failed")
+        logger.error(" Check logs above for details")
     
     return 0 if overall_success else 1
 
