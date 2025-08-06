@@ -8,10 +8,17 @@ import pandas as pd
 from pydantic import BaseModel, Field
 
 from scholarqa.llms.constants import GPT_4o
-from scholarqa.llms.litellm_helper import batch_llm_completion, llm_completion
+from scholarqa.llms.litellm_helper import batch_llm_completion_with_rate_limiting, llm_completion_with_rate_limiting
 from scholarqa.llms.prompts import USER_PROMPT_PAPER_LIST_FORMAT, USER_PROMPT_QUOTE_LIST_FORMAT, \
     PROMPT_ASSEMBLE_NO_QUOTES_SUMMARY
 from scholarqa.llms.constants import CompletionResult
+
+import os
+from dotenv import load_dotenv
+
+# Load environment variables at the top of the file
+load_dotenv()
+
 
 logger = logging.getLogger(__name__)
 
@@ -43,14 +50,17 @@ class ClusterPlan(BaseModel):
 
 
 class MultiStepQAPipeline:
-    def __init__(self, llm_model: str, fallback_llm: str = GPT_4o, batch_workers: int = 20,
+    def __init__(self, llm_model: str, fallback_llm: str = GPT_4o, batch_workers: int = int(os.getenv("MAX_LLM_WORKERS", "20")),
                  **llm_kwargs):
         self.llm_model = llm_model
         self.fallback_llm = fallback_llm
         self.batch_workers = batch_workers
-        self.llm_kwargs = {"max_tokens": 4096*4}
+        max_output_tokens = int(os.getenv("RATE_LIMIT_OTPM", (4096*4) ))
+        self.llm_kwargs = {"max_tokens": max_output_tokens}
         if llm_kwargs:
             self.llm_kwargs.update(llm_kwargs)
+        logger.info(f"Pipeline initialized: {self.batch_workers} workers, "
+                   f"max_tokens_per_request={max_output_tokens}")
 
 
     def step_select_quotes(self, query: str, scored_df: pd.DataFrame, sys_prompt: str) -> Tuple[
@@ -61,7 +71,7 @@ class MultiStepQAPipeline:
         tup_items = {k: v for k, v in
                      zip(scored_df["reference_string"], scored_df["relevance_judgment_input_expanded"])}
         messages = [USER_PROMPT_PAPER_LIST_FORMAT.format(query, v) for k, v in tup_items.items()]
-        completion_results = batch_llm_completion(self.llm_model, messages=messages, system_prompt=sys_prompt,
+        completion_results = batch_llm_completion_with_rate_limiting(self.llm_model, messages=messages, system_prompt=sys_prompt,
                                                   max_workers=self.batch_workers, fallback=self.fallback_llm,
                                                   **self.llm_kwargs)
         quotes = [
@@ -88,7 +98,7 @@ class MultiStepQAPipeline:
         user_prompt = make_prompt(query, per_paper_summaries)
         try:
             #params for reasoning mode: max_completion_tokens=4096, max_tokens=4096+1024, reasoning_effort="low"
-            response = llm_completion(user_prompt=user_prompt,
+            response = llm_completion_with_rate_limiting(user_prompt=user_prompt,
                                       system_prompt=sys_prompt, fallback=self.fallback_llm, model=self.llm_model,
                                       response_format= ClusterPlan, **self.llm_kwargs
                                       )
@@ -137,7 +147,7 @@ class MultiStepQAPipeline:
                 logger.warning(f"No quotes for section {section_name}")
                 filled_in_prompt = PROMPT_ASSEMBLE_NO_QUOTES_SUMMARY.format(**fill_in_prompt_args)
 
-            response = llm_completion(user_prompt=filled_in_prompt, model=self.llm_model, fallback=self.fallback_llm,
+            response = llm_completion_with_rate_limiting(user_prompt=filled_in_prompt, model=self.llm_model, fallback=self.fallback_llm,
                                       **self.llm_kwargs)
             existing_sections.append(response.content)
             yield response

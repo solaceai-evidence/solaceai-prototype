@@ -1,7 +1,7 @@
 import logging
 import os
 from scholarqa.llms.constants import *
-from typing import List, Any, Callable, Tuple, Iterator, Union, Generator
+from typing import List, Any, Callable, Tuple, Iterator, Union, Generator, Optional
 
 import litellm
 from litellm.caching import Cache
@@ -9,9 +9,66 @@ from litellm.utils import trim_messages
 from langsmith import traceable
 
 from scholarqa.state_mgmt.local_state_mgr import AbsStateMgrClient
+from scholarqa.llms.rate_limiter import RateLimiter
 
 logger = logging.getLogger(__name__)
 
+######################################################################
+# Setup rate limiter from environment variables (via app initialization)
+######################################################################
+
+# Global rate limiter instance set during app init
+_rate_limiter : Optional[RateLimiter] = None 
+
+def set_rate_limiter(rate_limiter: RateLimiter):
+    """Set the global rate limiter instance"""
+    global _rate_limiter
+    _rate_limiter = rate_limiter    
+    logger.info(f"Global rate limiter configured for LLM calls")
+
+######################################################################
+# LLM completion with rate limiting Wrappers
+######################################################################
+
+
+def llm_completion_with_rate_limiting(
+    user_prompt: str, system_prompt: str = None, fallback=GPT_41, **llm_lite_params
+) -> CompletionResult:
+    """Rate-limited version of llm_completion"""
+    # Initialized global rate limiter
+    global _rate_limiter
+    
+    # Apply rate limiting if enabled
+    # (by acquiring permission to make one API request)
+    if _rate_limiter:
+        _rate_limiter.acquire()
+    
+    # Call the original function
+    return llm_completion(user_prompt, system_prompt, fallback, **llm_lite_params)
+
+
+def batch_llm_completion_with_rate_limiting(
+    model: str,
+    messages: List[str],
+    system_prompt: str = None,
+    fallback=GPT_41,
+    **llm_lite_params,
+) -> List[CompletionResult]:
+    """Rate-limited version of batch_llm_completion"""
+    global _rate_limiter
+    
+    # Apply rate limiting for each message if enabled
+    # (by acquiring permission to make one API request)
+    if _rate_limiter:
+        for _ in messages:
+            _rate_limiter.acquire()
+    
+    # Call the original function
+    return batch_llm_completion(model, messages, system_prompt, fallback, **llm_lite_params)
+
+#########################################################################
+# LLM completion
+###########################################################################
 
 class CostAwareLLMCaller:
     def __init__(self, state_mgr: AbsStateMgrClient):

@@ -6,6 +6,11 @@ from time import time
 from typing import Union
 from uuid import uuid4, uuid5, UUID
 
+# Add these imports for rate limiting
+from dotenv import load_dotenv
+from scholarqa.llms.rate_limiter import RateLimiter
+from scholarqa.llms import litellm_helper
+
 from fastapi import FastAPI, HTTPException, Request
 from nora_lib.tasks.models import TASK_STATUSES, AsyncTaskState
 from nora_lib.tasks.state import NoSuchTaskException
@@ -26,6 +31,9 @@ from scholarqa.scholar_qa import ScholarQA
 from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
 from typing import Type, TypeVar
 
+# Load environment variables from .env file
+load_dotenv()
+
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 240
@@ -36,6 +44,31 @@ started_task_step = None
 
 T = TypeVar("T", bound=ScholarQA)
 
+# Initialize rate limiter from environment variables
+def setup_rate_limiter():
+    """Initialize rate limiter from environment variables"""
+    max_workers = int(os.getenv("MAX_LLM_WORKERS", 20))
+    max_requests_per_minute = int(os.getenv("RATE_LIMIT_RPM", -1))
+    
+    if max_requests_per_minute > 0:
+        max_input_tokens_per_minute = int(os.getenv("RATE_LIMIT_ITPM", "30000"))
+        max_output_tokens_per_minute = int(os.getenv("RATE_LIMIT_OTPM", "8000"))
+        
+        rate_limiter = RateLimiter(
+            max_requests_per_minute=max_requests_per_minute,
+            max_input_tokens_per_minute=max_input_tokens_per_minute,
+            max_output_tokens_per_minute=max_output_tokens_per_minute,
+            max_workers=max_workers
+        )
+        
+        # Set the rate limiter in the litellm helper
+        litellm_helper.set_rate_limiter(rate_limiter)
+        
+        logger.info(f"Rate limiter initialized: {max_requests_per_minute} RPM, "
+                   f"{max_input_tokens_per_minute} Input TPM, "
+                   f"{max_output_tokens_per_minute} Output TPM")
+    else:
+        logger.info("Rate limiting disabled")
 
 def lazy_load_state_mgr_client():
     return LocalStateMgrClient(logs_config.log_dir, "async_state")
@@ -99,6 +132,9 @@ def _estimate_task_length(tool_request: ToolRequest) -> str:
     """
     return "~3 minutes"
 
+
+# Initialize rate limiter from environment variables
+setup_rate_limiter()
 
 ###########################################################################
 ### BELOW THIS LINE IS ALL TEMPLATE CODE THAT SHOULD NOT NEED TO CHANGE ###
@@ -292,8 +328,3 @@ def _handle_async_task_check_in(
         task_result=task_state.task_result,
         steps=task_state.extra_state.get("steps", []),
     )
-
-
-# Create the app instance for direct uvicorn usage (when not using --factory)
-# Docker uses --factory flag so this won't interfere
-app = create_app()

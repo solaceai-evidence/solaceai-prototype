@@ -21,10 +21,11 @@ import gc
 # keep both pydantic validator styles for backwards compatibility
 try:
     from pydantic import field_validator # version 2.x
-    PYDANTIC_V = True#
+    PYDANTIC_V2 = True
 except ImportError:
     from pydantic import validator # version 1.x
-    PYDANTIC_V = False
+    PYDANTIC_V2 = False
+
 
 # Get host and port 
 host = os.getenv("RERANKER_HOST", "0.0.0.0")
