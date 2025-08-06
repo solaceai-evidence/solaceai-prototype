@@ -10,7 +10,7 @@ import time
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
 import os
 import torch
@@ -48,7 +48,8 @@ class RerankRequest(BaseModel):
     batch_size: int = Field(default=64, ge=1, le=256)
     top_k: Optional[int] = Field(default=None, ge=1)
     
-    @validator('passages')
+    @field_validator('passages')
+    @classmethod
     def validate_passages(cls, v):
         if any(len(passage.strip()) == 0 for passage in v):
             raise ValueError("All passages must be non-empty")
