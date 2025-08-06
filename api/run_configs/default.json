@@ -29,8 +29,9 @@
       "max_workers": 3,
       "request_timeout": 120,
       "rate_limit": {
-        "max_requests_per_minute": 45,
-        "max_tokens_per_minute": 25000
+        "max_requests_per_minute": 50,
+        "max_tokens_per_minute": 30000,
+        "output_tokens_per_minute": 8000
       }
     }
   }
