@@ -41,10 +41,10 @@ def llm_completion_with_rate_limiting(
     # Apply rate limiting if enabled
     # (by acquiring permission to make one API request)
     if _rate_limiter:
-        _rate_limiter.acquire()
-    
-    # Call the original function
-    return llm_completion(user_prompt, system_prompt, fallback, **llm_lite_params)
+        with _rate_limiter.request_context():
+            return llm_completion(user_prompt, system_prompt, fallback, **llm_lite_params)  
+    else:
+        return llm_completion(user_prompt, system_prompt, fallback, **llm_lite_params)
 
 
 def batch_llm_completion_with_rate_limiting(
@@ -57,14 +57,19 @@ def batch_llm_completion_with_rate_limiting(
     """Rate-limited version of batch_llm_completion"""
     global _rate_limiter
     
-    # Apply rate limiting for each message if enabled
-    # (by acquiring permission to make one API request)
     if _rate_limiter:
-        for _ in messages:
-            _rate_limiter.acquire()
-    
-    # Call the original function
-    return batch_llm_completion(model, messages, system_prompt, fallback, **llm_lite_params)
+        # Acquire permission for each message in the batch
+        results = []
+        for message in messages:
+            with _rate_limiter.request_context():
+                # Process 1 message at a time w rate limiting
+                single_result = batch_llm_completion(
+                    model, [message], system_prompt, fallback, **llm_lite_params
+                )
+                results.extend(single_result)
+        return results
+    else:
+        return batch_llm_completion(model, messages, system_prompt, fallback, **llm_lite_params)
 
 #########################################################################
 # LLM completion

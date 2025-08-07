@@ -2,6 +2,8 @@ import threading
 import time
 import logging
 
+from contextlib import contextmanager
+
 logger = logging.getLogger(__name__)
 
 # This class manages request and token limits to avoid exceeding LLM rate limits.
@@ -21,21 +23,37 @@ class RateLimiter:
         self.request_times = []
         self.token_usage = [] # List of (timestamp, token_counf) tuples for input TPM
         
+        # Track active workers
+        self.active_workers = 0
+        self.worker_condition = threading.Condition()
+        
         #Thead-safe lock to manage concurrent access
         self.lock = threading.Lock()
         
         logger.info(f"Rate limiter initialized: {self.max_requests_per_minute} req/min, "   
                 f"{self.max_input_tokens_per_minute} input tokens/min, "
-                f"{self.max_output_tokens_per_minute} output tokens/min")
+                f"{self.max_output_tokens_per_minute} output tokens/min" 
+                f", {self.max_workers} max workers")
     
-    # TODO: Implement token-based limits if needed
-    # TODO: Implement max_workers limit if needed
+
     def acquire(self):
         """
         Acquire permission to make one API request.
-        Blocks if rate limit would be exceeded.
+        Blocks if rate limit or max workers limit would be exceeded.
         Cleans up old requests older than 60 seconds.
         """
+        
+        # First check worker limit
+        with self.worker_condition:
+            while self.active_workers >= self.max_workers:
+                logger.info(f"Max workers reached ({self.active_workers}/{self.max_workers}), waiting...")
+                self.worker_condition.wait()
+                
+            # max workers not reached: Reserve a worker slot
+            self.active_workers += 1
+            logger.debug(f"Worker acquired. Active workers: {self.active_workers}/{self.max_workers}")
+        
+        # Now check rate limits       
         with self.lock:
             current_time = time.time()
             
@@ -59,6 +77,31 @@ class RateLimiter:
             self.request_times.append(current_time)
             logger.debug(f"Request acquired. Current usage: {len(self.request_times)}/{self.max_requests_per_minute}")
     
+    def release(self):
+        """
+        Release a worker slot after request completion.
+        Should be called when request is done (success or failure).
+        """
+        with self.worker_condition:
+            self.active_workers -= 1
+            logger.debug(f"Worker released. Active workers: {self.active_workers}/{self.max_workers}")
+            # Wake up one waiting thread
+            self.worker_condition.notify()
+    
+            
+    @contextmanager
+    def request_context(self):
+        """
+        Context manager for rate-limited requests.
+        Automatically acquires and releases resources.
+        """
+        try:
+            self.acquire()
+            yield
+        finally:
+            self.release()
+    
+        
     def get_current_usage(self):
         """Get current usage statistics"""
         current_time = time.time()
@@ -68,5 +111,8 @@ class RateLimiter:
         return {
             "requests_used": len(active_requests),
             "requests_limit": self.max_requests_per_minute,
-            "usage_percentage": (len(active_requests) / self.max_requests_per_minute) * 100
+            "requests_usage_percentage": (len(active_requests) / self.max_requests_per_minute) * 100,
+            "active_workers": self.active_workers,
+            "max_workers": self.max_workers,
+            "workers_usage_percentage": (self.active_workers / self.max_workers) * 100 if self.max_workers > 0 else 0
         }    
