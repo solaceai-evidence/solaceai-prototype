@@ -60,8 +60,7 @@ class LocalStateMgrClient(AbsStateMgrClient):
 
     def report_llm_usage(self, completion_costs: List[CompletionResult], cost_args: CostReportingArgs) -> Union[float, Tuple[float, TokenUsage]]:
         if not completion_costs:
-            logger.warning(f"report_llm_usage called with empty completion_costs list for {cost_args.description}")
-            return 0.0, TokenUsage(input=0, output=0, total=0, reasoning=0)
+            raise ValueError(f"report_llm_usage called with empty completion_costs list for {cost_args.description} - this indicates a critical failure in LLM completion")
         
         tot_cost = sum([cost.cost for cost in completion_costs])
         token_usage = TokenUsage(

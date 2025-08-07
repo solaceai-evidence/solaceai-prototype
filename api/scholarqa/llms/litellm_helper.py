@@ -130,22 +130,31 @@ class CostAwareLLMCaller:
         all_results, all_completion_costs, all_completion_models = [], [], []
         logger.info(f"Starting iterative method for {cost_args.description}")
         
-        for i, method_result in enumerate(gen_method(**kwargs)):
-            result, completion_costs, completion_models = self.parse_result_args(
-                method_result
-            )
-            all_completion_costs.extend(completion_costs)
-            all_completion_models.extend(completion_models)
-            all_results.append(result)
-            
-            # Log individual completion details
-            total_tokens_this_iter = sum([cost.total_tokens for cost in completion_costs])
-            logger.info(f"Iteration {i+1}: {len(completion_costs)} completions, {total_tokens_this_iter} total tokens")
-            
-            yield result
+        try:
+            for i, method_result in enumerate(gen_method(**kwargs)):
+                result, completion_costs, completion_models = self.parse_result_args(
+                    method_result
+                )
+                all_completion_costs.extend(completion_costs)
+                all_completion_models.extend(completion_models)
+                all_results.append(result)
+                
+                # Log individual completion details
+                total_tokens_this_iter = sum([cost.total_tokens for cost in completion_costs])
+                logger.info(f"Iteration {i+1}: {len(completion_costs)} completions, {total_tokens_this_iter} total tokens")
+                
+                yield result
+        except Exception as e:
+            logger.error(f"Exception in iterative method {cost_args.description}: {e}")
+            import traceback
+            traceback.print_exc()
+            raise  # Re-raise to fail fast and preserve the original error
         
         # Log aggregation details
         total_completions = len(all_completion_costs)
+        if total_completions == 0:
+            raise ValueError(f"No completions collected for {cost_args.description} - generator failed without producing any results")
+            
         total_input_tokens = sum([cost.input_tokens for cost in all_completion_costs])
         total_output_tokens = sum([cost.output_tokens for cost in all_completion_costs])
         total_all_tokens = sum([cost.total_tokens for cost in all_completion_costs])
@@ -156,6 +165,9 @@ class CostAwareLLMCaller:
             completion_costs=all_completion_costs, cost_args=cost_args
         )
         total_cost, tokens = self.parse_usage_args(llm_usage)
+        
+        if tokens is None:
+            raise ValueError(f"Token aggregation failed for {cost_args.description} - state_mgr.report_llm_usage returned None tokens")
         
         logger.info(f"Final aggregated tokens: {tokens}")
         
@@ -168,15 +180,9 @@ class CostAwareLLMCaller:
         
         logger.info(f"CostAwareLLMResult created with tokens: {result.tokens}")
         
-        # Safety check - ensure tokens is not None
+        # Strict validation - fail fast if tokens is None
         if result.tokens is None:
-            logger.error("CostAwareLLMResult created with None tokens! Creating default TokenUsage.")
-            result = CostAwareLLMResult(
-                result=all_results,
-                tot_cost=total_cost,
-                models=all_completion_models,
-                tokens=TokenUsage(input=0, output=0, total=0, reasoning=0),
-            )
+            raise ValueError("CostAwareLLMResult created with None tokens! This indicates a critical failure in token aggregation.")
         
         return result
 

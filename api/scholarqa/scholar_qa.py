@@ -343,12 +343,18 @@ class ScholarQA:
                 yield response.content
         except StopIteration as e:
             return_val = e.value
-        if return_val:
-            logger.info(
-                f"Step 3 done, cost: {return_val.tot_cost}, tokens: {return_val.tokens}, time: {time() - start:.2f}"
-            )
-        else:
-            logger.warning("Step 3 completed but return_val is None - this may cause token aggregation issues")
+        except Exception as e:
+            logger.error(f"Exception in iterative summary generation: {e}")
+            import traceback
+            traceback.print_exc()
+            raise  # Re-raise the original exception to fail fast
+            
+        if return_val is None:
+            raise ValueError("Step 3 completed but return_val is None - iterative generation failed to produce aggregated results")
+            
+        logger.info(
+            f"Step 3 done, cost: {return_val.tot_cost}, tokens: {return_val.tokens}, time: {time() - start:.2f}"
+        )
         return return_val
 
     # Step 4: Extract inline citations from the generated summary.
@@ -951,6 +957,9 @@ class ScholarQA:
         event_trace.persist_trace(self.logs_config)
         
         logger.info(f"Creating TaskResult with cost: {event_trace.total_cost}, tokens: {event_trace.tokens}")
+        
+        if event_trace.tokens is None:
+            raise ValueError("event_trace.tokens is None when creating TaskResult - this indicates a critical failure in token aggregation")
         
         return TaskResult(
             sections=generated_sections,
