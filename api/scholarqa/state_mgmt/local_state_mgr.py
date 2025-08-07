@@ -1,3 +1,4 @@
+import logging
 import os
 from abc import ABC, abstractmethod
 from time import time
@@ -8,6 +9,8 @@ from nora_lib.tasks.state import IStateManager, StateManager
 
 from scholarqa.llms.constants import CompletionResult, CostReportingArgs, TokenUsage
 from scholarqa.models import TaskResult, TaskStep, AsyncTaskState, ToolRequest
+
+logger = logging.getLogger(__name__)
 
 UUID_NAMESPACE = os.getenv("UUID_ENCODER_KEY", "ai2-scholar-qa")
 
@@ -38,7 +41,12 @@ class AbsStateMgrClient(ABC):
         if task_estimated_time:
             task_state.estimated_time = task_estimated_time
         if curr_response:
-            task_state.task_result = TaskResult(sections=curr_response)
+            # Create TaskResult with required fields - using defaults for intermediate state
+            task_state.task_result = TaskResult(
+                sections=curr_response,
+                tokens={"input": 0, "output": 0, "total": 0, "reasoning": 0},  # Placeholder for intermediate results
+                cost=0.0  # Placeholder for intermediate results
+            )
         task_state.extra_state["steps"].append(curr_step)
         state_mgr.write_state(task_state)
 
@@ -56,6 +64,9 @@ class LocalStateMgrClient(AbsStateMgrClient):
         return self.state_mgr
 
     def report_llm_usage(self, completion_costs: List[CompletionResult], cost_args: CostReportingArgs) -> Union[float, Tuple[float, TokenUsage]]:
+        if not completion_costs:
+            raise ValueError(f"report_llm_usage called with empty completion_costs list for {cost_args.description} - this indicates a critical failure in LLM completion")
+        
         tot_cost = sum([cost.cost for cost in completion_costs])
         token_usage = TokenUsage(
             input=sum([cost.input_tokens for cost in completion_costs]),
@@ -63,6 +74,9 @@ class LocalStateMgrClient(AbsStateMgrClient):
             total=sum([cost.total_tokens for cost in completion_costs]),
             reasoning=sum([cost.reasoning_tokens for cost in completion_costs])
         )
+        
+        logger.info(f"report_llm_usage for {cost_args.description}: {len(completion_costs)} completions, tokens={token_usage}")
+        
         return tot_cost, token_usage
 
     def init_task(self, task_id: str, tool_request: ToolRequest):

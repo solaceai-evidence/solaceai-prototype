@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 S2_APIKEY = os.getenv("S2_API_KEY", "")
 S2_HEADERS = {"x-api-key": S2_APIKEY}
 S2_API_BASE_URL = "https://api.semanticscholar.org/graph/v1/"
+# TODO: Adapt meta_fields based on SOLACE-AI requirements
 NUMERIC_META_FIELDS = {"year", "citationCount", "referenceCount", "influentialCitationCount"}
 CATEGORICAL_META_FIELDS = {"title", "abstract", "corpusId", "authors", "venue", "isOpenAccess", "openAccessPdf"}
 METADATA_FIELDS = ",".join(CATEGORICAL_META_FIELDS.union(NUMERIC_META_FIELDS))
