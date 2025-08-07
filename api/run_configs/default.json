@@ -25,8 +25,7 @@
       "validate": false,
       "llm": "anthropic/claude-sonnet-4-20250514",
       "fallback_llm": "openai/gpt-4.1",
-      "decomposer_llm": "anthropic/claude-sonnet-4-20250514",
-      "max_workers": "3"
+      "decomposer_llm": "anthropic/claude-sonnet-4-20250514"
     }
   }
 }

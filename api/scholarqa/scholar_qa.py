@@ -345,8 +345,10 @@ class ScholarQA:
             return_val = e.value
         if return_val:
             logger.info(
-                f"Step 3 done, cost: {return_val.tot_cost}, time: {time() - start:.2f}"
+                f"Step 3 done, cost: {return_val.tot_cost}, tokens: {return_val.tokens}, time: {time() - start:.2f}"
             )
+        else:
+            logger.warning("Step 3 completed but return_val is None - this may cause token aggregation issues")
         return return_val
 
     # Step 4: Extract inline citations from the generated summary.
@@ -947,6 +949,9 @@ class ScholarQA:
         self.postprocess_json_output(json_summary, quotes_meta=quotes_metadata)
         event_trace.trace_summary_event(json_summary, all_sections, tcosts)
         event_trace.persist_trace(self.logs_config)
+        
+        logger.info(f"Creating TaskResult with cost: {event_trace.total_cost}, tokens: {event_trace.tokens}")
+        
         return TaskResult(
             sections=generated_sections,
             cost=event_trace.total_cost,

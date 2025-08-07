@@ -42,9 +42,14 @@ def llm_completion_with_rate_limiting(
     # (by acquiring permission to make one API request)
     if _rate_limiter:
         with _rate_limiter.request_context():
-            return llm_completion(user_prompt, system_prompt, fallback, **llm_lite_params)  
+            result = llm_completion(user_prompt, system_prompt, fallback, **llm_lite_params)
+            # Log token usage for debugging
+            logger.info(f"LLM call completed - Input: {result.input_tokens}, Output: {result.output_tokens}, Total: {result.total_tokens}, Cost: {result.cost}")
+            return result
     else:
-        return llm_completion(user_prompt, system_prompt, fallback, **llm_lite_params)
+        result = llm_completion(user_prompt, system_prompt, fallback, **llm_lite_params)
+        logger.info(f"LLM call completed (no rate limiting) - Input: {result.input_tokens}, Output: {result.output_tokens}, Total: {result.total_tokens}, Cost: {result.cost}")
+        return result
 
 
 def batch_llm_completion_with_rate_limiting(
@@ -123,24 +128,57 @@ class CostAwareLLMCaller:
         self, cost_args: CostReportingArgs, gen_method: Callable, **kwargs
     ) -> Generator[Any, None, CostAwareLLMResult]:
         all_results, all_completion_costs, all_completion_models = [], [], []
-        for method_result in gen_method(**kwargs):
+        logger.info(f"Starting iterative method for {cost_args.description}")
+        
+        for i, method_result in enumerate(gen_method(**kwargs)):
             result, completion_costs, completion_models = self.parse_result_args(
                 method_result
             )
             all_completion_costs.extend(completion_costs)
             all_completion_models.extend(completion_models)
             all_results.append(result)
+            
+            # Log individual completion details
+            total_tokens_this_iter = sum([cost.total_tokens for cost in completion_costs])
+            logger.info(f"Iteration {i+1}: {len(completion_costs)} completions, {total_tokens_this_iter} total tokens")
+            
             yield result
+        
+        # Log aggregation details
+        total_completions = len(all_completion_costs)
+        total_input_tokens = sum([cost.input_tokens for cost in all_completion_costs])
+        total_output_tokens = sum([cost.output_tokens for cost in all_completion_costs])
+        total_all_tokens = sum([cost.total_tokens for cost in all_completion_costs])
+        
+        logger.info(f"Aggregating {total_completions} completions: Input={total_input_tokens}, Output={total_output_tokens}, Total={total_all_tokens}")
+        
         llm_usage = self.state_mgr.report_llm_usage(
             completion_costs=all_completion_costs, cost_args=cost_args
         )
         total_cost, tokens = self.parse_usage_args(llm_usage)
-        return CostAwareLLMResult(
+        
+        logger.info(f"Final aggregated tokens: {tokens}")
+        
+        result = CostAwareLLMResult(
             result=all_results,
             tot_cost=total_cost,
             models=all_completion_models,
             tokens=tokens,
         )
+        
+        logger.info(f"CostAwareLLMResult created with tokens: {result.tokens}")
+        
+        # Safety check - ensure tokens is not None
+        if result.tokens is None:
+            logger.error("CostAwareLLMResult created with None tokens! Creating default TokenUsage.")
+            result = CostAwareLLMResult(
+                result=all_results,
+                tot_cost=total_cost,
+                models=all_completion_models,
+                tokens=TokenUsage(input=0, output=0, total=0, reasoning=0),
+            )
+        
+        return result
 
 
 def success_callback(kwargs, completion_response, start_time, end_time):

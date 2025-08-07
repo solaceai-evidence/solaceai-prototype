@@ -147,7 +147,7 @@ class MultiStepQAPipeline:
                 logger.warning(f"No quotes for section {section_name}")
                 filled_in_prompt = PROMPT_ASSEMBLE_NO_QUOTES_SUMMARY.format(**fill_in_prompt_args)
 
-            response = llm_completion_with_rate_limiting(user_prompt=filled_in_prompt, model=self.llm_model, fallback=self.fallback_llm,
-                                      **self.llm_kwargs)
+            response = llm_completion_with_rate_limiting(user_prompt=filled_in_prompt, fallback=self.fallback_llm,
+                                      model=self.llm_model, **self.llm_kwargs)
             existing_sections.append(response.content)
             yield response
