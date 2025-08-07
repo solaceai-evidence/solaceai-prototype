@@ -148,13 +148,16 @@ class MultiStepQAPipeline:
                 filled_in_prompt = PROMPT_ASSEMBLE_NO_QUOTES_SUMMARY.format(**fill_in_prompt_args)
 
             try:
+                logger.info(f"About to call llm_completion_with_rate_limiting for section '{section_name}'")
                 response = llm_completion_with_rate_limiting(user_prompt=filled_in_prompt, fallback=self.fallback_llm,
                                           model=self.llm_model, **self.llm_kwargs)
+                logger.info(f"LLM call successful for section '{section_name}', response type: {type(response)}")
                 existing_sections.append(response.content)
                 logger.info(f"Successfully generated section '{section_name}' with {response.total_tokens} tokens")
                 yield response
             except Exception as e:
                 logger.error(f"Error generating section '{section_name}': {e}")
+                logger.error(f"Exception type: {type(e)}")
                 import traceback
                 traceback.print_exc()
                 raise  # Re-raise to maintain error flow

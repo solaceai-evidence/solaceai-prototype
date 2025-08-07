@@ -41,8 +41,15 @@ def llm_completion_with_rate_limiting(
     # Apply rate limiting if enabled
     # (by acquiring permission to make one API request)
     if _rate_limiter:
-        with _rate_limiter.request_context():
+        # Estimate input tokens (rough heuristic: ~4 chars per token)
+        estimated_input = len(user_prompt + (system_prompt or "")) // 4
+        
+        with _rate_limiter.request_context(estimated_input_tokens=estimated_input) as rate_limiter:
             result = llm_completion(user_prompt, system_prompt, fallback, **llm_lite_params)
+            
+            # Record actual token usage with the existing tracking
+            rate_limiter.record_token_usage(result.input_tokens, result.output_tokens)
+            
             # Log token usage for debugging
             logger.info(f"LLM call completed - Input: {result.input_tokens}, Output: {result.output_tokens}, Total: {result.total_tokens}, Cost: {result.cost}")
             return result
@@ -66,11 +73,22 @@ def batch_llm_completion_with_rate_limiting(
         # Acquire permission for each message in the batch
         results = []
         for message in messages:
-            with _rate_limiter.request_context():
+            # Estimate input tokens for this message
+            estimated_input = len(message + (system_prompt or "")) // 4
+            
+            with _rate_limiter.request_context(estimated_input_tokens=estimated_input) as rate_limiter:
                 # Process 1 message at a time w rate limiting
                 single_result = batch_llm_completion(
                     model, [message], system_prompt, fallback, **llm_lite_params
                 )
+                
+                # Record actual token usage for this completion
+                if single_result:
+                    rate_limiter.record_token_usage(
+                        single_result[0].input_tokens, 
+                        single_result[0].output_tokens
+                    )
+                
                 results.extend(single_result)
         return results
     else:

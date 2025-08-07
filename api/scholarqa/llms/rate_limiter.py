@@ -21,7 +21,8 @@ class RateLimiter:
 
         # Initialize tracking for requests and token usage over time
         self.request_times = []
-        self.token_usage = [] # List of (timestamp, token_counf) tuples for input TPM
+        self.input_token_usage = []  # List of (timestamp, input_tokens) tuples for input TPM
+        self.output_token_usage = [] # List of (timestamp, output_tokens) tuples for output TPM
         
         # Track active workers
         self.active_workers = 0
@@ -43,15 +44,17 @@ class RateLimiter:
         Cleans up old requests older than 60 seconds.
         """
         
-        # First check worker limit
-        with self.worker_condition:
-            while self.active_workers >= self.max_workers:
-                logger.info(f"Max workers reached ({self.active_workers}/{self.max_workers}), waiting...")
-                self.worker_condition.wait()
-                
-            # max workers not reached: Reserve a worker slot
-            self.active_workers += 1
-            logger.debug(f"Worker acquired. Active workers: {self.active_workers}/{self.max_workers}")
+        # Optimization: Skip worker management for single worker
+        if self.max_workers > 1:
+            # First check worker limit
+            with self.worker_condition:
+                while self.active_workers >= self.max_workers:
+                    logger.info(f"Max workers reached ({self.active_workers}/{self.max_workers}), waiting...")
+                    self.worker_condition.wait()
+                    
+                # max workers not reached: Reserve a worker slot
+                self.active_workers += 1
+                logger.debug(f"Worker acquired. Active workers: {self.active_workers}/{self.max_workers}")
         
         # Now check rate limits       
         with self.lock:
@@ -82,22 +85,75 @@ class RateLimiter:
         Release a worker slot after request completion.
         Should be called when request is done (success or failure).
         """
-        with self.worker_condition:
-            self.active_workers -= 1
-            logger.debug(f"Worker released. Active workers: {self.active_workers}/{self.max_workers}")
-            # Wake up one waiting thread
-            self.worker_condition.notify()
+        # Optimization: Skip worker management for single worker
+        if self.max_workers > 1:
+            with self.worker_condition:
+                self.active_workers -= 1
+                logger.debug(f"Worker released. Active workers: {self.active_workers}/{self.max_workers}")
+                # Wake up one waiting thread
+                self.worker_condition.notify()
     
             
-    @contextmanager
-    def request_context(self):
+    def record_token_usage(self, input_tokens: int, output_tokens: int):
         """
-        Context manager for rate-limited requests.
-        Automatically acquires and releases resources.
+        Record actual token usage after an API call.
+        This should be called after each completion to track token consumption.
+        """
+        current_time = time.time()
+        
+        with self.lock:
+            self.input_token_usage.append((current_time, input_tokens))
+            self.output_token_usage.append((current_time, output_tokens))
+            
+            # Clean up old token usage (older than 60 seconds)
+            cutoff_time = current_time - 60
+            self.input_token_usage = [(t, tokens) for t, tokens in self.input_token_usage if t > cutoff_time]
+            self.output_token_usage = [(t, tokens) for t, tokens in self.output_token_usage if t > cutoff_time]
+            
+            logger.debug(f"Recorded token usage: {input_tokens} input, {output_tokens} output")
+
+    def check_token_limits(self, estimated_input_tokens: int, estimated_output_tokens: int = 0) -> bool:
+        """
+        Check if the proposed token usage would exceed limits.
+        Returns True if within limits, False if would exceed.
+        """
+        current_time = time.time()
+        cutoff_time = current_time - 60
+        
+        with self.lock:
+            # Calculate current token usage in the last minute
+            current_input_tokens = sum(tokens for t, tokens in self.input_token_usage if t > cutoff_time)
+            current_output_tokens = sum(tokens for t, tokens in self.output_token_usage if t > cutoff_time)
+            
+            # Check if adding estimated tokens would exceed limits
+            projected_input = current_input_tokens + estimated_input_tokens
+            projected_output = current_output_tokens + estimated_output_tokens
+            
+            input_ok = projected_input <= self.max_input_tokens_per_minute
+            output_ok = projected_output <= self.max_output_tokens_per_minute
+            
+            if not input_ok:
+                logger.warning(f"Input token limit would be exceeded: {projected_input}/{self.max_input_tokens_per_minute}")
+            if not output_ok:
+                logger.warning(f"Output token limit would be exceeded: {projected_output}/{self.max_output_tokens_per_minute}")
+                
+            return input_ok and output_ok
+
+    @contextmanager
+    def request_context(self, estimated_input_tokens: int = 0, estimated_output_tokens: int = 0):
+        """
+        Context manager for rate-limited requests with token estimation.
+        Automatically acquires and releases resources, and optionally checks token limits.
         """
         try:
             self.acquire()
-            yield
+            
+            # Optional: Check token limits before proceeding if estimates provided
+            if estimated_input_tokens > 0 or estimated_output_tokens > 0:
+                if not self.check_token_limits(estimated_input_tokens, estimated_output_tokens):
+                    logger.warning("Proceeding despite token limit concerns (rate limiter continues with request limiting)")
+            
+            yield self  # Yield the rate limiter instance so caller can call record_token_usage()
         finally:
             self.release()
     
@@ -108,10 +164,20 @@ class RateLimiter:
         cutoff_time = current_time - 60
         active_requests = [t for t in self.request_times if t > cutoff_time]
         
+        # Calculate current token usage
+        current_input_tokens = sum(tokens for t, tokens in self.input_token_usage if t > cutoff_time)
+        current_output_tokens = sum(tokens for t, tokens in self.output_token_usage if t > cutoff_time)
+        
         return {
             "requests_used": len(active_requests),
             "requests_limit": self.max_requests_per_minute,
             "requests_usage_percentage": (len(active_requests) / self.max_requests_per_minute) * 100,
+            "input_tokens_used": current_input_tokens,
+            "input_tokens_limit": self.max_input_tokens_per_minute,
+            "input_tokens_usage_percentage": (current_input_tokens / self.max_input_tokens_per_minute) * 100,
+            "output_tokens_used": current_output_tokens,
+            "output_tokens_limit": self.max_output_tokens_per_minute,
+            "output_tokens_usage_percentage": (current_output_tokens / self.max_output_tokens_per_minute) * 100,
             "active_workers": self.active_workers,
             "max_workers": self.max_workers,
             "workers_usage_percentage": (self.active_workers / self.max_workers) * 100 if self.max_workers > 0 else 0

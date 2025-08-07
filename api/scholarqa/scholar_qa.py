@@ -11,9 +11,9 @@ from anyascii import anyascii
 from langsmith import traceable
 
 from scholarqa.config.config_setup import LogsConfig
-from scholarqa.llms.constants import CostAwareLLMResult, GPT_4o, CLAUDE_4_SONNET
+from scholarqa.llms.constants import CostAwareLLMResult, GPT_4o, CLAUDE_35_SONNET
 from scholarqa.llms.litellm_helper import (
-    CLAUDE_4_SONNET,
+    CLAUDE_35_SONNET,
     GPT_4o,
     CostAwareLLMCaller,
     CostReportingArgs,
@@ -65,7 +65,7 @@ class ScholarQA:
         # Required for webapp since a new process is created for each request, for library task_id can be None initially and assigned for each request as below
         paper_finder: PaperFinder,
         task_id: str = None,
-        llm_model: str = CLAUDE_4_SONNET,
+        llm_model: str = CLAUDE_35_SONNET,
         multi_step_pipeline: MultiStepQAPipeline = None,
         state_mgr: AbsStateMgrClient = None,
         logs_config: LogsConfig = None,
@@ -338,13 +338,21 @@ class ScholarQA:
             sys_prompt=sys_prompt,
         )
         try:
+            iteration_count = 0
             while True:
+                iteration_count += 1
+                logger.info(f"About to call next() on sec_generator (iteration {iteration_count})")
                 response = next(sec_generator)
+                logger.info(f"Got response from sec_generator: {type(response)} (iteration {iteration_count})")
+                logger.info(f"About to yield response.content (iteration {iteration_count})")
                 yield response.content
+                logger.info(f"Yielded response.content successfully (iteration {iteration_count})")
         except StopIteration as e:
+            logger.info(f"StopIteration caught with value: {type(e.value)}")
             return_val = e.value
         except Exception as e:
             logger.error(f"Exception in iterative summary generation: {e}")
+            logger.error(f"Exception type: {type(e)}")
             import traceback
             traceback.print_exc()
             raise  # Re-raise the original exception to fail fast
@@ -892,7 +900,9 @@ class ScholarQA:
                         curr_response=generated_sections,
                         step_estimated_time=15,
                     )
+                logger.info(f"About to call next(gen_iter) for section {idx + 1}")
                 section_text = next(gen_iter)
+                logger.info(f"Got section_text from gen_iter for section {idx + 1}: {len(section_text) if section_text else 'None'} chars")
                 section_json = get_json_summary(
                     self.multi_step_pipeline.llm_model,
                     [section_text],

@@ -41,7 +41,12 @@ class AbsStateMgrClient(ABC):
         if task_estimated_time:
             task_state.estimated_time = task_estimated_time
         if curr_response:
-            task_state.task_result = TaskResult(sections=curr_response)
+            # Create TaskResult with required fields - using defaults for intermediate state
+            task_state.task_result = TaskResult(
+                sections=curr_response,
+                tokens={"input": 0, "output": 0, "total": 0, "reasoning": 0},  # Placeholder for intermediate results
+                cost=0.0  # Placeholder for intermediate results
+            )
         task_state.extra_state["steps"].append(curr_step)
         state_mgr.write_state(task_state)
 
