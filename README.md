@@ -349,3 +349,11 @@ Once services are running, access interactive API documentation:
 
 - Main API: `http://localhost:8000/docs`
 - Reranker Service: `http://localhost:8001/docs`
+
+### Install TypeScript Types (if using TypeScript)
+
+If you see TypeScript errors about missing React types, install them with:
+
+```bash
+yarn add --dev @types/react @types/react-dom
+```
