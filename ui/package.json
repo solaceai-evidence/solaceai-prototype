@@ -3,12 +3,12 @@
   "version": "0.0.1",
   "private": true,
   "license": "UNLICENSED",
-  "author": "reviz@allenai.org",
+  "author": "jesus.dominguez@kcl.ac.uk",
   "scripts": {
-    "build": "webpack --mode production",
+    "build": "NODE_OPTIONS='--max-old-space-size=4096' webpack --mode production",
     "lint": "eslint '**/*.{js,ts,tsx,json}' && echo '💫  Lint complete.'",
     "lint:fix": "eslint '**/*.{js,ts,tsx,json}' --fix && sort-package-json && echo '🛠  Lint --fix complete'",
-    "start": "webpack serve --mode development"
+    "start": "NODE_OPTIONS='--max-old-space-size=4096' webpack serve --mode development"
   },
   "resolutions": {
     "@types/react": "^18.2.0"
