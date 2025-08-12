@@ -109,7 +109,7 @@ export const App = () => {
                                 ))}
                             </Routes>
                             <Box sx={{ display: 'flex', gap: '16px' }}>
-                                <Link target='_blank' underline="hover" href={`https://docs.google.com/forms/d/e/1FAIpQLSeEXy9unYmpL278qXZ8-EAL_p7PtuNY50aLNvWsXntuf3VJwQ/viewform?usp=sf_link&entry.268806865=${location.pathname}`} variant="body2" sx={{ lineHeight: '24px', color: '#26EFAC' }}>Feedback</Link>
+                                {/* <Link target='_blank' underline="hover" href={`https://docs.google.com/forms/d/e/1FAIpQLSeEXy9unYmpL278qXZ8-EAL_p7PtuNY50aLNvWsXntuf3VJwQ/viewform?usp=sf_link&entry.268806865=${location.pathname}`} variant="body2" sx={{ lineHeight: '24px', color: '#26EFAC' }}>Feedback</Link>*/}
                                 <Link href={RoutesEnum.ABOUT} underline="hover" variant="body2" sx={{ lineHeight: '24px', color: '#26EFAC' }}>About</Link>
                                 {/* <Link href="#">Blog Post</Link> */}
                             </Box>

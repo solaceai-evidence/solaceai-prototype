@@ -181,3 +181,7 @@ api/*.lock
 local_skiff_files/**
 logs
 .idea
+
+# node modules
+node_modules/
+.DS_Store
