@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import List, Dict, Any
 
@@ -5,6 +6,8 @@ from scholarqa.config.config_setup import LogsConfig
 from scholarqa.llms.constants import CostAwareLLMResult
 from scholarqa.models import ToolRequest
 from scholarqa.trace.trace_writer import GCSWriter, LocalWriter
+
+logger = logging.getLogger(__name__)
 
 
 class EventTrace:
@@ -83,12 +86,17 @@ class EventTrace:
             quote_obj["metadata"] = quotes_metadata.get(quote_obj["key"], [])
 
     def trace_summary_event(self, json_summary: List[Dict[str, Any]], cost_result: CostAwareLLMResult, tab_costs: List[Dict] = None):
+        logger.info(f"trace_summary_event called with cost_result.tokens: {cost_result.tokens}")
+        logger.info(f"trace_summary_event: current self.tokens before update: {self.tokens}")
+        
         self.summary = {"sections": json_summary, "cost": cost_result.tot_cost, "tokens": cost_result.tokens._asdict(), "table_costs": tab_costs}
         for idx, section in enumerate(self.summary["sections"]):
             section["model"] = cost_result.models[idx]
         self.total_cost += cost_result.tot_cost
         for k, v in self.tokens.items():
             self.tokens[k] += self.summary["tokens"][k]
+
+        logger.info(f"trace_summary_event: self.tokens after update: {self.tokens}")
 
         if tab_costs:
             for tcost in tab_costs:

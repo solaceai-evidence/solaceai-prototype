@@ -6,6 +6,11 @@ from time import time
 from typing import Union
 from uuid import uuid4, uuid5, UUID
 
+# Add these imports for rate limiting
+from dotenv import load_dotenv
+from scholarqa.llms.rate_limiter import RateLimiter
+from scholarqa.llms import litellm_helper
+
 from fastapi import FastAPI, HTTPException, Request
 from nora_lib.tasks.models import TASK_STATUSES, AsyncTaskState
 from nora_lib.tasks.state import NoSuchTaskException
@@ -26,6 +31,9 @@ from scholarqa.scholar_qa import ScholarQA
 from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
 from typing import Type, TypeVar
 
+# Load environment variables from .env file
+load_dotenv()
+
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 240
@@ -35,7 +43,6 @@ async_context = multiprocessing.get_context("fork")
 started_task_step = None
 
 T = TypeVar("T", bound=ScholarQA)
-
 
 def lazy_load_state_mgr_client():
     return LocalStateMgrClient(logs_config.log_dir, "async_state")
@@ -100,6 +107,38 @@ def _estimate_task_length(tool_request: ToolRequest) -> str:
     return "~3 minutes"
 
 
+# Initialize rate limiter from environment variables
+# then, store reference for monitoring (added rate limiter status endpoint below thru app.state)
+def setup_rate_limiter():
+    """Initialize rate limiter from environment variables"""
+    max_requests_per_minute = int(os.getenv("RATE_LIMIT_RPM", "-1"))
+    
+    if max_requests_per_minute <=0:
+        logger.info("Rate limiting is disabled")
+        return None
+        
+    input_TKP = int(os.getenv("RATE_LIMIT_ITPM", "30000"))
+    output_TKP = int(os.getenv("RATE_LIMIT_OTPM", "8000"))
+    workers = int(os.getenv("MAX_LLM_WORKERS", "3"))
+    
+    rate_limiter = RateLimiter(
+        max_requests_per_minute = max_requests_per_minute,
+        max_input_tokens_per_minute = input_TKP,
+        max_output_tokens_per_minute = output_TKP,
+        max_workers = workers
+    )
+        
+    # Set the rate limiter in the litellm helper
+    litellm_helper.set_rate_limiter(rate_limiter)
+        
+    logger.info(f"Rate limiter initialized: {max_requests_per_minute} RPM, "
+                f"{input_TKP} Input TPM, "
+                f"{output_TKP} Output TPM, "
+                f"{workers} workers")
+    # Return the rate limiter instance for use in the app
+    return rate_limiter
+
+
 ###########################################################################
 ### BELOW THIS LINE IS ALL TEMPLATE CODE THAT SHOULD NOT NEED TO CHANGE ###
 ###########################################################################
@@ -108,6 +147,9 @@ def _estimate_task_length(tool_request: ToolRequest) -> str:
 # root_path="/api"
 def create_app() -> FastAPI:
     app = FastAPI()
+    
+    # Store rate limiter
+    app.state.rate_limiter = setup_rate_limiter()
 
     @app.get("/")
     def root(request: Request):
@@ -116,6 +158,17 @@ def create_app() -> FastAPI:
     @app.get("/health", status_code=204)
     def health():
         return "OK"
+    
+    # Add rate limiter status endpoint
+    @app.get("/rate_limiter_status")
+    def get_rate_limiter_status(request: Request):
+        rate_limiter = request.app.state.rate_limiter
+        if rate_limiter:
+            return {
+                "enabled": True,
+                "usage": rate_limiter.get_current_usage()
+            }
+        return {"enabled": False}
 
     @app.post("/query_corpusqa")
     def use_tool(
@@ -292,8 +345,3 @@ def _handle_async_task_check_in(
         task_result=task_state.task_result,
         steps=task_state.extra_state.get("steps", []),
     )
-
-
-# Create the app instance for direct uvicorn usage (when not using --factory)
-# Docker uses --factory flag so this won't interfere
-app = create_app()

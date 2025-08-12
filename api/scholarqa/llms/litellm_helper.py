@@ -1,7 +1,7 @@
 import logging
 import os
 from scholarqa.llms.constants import *
-from typing import List, Any, Callable, Tuple, Iterator, Union, Generator
+from typing import List, Any, Callable, Tuple, Iterator, Union, Generator, Optional
 
 import litellm
 from litellm.caching import Cache
@@ -9,9 +9,94 @@ from litellm.utils import trim_messages
 from langsmith import traceable
 
 from scholarqa.state_mgmt.local_state_mgr import AbsStateMgrClient
+from scholarqa.llms.rate_limiter import RateLimiter
 
 logger = logging.getLogger(__name__)
 
+######################################################################
+# Setup rate limiter from environment variables (via app initialization)
+######################################################################
+
+# Global rate limiter instance set during app init
+_rate_limiter : Optional[RateLimiter] = None 
+
+def set_rate_limiter(rate_limiter: RateLimiter):
+    """Set the global rate limiter instance"""
+    global _rate_limiter
+    _rate_limiter = rate_limiter    
+    logger.info(f"Global rate limiter configured for LLM calls")
+
+######################################################################
+# LLM completion with rate limiting Wrappers
+######################################################################
+
+
+def llm_completion_with_rate_limiting(
+    user_prompt: str, system_prompt: str = None, fallback=GPT_41, **llm_lite_params
+) -> CompletionResult:
+    """Rate-limited version of llm_completion"""
+    # Initialized global rate limiter
+    global _rate_limiter
+    
+    # Apply rate limiting if enabled
+    # (by acquiring permission to make one API request)
+    if _rate_limiter:
+        # Estimate input tokens (rough heuristic: ~4 chars per token)
+        estimated_input = len(user_prompt + (system_prompt or "")) // 4
+        
+        with _rate_limiter.request_context(estimated_input_tokens=estimated_input) as rate_limiter:
+            result = llm_completion(user_prompt, system_prompt, fallback, **llm_lite_params)
+            
+            # Record actual token usage with the existing tracking
+            rate_limiter.record_token_usage(result.input_tokens, result.output_tokens)
+            
+            # Log token usage for debugging
+            logger.info(f"LLM call completed - Input: {result.input_tokens}, Output: {result.output_tokens}, Total: {result.total_tokens}, Cost: {result.cost}")
+            return result
+    else:
+        result = llm_completion(user_prompt, system_prompt, fallback, **llm_lite_params)
+        logger.info(f"LLM call completed (no rate limiting) - Input: {result.input_tokens}, Output: {result.output_tokens}, Total: {result.total_tokens}, Cost: {result.cost}")
+        return result
+
+
+def batch_llm_completion_with_rate_limiting(
+    model: str,
+    messages: List[str],
+    system_prompt: str = None,
+    fallback=GPT_41,
+    **llm_lite_params,
+) -> List[CompletionResult]:
+    """Rate-limited version of batch_llm_completion"""
+    global _rate_limiter
+    
+    if _rate_limiter:
+        # Acquire permission for each message in the batch
+        results = []
+        for message in messages:
+            # Estimate input tokens for this message
+            estimated_input = len(message + (system_prompt or "")) // 4
+            
+            with _rate_limiter.request_context(estimated_input_tokens=estimated_input) as rate_limiter:
+                # Process 1 message at a time w rate limiting
+                single_result = batch_llm_completion(
+                    model, [message], system_prompt, fallback, **llm_lite_params
+                )
+                
+                # Record actual token usage for this completion
+                if single_result:
+                    rate_limiter.record_token_usage(
+                        single_result[0].input_tokens, 
+                        single_result[0].output_tokens
+                    )
+                
+                results.extend(single_result)
+        return results
+    else:
+        return batch_llm_completion(model, messages, system_prompt, fallback, **llm_lite_params)
+
+#########################################################################
+# LLM completion
+###########################################################################
 
 class CostAwareLLMCaller:
     def __init__(self, state_mgr: AbsStateMgrClient):
@@ -61,24 +146,63 @@ class CostAwareLLMCaller:
         self, cost_args: CostReportingArgs, gen_method: Callable, **kwargs
     ) -> Generator[Any, None, CostAwareLLMResult]:
         all_results, all_completion_costs, all_completion_models = [], [], []
-        for method_result in gen_method(**kwargs):
-            result, completion_costs, completion_models = self.parse_result_args(
-                method_result
-            )
-            all_completion_costs.extend(completion_costs)
-            all_completion_models.extend(completion_models)
-            all_results.append(result)
-            yield result
+        logger.info(f"Starting iterative method for {cost_args.description}")
+        
+        try:
+            for i, method_result in enumerate(gen_method(**kwargs)):
+                result, completion_costs, completion_models = self.parse_result_args(
+                    method_result
+                )
+                all_completion_costs.extend(completion_costs)
+                all_completion_models.extend(completion_models)
+                all_results.append(result)
+                
+                # Log individual completion details
+                total_tokens_this_iter = sum([cost.total_tokens for cost in completion_costs])
+                logger.info(f"Iteration {i+1}: {len(completion_costs)} completions, {total_tokens_this_iter} total tokens")
+                
+                yield result
+        except Exception as e:
+            logger.error(f"Exception in iterative method {cost_args.description}: {e}")
+            import traceback
+            traceback.print_exc()
+            raise  # Re-raise to fail fast and preserve the original error
+        
+        # Log aggregation details
+        total_completions = len(all_completion_costs)
+        if total_completions == 0:
+            raise ValueError(f"No completions collected for {cost_args.description} - generator failed without producing any results")
+            
+        total_input_tokens = sum([cost.input_tokens for cost in all_completion_costs])
+        total_output_tokens = sum([cost.output_tokens for cost in all_completion_costs])
+        total_all_tokens = sum([cost.total_tokens for cost in all_completion_costs])
+        
+        logger.info(f"Aggregating {total_completions} completions: Input={total_input_tokens}, Output={total_output_tokens}, Total={total_all_tokens}")
+        
         llm_usage = self.state_mgr.report_llm_usage(
             completion_costs=all_completion_costs, cost_args=cost_args
         )
         total_cost, tokens = self.parse_usage_args(llm_usage)
-        return CostAwareLLMResult(
+        
+        if tokens is None:
+            raise ValueError(f"Token aggregation failed for {cost_args.description} - state_mgr.report_llm_usage returned None tokens")
+        
+        logger.info(f"Final aggregated tokens: {tokens}")
+        
+        result = CostAwareLLMResult(
             result=all_results,
             tot_cost=total_cost,
             models=all_completion_models,
             tokens=tokens,
         )
+        
+        logger.info(f"CostAwareLLMResult created with tokens: {result.tokens}")
+        
+        # Strict validation - fail fast if tokens is None
+        if result.tokens is None:
+            raise ValueError("CostAwareLLMResult created with None tokens! This indicates a critical failure in token aggregation.")
+        
+        return result
 
 
 def success_callback(kwargs, completion_response, start_time, end_time):
