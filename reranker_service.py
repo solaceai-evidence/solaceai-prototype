@@ -29,8 +29,7 @@ except ImportError:
 
 # Get host and port 
 host = os.getenv("RERANKER_HOST", "0.0.0.0")
-port = int(os.getenv("RERANKER_PORT", "8001"))
-max_workers = int(os.getenv("MAX_WORKERS", "1"))
+port = int(os.getenv("RERANKER_PORT", "10001"))
 log_level = os.getenv("LOG_LEVEL", "INFO")
 
 # Use existing reranker infrastructure 
@@ -49,12 +48,23 @@ _cache_lock = Lock()
 _request_count = 0
 _start_time = time.time()
 
+# Service settings (not tunable via env yet)
+MAX_CONCURRENCY = int(os.getenv("MAX_CONCURRENCY", "1"))
+REQUEST_TIMEOUT_MS = int(os.getenv("RERANKER_TIMEOUT_MS", "120000"))
+QUEUE_TIMEOUT_MS = int(os.getenv("RERANKER_QUEUE_TIMEOUT_MS", "10000"))
+PRELOAD_MODEL = os.getenv("RERANKER_PRELOAD_MODEL", "mixedbread-ai/mxbai-rerank-large-v1")
+PRELOAD_TYPE = os.getenv("RERANKER_PRELOAD_TYPE", "crossencoder")
+
+# Concurrency / shutdown controls
+_semaphore: asyncio.Semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
+_shutdown_event: asyncio.Event = asyncio.Event()
+
 class RerankRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=10000)
     passages: List[str] = Field(..., min_items=1, max_items=1000)
     model_name_or_path: str = Field(default="mixedbread-ai/mxbai-rerank-large-v1")
     reranker_type: str = Field(default="crossencoder")
-    batch_size: int = Field(default=64, ge=1, le=256)
+    batch_size: int = Field(default=32, ge=16, le=128)
     top_k: Optional[int] = Field(default=None, ge=1)
     
     if PYDANTIC_V2: 
@@ -189,25 +199,39 @@ async def cleanup_unused_models():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan management"""
-    logger.info("Starting Reranker Service...")
-    
-    # Startup
+    global _semaphore, _shutdown_event
+    logger.info(">>>> Starting Reranker Service... <<<")
+
+    # Initialize concurrency and shutdown primitives
+    _semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
+    _shutdown_event = asyncio.Event()
+
+    # Startup logging
     device_info = get_device_info()
     logger.info(f"Device info: {device_info}")
-    
+
+    # Optional model warmup
+    if PRELOAD_MODEL:
+        try:
+            logger.info(f"Preloading reranker model: {PRELOAD_TYPE}:{PRELOAD_MODEL}")
+            _ = get_reranker(PRELOAD_TYPE, PRELOAD_MODEL)
+        except Exception as e:
+            logger.warning(f"Warmup failed: {e}")
+
     # Start background cleanup task
     cleanup_task = asyncio.create_task(periodic_cleanup())
-    
-    yield
-    
-    # Shutdown
-    cleanup_task.cancel()
-    logger.info("Shutting down Reranker Service...")
-    
-    # Cleanup all cached models
-    with _cache_lock:
-        _reranker_cache.clear()
-    gc.collect()
+
+    try:
+        yield
+    finally:
+        # Shutdown
+        _shutdown_event.set()
+        cleanup_task.cancel()
+        logger.info(">>> Shutting down Reranker Service... <<<")
+        # Cleanup all cached models
+        with _cache_lock:
+            _reranker_cache.clear()
+        gc.collect()
 
 async def periodic_cleanup():
     """Periodic cleanup task"""
@@ -222,7 +246,7 @@ async def periodic_cleanup():
 
 # FastAPI app with lifespan management
 app = FastAPI(
-    title="Solace AI Reranker Service", 
+    title="Solace-AI CrossEncoder Reranker Service", 
     version="1.1.0",
     description="High-performance reranking service with GPU acceleration",
     lifespan=lifespan
@@ -259,23 +283,61 @@ async def health_check():
         cached_models=cached_models
     )
 
+@app.get("/ready", status_code=204)
+async def readiness():
+    """Readiness probe: returns 204 when accepting traffic"""
+    if _shutdown_event.is_set():
+        raise HTTPException(status_code=503, detail="Shutting down")
+    return "OK"
+
 @app.post("/rerank", response_model=RerankResponse)
 async def rerank_documents(request: RerankRequest, background_tasks: BackgroundTasks):
-    """Rerank documents using specified model"""
+    """Rerank documents using specified model with backpressure and timeout"""
     global _request_count
+
+    if _shutdown_event.is_set():
+        raise HTTPException(status_code=503, detail="Service is shutting down")
+
     _request_count += 1
-    
     start_time = time.time()
-    
+
+    # Try to acquire a concurrency slot with a queue timeout
+    try:
+        await asyncio.wait_for(_semaphore.acquire(), timeout=QUEUE_TIMEOUT_MS / 1000)
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=503, detail="Reranker overloaded, try again later")
+
     try:
         reranker = get_reranker(request.reranker_type, request.model_name_or_path, request.batch_size)
-        
-        # Get scores
-        scores = reranker.get_scores(request.query, request.passages)
-        
+
+        loop = asyncio.get_running_loop()
+
+        def do_scores():
+            # Heavy compute off the event loop
+            return reranker.get_scores(request.query, request.passages)
+
+        try:
+            scores = await asyncio.wait_for(
+                loop.run_in_executor(None, do_scores),
+                timeout=REQUEST_TIMEOUT_MS / 1000,
+            )
+        except asyncio.TimeoutError:
+            raise HTTPException(status_code=504, detail="Rerank request timed out")
+        except Exception as e:
+            # Handle CUDA OOM explicitly if available
+            if isinstance(e, torch.cuda.OutOfMemoryError):
+                if torch.cuda.is_available():
+                    try:
+                        torch.cuda.empty_cache()
+                    except Exception:
+                        pass
+                raise HTTPException(status_code=503, detail="GPU out of memory")
+            logger.error(f"Reranking error: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=str(e))
+
         # Create ranked indices (descending order)
         ranked_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
-        
+
         # Apply top_k if specified
         top_k_applied = None
         if request.top_k is not None:
@@ -283,31 +345,34 @@ async def rerank_documents(request: RerankRequest, background_tasks: BackgroundT
             ranked_indices = ranked_indices[:top_k]
             scores = [scores[i] for i in ranked_indices]
             top_k_applied = top_k
-        
+
         # Get device info
         device = "unknown"
         if hasattr(reranker, 'device'):
             device = str(reranker.device)
         elif hasattr(reranker, 'model') and hasattr(reranker.model, 'device'):
             device = str(reranker.model.device)
-        
+
         processing_time = (time.time() - start_time) * 1000  # Convert to ms
-        
-        logger.info(f"Processed rerank request: {len(request.passages)} passages, "
-                   f"{processing_time:.2f}ms, device: {device}")
-        
+
+        logger.info(
+            f"Processed rerank request: {len(request.passages)} passages, "
+            f"{processing_time:.2f}ms, device: {device}"
+        )
+
         return RerankResponse(
             scores=scores,
             ranked_indices=ranked_indices,
             model_used=request.model_name_or_path,
             device=device,
             processing_time_ms=processing_time,
-            top_k_applied=top_k_applied
+            top_k_applied=top_k_applied,
         )
-        
-    except Exception as e:
-        logger.error(f"Reranking error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        try:
+            _semaphore.release()
+        except Exception:
+            pass
 
 @app.get("/models")
 async def list_cached_models():
@@ -365,14 +430,14 @@ async def root():
 
 if __name__ == "__main__":
     logger.info(f"Starting Solace-AI Remote Reranker Service on {host}:{port}...")
-    logger.info(f"Max workers: {max_workers}, Log level: {log_level}")
     
     uvicorn.run(
-        app, 
-        host=host, 
-        port=port, 
+        app,
+        host=host,
+        port=port,
         log_level=log_level.lower(),
-        workers=max_workers,
+        workers=1,  # Use single worker for GPU-based rerankers
+        timeout_keep_alive=30,
         # Enable auto-reload in development
-        reload=os.getenv("ENVIRONMENT", "production") == "development"
+        reload=os.getenv("ENVIRONMENT", "production") == "development",
     )

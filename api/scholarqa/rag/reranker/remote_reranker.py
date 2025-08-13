@@ -15,13 +15,14 @@ class RemoteRerankerClient(AbstractReranker):
     def __init__(self, model_name_or_path: str = "mixedbread-ai/mxbai-rerank-large-v1", 
                  reranker_type: str = "crossencoder", 
                  batch_size: int = 64,
-                 timeout: float = 60.0):
+                 timeout: float = None):
         # Get service URL from environment variable (set by Docker Compose)
-        self.service_url = os.getenv("RERANKER_SERVICE_URL", "http://localhost:8001").rstrip('/')
+        self.service_url = os.getenv("RERANKER_SERVICE_URL", "http://localhost:10001").rstrip('/')
         self.model_name_or_path = model_name_or_path
         self.reranker_type = reranker_type
         self.batch_size = batch_size
-        self.timeout = timeout
+        # Use environment variable for timeout, fall back to parameter, then default
+        self.timeout = timeout or float(os.getenv("RERANKER_CLIENT_TIMEOUT", "120.0"))
         self.device = "remote"  # Indicate this is a remote service
         
         logger.info(f"Initialized RemoteRerankerClient: {self.service_url} with model: {model_name_or_path}, batch_size: {batch_size}")
@@ -33,11 +34,11 @@ class RemoteRerankerClient(AbstractReranker):
             with httpx.Client(timeout=5.0) as client:
                 response = client.get(f"{self.service_url}/health")
                 if response.status_code == 200:
-                    logger.info("✅ Connected to remote reranker service")
+                    logger.info(">> Connected to remote reranker service")
                 else:
-                    logger.warning(f"⚠️ Service health check failed: {response.status_code}")
+                    logger.warning(f"Service health check failed: {response.status_code}")
         except Exception as e:
-            logger.error(f"❌ Failed to connect to reranker service: {e}")
+            logger.error(f"Failed to connect to reranker service: {e}")
             raise ConnectionError(f"Cannot connect to reranker service at {self.service_url}")
     
     def get_scores(self, query: str, passages: List[str]) -> List[float]:

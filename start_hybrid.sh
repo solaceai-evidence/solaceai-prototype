@@ -10,21 +10,48 @@ echo "Solace AI - Hybrid Architecture Startup"
 echo "═══════════════════════════════════════════"
 
 # Configuration
-export RERANKER_PORT=$(grep '^RERANKER_PORT=' .env | cut -d '=' -f2-)
+export RERANKER_PORT=$(grep '^RERANKER_PORT=' .env | cut -d '=' -f2- || echo "")
+export RERANKER_HOST=$(grep '^RERANKER_HOST=' .env | cut -d '=' -f2- || echo "")
+if [ -z "$RERANKER_PORT" ]; then
+    RERANKER_PORT=10001
+fi
+if [ -z "$RERANKER_HOST" ]; then
+    RERANKER_HOST="0.0.0.0"
+fi
 MAIN_API_PORT=8000
 CONFIG_FILE="api/run_configs/default.json"
 
 # Cleanup function
 cleanup_and_exit() {
-    echo ""
-    echo " Cleaning up..."
-    kill $RERANKER_PID 2>/dev/null || true
-    docker-compose down 2>/dev/null || true
-    exit $1
+        echo ""
+        echo " Cleaning up..."
+
+        # Gracefully stop reranker
+        if [ -n "$RERANKER_PID" ] && ps -p $RERANKER_PID > /dev/null 2>&1; then
+            echo "   Stopping reranker (PID=$RERANKER_PID)"
+            kill $RERANKER_PID 2>/dev/null || true
+            # wait up to 10s
+            for i in {1..10}; do
+                if ps -p $RERANKER_PID > /dev/null 2>&1; then
+                    sleep 1
+                else
+                    break
+                fi
+            done
+            if ps -p $RERANKER_PID > /dev/null 2>&1; then
+                echo "   Reranker didn't exit, force killing"
+                kill -9 $RERANKER_PID 2>/dev/null || true
+            fi
+        fi
+
+        # Stop docker services
+        echo "   Stopping Docker services"
+        docker-compose down 2>/dev/null || true
+        exit $1
 }
 
 echo " Configuration:"
-echo "   • Reranker Service: http://0.0.0.0:$RERANKER_PORT (Native Reranker Service)"
+echo "   • Reranker Service: http://$RERANKER_HOST:$RERANKER_PORT (Native Reranker Service)"
 echo "   • Main API: http://localhost:$MAIN_API_PORT (Dockerized API)"
 echo "   • Config: $CONFIG_FILE"
 echo ""
@@ -43,13 +70,15 @@ RERANKER_PID=$!
 
 # Wait for service to start
 echo "   Waiting for reranker service to initialize..."
-for i in {1..10}; do
-    if curl -s http://0.0.0.0:$RERANKER_PORT/health > /dev/null 2>&1; then
+for i in {1..15}; do
+    if curl -sf http://$RERANKER_HOST:$RERANKER_PORT/ready > /dev/null 2>&1; then
         echo "   Reranker service ready!"
         break
     fi
-    if [ $i -eq 10 ]; then
+    if [ $i -eq 15 ]; then
         echo "   Reranker service failed to start"
+        echo "   Last 100 lines of reranker log:"
+        tail -n 100 api/logs/reranker_service.log || true
         exit 1
     fi
     sleep 2
@@ -68,17 +97,19 @@ fi
 
 # Start main services with docker-compose
 echo "   Starting Docker services..."
-docker-compose up --build
+docker-compose up -d --build
 
 # Wait for main API
 echo "   Waiting for main API..."
-for i in {1..15}; do
-    if curl -s http://localhost:$MAIN_API_PORT/health > /dev/null 2>&1; then
+for i in {1..20}; do
+    if curl -sf http://localhost:$MAIN_API_PORT/health > /dev/null 2>&1; then
         echo "   Main API ready!"
         break
     fi
-    if [ $i -eq 15 ]; then
+    if [ $i -eq 20 ]; then
         echo "   Main API failed to start"
+        echo "   Docker service logs (last 200 lines):"
+        docker-compose logs --no-color --tail=200 || true
         cleanup_and_exit 1
     fi
     sleep 3
@@ -104,7 +135,7 @@ echo " Startup Complete!"
 echo "═══════════════════════"
 echo ""
 echo " Service Status:"
-echo "   • Native Reranker: http://0.0.0.0:$RERANKER_PORT/health"
+echo "   • Native Reranker: http://$RERANKER_HOST:$RERANKER_PORT/health"
 echo "     - Process ID: $RERANKER_PID"
 echo "     - Logs: api/logs/reranker_service.log"
 echo ""
@@ -112,6 +143,7 @@ echo "   • Main API: http://localhost:$MAIN_API_PORT"
 echo ""
 echo " Management Commands:"
 echo "   • Stop reranker: kill $RERANKER_PID"
+echo "   • Stop all services: press Ctrl+C in this terminal"
 echo ""
 echo " The architecture is running!"
 

@@ -1,7 +1,6 @@
 import logging
-import os
 from scholarqa.llms.constants import *
-from typing import List, Any, Callable, Tuple, Iterator, Union, Generator, Optional
+from typing import List, Any, Callable, Tuple, Union, Generator, Optional
 
 import litellm
 from litellm.caching import Cache
@@ -30,7 +29,9 @@ def set_rate_limiter(rate_limiter: RateLimiter):
 # LLM completion with rate limiting Wrappers
 ######################################################################
 
-
+# Wrapper that enforces rate limiting around a single LLM completion (llm_completion). 
+# It estimates input tokens, acquires a rate-limiter slot, calls the LLM, then records actual token usage.
+@traceable(run_type="llm", name="llm completion with rate limiting")
 def llm_completion_with_rate_limiting(
     user_prompt: str, system_prompt: str = None, fallback=GPT_41, **llm_lite_params
 ) -> CompletionResult:
@@ -58,7 +59,9 @@ def llm_completion_with_rate_limiting(
         logger.info(f"LLM call completed (no rate limiting) - Input: {result.input_tokens}, Output: {result.output_tokens}, Total: {result.total_tokens}, Cost: {result.cost}")
         return result
 
-
+# Wrapper that enforces rate limiting for batch completions by looping one message at a time and calling batch_llm_completion(model, [message], ...). 
+# Records usage per message.
+@traceable(run_type="llm", name="batch llm completion with rate limiting")
 def batch_llm_completion_with_rate_limiting(
     model: str,
     messages: List[str],
@@ -98,10 +101,12 @@ def batch_llm_completion_with_rate_limiting(
 # LLM completion
 ###########################################################################
 
+
 class CostAwareLLMCaller:
     def __init__(self, state_mgr: AbsStateMgrClient):
         self.state_mgr = state_mgr
 
+    # normalizes method results to (result, [CompletionResult], [models]).
     @staticmethod
     def parse_result_args(
         method_result: Union[Tuple[Any, CompletionResult], CompletionResult],
@@ -116,6 +121,7 @@ class CostAwareLLMCaller:
         completion_models = [cost.model for cost in completion_costs]
         return result, completion_costs, completion_models
 
+    # normalizes state_mgr.report_llm_usage return to (total_cost, tokens), defaulting tokens to zeros if not provided.
     def parse_usage_args(
         self, method_result: Union[Tuple[float, TokenUsage], float]
     ) -> Tuple[float, TokenUsage]:
@@ -127,6 +133,7 @@ class CostAwareLLMCaller:
             )
         return total_cost, tokens
 
+    # Calls an LLM-using method, reports usage to state_mgr, returns a CostAwareLLMResult with costs/tokens/models.
     def call_method(
         self, cost_args: CostReportingArgs, method: Callable, **kwargs
     ) -> CostAwareLLMResult:
@@ -141,12 +148,13 @@ class CostAwareLLMCaller:
         return CostAwareLLMResult(
             result=result, tot_cost=total_cost, models=completion_models, tokens=tokens
         )
-
+    # Wraps a generator of LLM calls, yields incremental results, aggregates completions, reports usage once at the end, returns CostAwareLLMResult. 
+    # Includes detailed logging and fail-fast validation.
     def call_iter_method(
         self, cost_args: CostReportingArgs, gen_method: Callable, **kwargs
     ) -> Generator[Any, None, CostAwareLLMResult]:
         all_results, all_completion_costs, all_completion_models = [], [], []
-        logger.info(f"Starting iterative method for {cost_args.description}")
+        logger.info(f"Starting def call_iter_method for {cost_args.description}")
         
         try:
             for i, method_result in enumerate(gen_method(**kwargs)):
@@ -204,7 +212,7 @@ class CostAwareLLMCaller:
         
         return result
 
-
+# Attaches cache-hit info from LiteLLM into responses.
 def success_callback(kwargs, completion_response, start_time, end_time):
     """required callback method to update the response object with cache hit/miss info"""
     completion_response.cache_hit = (
@@ -214,13 +222,13 @@ def success_callback(kwargs, completion_response, start_time, end_time):
 
 litellm.success_callback = [success_callback]
 
-
+# Configures LiteLLM caching and enables it.
 def setup_llm_cache(cache_type: str = "s3", **cache_args):
     logger.info("Setting up LLM cache...")
     litellm.cache = Cache(type=cache_type, **cache_args)
     litellm.enable_cache()
 
-
+# Builds messages, calls litellm.batch_completion (with retry/fallback), computes cost and token usage, returns a list of CompletionResult.
 @traceable(run_type="llm", name="batch completion")
 def batch_llm_completion(
     model: str,
@@ -290,6 +298,9 @@ def batch_llm_completion(
     return results
 
 
+# Core single LLM call. 
+# Builds messages, calls litellm.completion_with_retries (with retry/fallback), computes cost and token usage, returns a CompletionResult. 
+# Handles tool call content fallback.
 @traceable(run_type="llm", name="completion")
 def llm_completion(
     user_prompt: str, system_prompt: str = None, fallback=GPT_4o, **llm_lite_params

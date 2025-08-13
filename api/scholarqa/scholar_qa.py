@@ -11,10 +11,8 @@ from anyascii import anyascii
 from langsmith import traceable
 
 from scholarqa.config.config_setup import LogsConfig
-from scholarqa.llms.constants import CostAwareLLMResult, GPT_4o, CLAUDE_35_SONNET
+from scholarqa.llms.constants import CostAwareLLMResult, GPT_4o, CLAUDE_4_SONNET, CLAUDE_35_SONNET
 from scholarqa.llms.litellm_helper import (
-    CLAUDE_35_SONNET,
-    GPT_4o,
     CostAwareLLMCaller,
     CostReportingArgs,
 )
@@ -697,7 +695,7 @@ class ScholarQA:
         cit_ids: List[int],
         tlist: List[Any],
     ) -> Thread:
-        def call_table_generator(didx: int, payload: Dict[str, Any]):
+        def call_table_generator(didx: int, payload: Dict[str, Any], cost_args: CostReportingArgs):
             logger.info(
                 "Received table generation request for topic: "
                 + payload["section_title"]
@@ -710,6 +708,7 @@ class ScholarQA:
                 corpus_ids=payload["cit_ids"],
                 column_model=payload["column_model"],
                 value_model=payload["value_model"],
+                cost_args=cost_args,
             )
             tlist[dim["idx"]] = (table, costs)
 
@@ -723,11 +722,20 @@ class ScholarQA:
             "column_model": self.table_llm,
             "value_model": self.table_llm,
         }
+        # Create a CostReportingArgs for table generation
+        cost_args = CostReportingArgs(
+            task_id=task_id,
+            user_id=user_id,
+            description=f"Table Generation: {dim['name']}",
+            model=self.table_llm,
+            msg_id=task_id,
+        )
         tthread = Thread(
             target=call_table_generator,
             args=(
                 dim["idx"],
                 payload,
+                cost_args,
             ),
         )
         tthread.start()
