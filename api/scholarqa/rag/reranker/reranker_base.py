@@ -56,7 +56,7 @@ class BiEncoderScores(AbstractReranker):
 # Sentence Transformer supports Jina AI (https://huggingface.co/jinaai/jina-reranker-v2-base-multilingual)
 # and Mix Bread re-rankers (https://huggingface.co/mixedbread-ai/mxbai-rerank-large-v1)
 class CrossEncoderScores(AbstractReranker):
-    def __init__(self, model_name_or_path: str, batch_size: int = 128):
+    def __init__(self, model_name_or_path: str, batch_size: int = 64):  # Optimized default batch size
         from sentence_transformers import CrossEncoder
         if torch.cuda.is_available():
             device = "cuda"
@@ -96,7 +96,7 @@ class FlagEmbeddingScores:
 
     def get_scores(self, query: str, passages: List[str], separator: str) -> List[float]:
         sentence_pairs = [(query, passage.replace(separator, self.get_tokenizer().eos_token)) for passage in passages]
-        scores = self.model.compute_score(sentence_pairs, normalize=True, batch_size=32)
+        scores = self.model.compute_score(sentence_pairs, normalize=True, batch_size=64)  # Optimized batch size
         return [float(s) for s in scores]
 
 RERANKER_MAPPING = {

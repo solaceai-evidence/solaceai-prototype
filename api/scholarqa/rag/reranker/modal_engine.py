@@ -14,7 +14,7 @@ class ModalReranker(AbstractReranker):
         self,
         app_name: str,
         api_name: str,
-        batch_size=32,
+        batch_size=64,  # Optimized default batch size
         gen_options: Dict[str, Any] = None,
     ):
         logger.info(f"using model {app_name} on Modal for reranking")

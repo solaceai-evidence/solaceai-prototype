@@ -14,7 +14,7 @@ class RemoteRerankerClient(AbstractReranker):
     
     def __init__(self, model_name_or_path: str = "mixedbread-ai/mxbai-rerank-large-v1", 
                  reranker_type: str = "crossencoder", 
-                 batch_size: int = 64,
+                 batch_size: int = 64,  # Increased default for better performance
                  timeout: float = None):
         # Get service URL from environment variable (set by Docker Compose)
         self.service_url = os.getenv("RERANKER_SERVICE_URL", "http://localhost:10001").rstrip('/')
@@ -22,7 +22,7 @@ class RemoteRerankerClient(AbstractReranker):
         self.reranker_type = reranker_type
         self.batch_size = batch_size
         # Use environment variable for timeout, fall back to parameter, then default
-        self.timeout = timeout or float(os.getenv("RERANKER_CLIENT_TIMEOUT", "120.0"))
+        self.timeout = timeout or float(os.getenv("RERANKER_CLIENT_TIMEOUT", "300.0"))  # Increased to 5 minutes for reliability
         self.device = "remote"  # Indicate this is a remote service
         
         logger.info(f"Initialized RemoteRerankerClient: {self.service_url} with model: {model_name_or_path}, batch_size: {batch_size}")

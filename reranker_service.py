@@ -48,10 +48,10 @@ _cache_lock = Lock()
 _request_count = 0
 _start_time = time.time()
 
-# Service settings (not tunable via env yet)
-MAX_CONCURRENCY = int(os.getenv("MAX_CONCURRENCY", "1"))
-REQUEST_TIMEOUT_MS = int(os.getenv("RERANKER_TIMEOUT_MS", "120000"))
-QUEUE_TIMEOUT_MS = int(os.getenv("RERANKER_QUEUE_TIMEOUT_MS", "10000"))
+# Service settings (tunable via environment variables)
+MAX_CONCURRENCY = int(os.getenv("MAX_CONCURRENCY", "2"))
+REQUEST_TIMEOUT_MS = int(os.getenv("RERANKER_TIMEOUT_MS", "300000"))  # Increased to 5 minutes for reliability
+QUEUE_TIMEOUT_MS = int(os.getenv("RERANKER_QUEUE_TIMEOUT_MS", "30000"))  # Increased to 30 seconds
 PRELOAD_MODEL = os.getenv("RERANKER_PRELOAD_MODEL", "mixedbread-ai/mxbai-rerank-large-v1")
 PRELOAD_TYPE = os.getenv("RERANKER_PRELOAD_TYPE", "crossencoder")
 
@@ -64,7 +64,7 @@ class RerankRequest(BaseModel):
     passages: List[str] = Field(..., min_items=1, max_items=1000)
     model_name_or_path: str = Field(default="mixedbread-ai/mxbai-rerank-large-v1")
     reranker_type: str = Field(default="crossencoder")
-    batch_size: int = Field(default=32, ge=16, le=128)
+    batch_size: int = Field(default=64, ge=16, le=256)  # Increased default and maximum for better performance
     top_k: Optional[int] = Field(default=None, ge=1)
     
     if PYDANTIC_V2: 
