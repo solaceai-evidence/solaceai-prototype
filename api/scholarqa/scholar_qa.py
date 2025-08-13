@@ -11,10 +11,8 @@ from anyascii import anyascii
 from langsmith import traceable
 
 from scholarqa.config.config_setup import LogsConfig
-from scholarqa.llms.constants import CostAwareLLMResult, GPT_4o, CLAUDE_35_SONNET
+from scholarqa.llms.constants import CostAwareLLMResult, GPT_4o, CLAUDE_4_SONNET, CLAUDE_35_SONNET
 from scholarqa.llms.litellm_helper import (
-    CLAUDE_35_SONNET,
-    GPT_4o,
     CostAwareLLMCaller,
     CostReportingArgs,
 )
@@ -163,7 +161,15 @@ class ScholarQA:
         # retrieval from vespa index
         start = time()
         rewritten_query = llm_processed_query.rewritten_query
+        self.update_task_state(
+            f"Reformulated query for semantic search:\n{rewritten_query}",
+            step_estimated_time=1,
+        )
         keyword_query = llm_processed_query.keyword_query
+        self.update_task_state(
+            f"Keyword search query: {keyword_query}",
+            step_estimated_time=1,
+        )
         self.update_task_state(
             f"Retrieving relevant passages from a corpus of 8M+ open access papers",
             step_estimated_time=5,
@@ -210,7 +216,7 @@ class ScholarQA:
         if self.paper_finder.n_rerank > 0:
             self.update_task_state(
                 f"Further re-rank and aggregate passages to focus on up to top {self.paper_finder.n_rerank} papers",
-                step_estimated_time=10,
+                step_estimated_time=30,
             )
         start = time()
         reranked_candidates = self.paper_finder.rerank(user_query, retrieved_candidates)
@@ -247,7 +253,7 @@ class ScholarQA:
     ) -> CostAwareLLMResult:
         logger.info("Running Step 1 - quote extraction")
         self.update_task_state(
-            "Extracting salient key statements from papers", step_estimated_time=15
+            "Extracting salient key statements from papers", step_estimated_time=50
         )
         logger.info(
             f"{scored_df.shape[0]} papers with relevance_judgement >= {self.paper_finder.context_threshold} to start with."
@@ -697,7 +703,7 @@ class ScholarQA:
         cit_ids: List[int],
         tlist: List[Any],
     ) -> Thread:
-        def call_table_generator(didx: int, payload: Dict[str, Any]):
+        def call_table_generator(didx: int, payload: Dict[str, Any], cost_args: CostReportingArgs):
             logger.info(
                 "Received table generation request for topic: "
                 + payload["section_title"]
@@ -710,6 +716,7 @@ class ScholarQA:
                 corpus_ids=payload["cit_ids"],
                 column_model=payload["column_model"],
                 value_model=payload["value_model"],
+                cost_args=cost_args,
             )
             tlist[dim["idx"]] = (table, costs)
 
@@ -723,11 +730,20 @@ class ScholarQA:
             "column_model": self.table_llm,
             "value_model": self.table_llm,
         }
+        # Create a CostReportingArgs for table generation
+        cost_args = CostReportingArgs(
+            task_id=task_id,
+            user_id=user_id,
+            description=f"Table Generation: {dim['name']}",
+            model=self.table_llm,
+            msg_id=task_id,
+        )
         tthread = Thread(
             target=call_table_generator,
             args=(
                 dim["idx"],
                 payload,
+                cost_args,
             ),
         )
         tthread.start()

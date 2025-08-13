@@ -15,7 +15,7 @@
     "reranker_service": "remote",
     "reranker_args": {
       "model_name_or_path": "mixedbread-ai/mxbai-rerank-large-v1",
-      "batch_size": 64
+      "batch_size": 32
     },
     "paper_finder_args": {
       "n_rerank": 50,

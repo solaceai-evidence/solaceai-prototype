@@ -4,7 +4,7 @@ import os
 from json import JSONDecodeError
 from time import time
 from typing import Union
-from uuid import uuid4, uuid5, UUID
+from uuid import uuid4
 
 # Add these imports for rate limiting
 from dotenv import load_dotenv

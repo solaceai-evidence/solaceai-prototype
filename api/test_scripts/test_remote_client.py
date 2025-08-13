@@ -19,9 +19,10 @@ def test_remote_client():
     try:
         # Initialize remote client
         client = RemoteRerankerClient(
-            service_url="http://localhost:8001",
+            service_url="http://0.0.0.0:10001",
             model_name_or_path="mixedbread-ai/mxbai-rerank-large-v1",
-            reranker_type="crossencoder"
+            reranker_type="crossencoder",
+            batch_size=128,  # Use larger batch size for better performance
         )
         
         # Test query

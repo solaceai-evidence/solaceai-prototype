@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Solace AI Scholar QA System provides intelligent question-answering capabilities over a large corpus of academic papers. The system supports multiple deployment architectures to accommodate different performance requirements and infrastructure constraints.
+The Solace AI System provides intelligent question-answering capabilities over a large corpus of academic papers. The system supports multiple deployment architectures to accommodate different performance requirements and infrastructure constraints.
 
 ## Supported Architectures
 
@@ -67,16 +67,16 @@ The system automatically detects and uses the best available device:
 - CPU (fallback)
 
 **Configuration:**
+The configuration can be modified by tuning the .env file. Below are the default parameters.
 
 - Main API: `http://localhost:8000`
-- Native Reranker: `http://localhost:8001`
+- Native Reranker: `http://0.0.0.0:10001`
 - Web UI: `http://localhost:3000`
 
 The hybrid approach provides:
 
 - GPU acceleration for reranking operations
 - Reduced latency through native service communication
-- Optimal performance for local development environments
 
 ### 2. Modal Cloud Architecture
 
@@ -146,7 +146,7 @@ The system supports multiple reranker backends through configuration:
   "reranker_service": "remote|modal|http|crossencoder",
   "reranker_args": {
     "model_name_or_path": "mixedbread-ai/mxbai-rerank-large-v1",
-    "batch_size": 64
+    "batch_size": 32
   }
 }
 ```
@@ -157,19 +157,6 @@ The system supports multiple reranker backends through configuration:
 - `modal`: Modal cloud deployment
 - `http`: Containerized microservice
 - `crossencoder`: Local in-process reranker
-
-### Rate Limiting Configuration
-
-For API providers with rate limits, configure appropriate concurrency:
-
-```json
-{
-  "pipeline_args": {
-    "max_workers": 3,
-    "request_timeout": 300
-  }
-}
-```
 
 **Environment Variables:**
 
@@ -190,18 +177,24 @@ MODAL_TOKEN_SECRET=your_modal_secret
 
 #### Reranker Service (Optional)
 
+We provide a suitable configuration for the reranker service when it is remotely accessed, and locally installed. (The timeout for the reranker client is set in seconds.)
+
 ```bash
-RERANKER_HOST=localhost
-RERANKER_PORT=8001
+RERANKER_HOST=0.0.0.0
+RERANKER_PORT=10001
+RERANKER_CLIENT_TIMEOUT=120
+MAX_CONCURRENCY=1
+RERANKER_TIMEOUT_MS=120000
+RERANKER_QUEUE_TIMEOUT_MS=10000
 ```
 
 #### Rate limiting configuration
 
 ```bash
-MAX_LLM_WORKERS=the maximum number of concurrent workers for active LLM model
-RATE_LIMIT_RPM=maximum API requests/min. Set according to your LLM quota
-RATE_LIMIT_ITPM=maximum input tokens/min across all requests to LLM. Set according to LLM quota
-RATE_LIMIT_OTPM=maximum output tokens/min across all requests to LLM. Set according to LLM quota
+MAX_LLM_WORKERS=the maximum number of concurrent workers for active LLM model (e.g., 3)
+RATE_LIMIT_RPM=maximum API requests/min. Set according to your LLM quota (e.g., 50)
+RATE_LIMIT_ITPM=maximum input tokens/min across all requests to LLM. Set according to LLM quota (e.g., 30000)
+RATE_LIMIT_OTPM=maximum output tokens/min across all requests to LLM. Set according to LLM quota (e.g., 8000)
 ```
 
 ## Usage
@@ -210,40 +203,12 @@ The rate limiter is automatically enabled when the environment variables are con
 
 If rate limiting is disabled (variables not set or set to -1), the system will operate without rate limiting controls.
 
-## Performance Characteristics
-
-### Device-Specific Performance
-
-**NVIDIA GPU (CUDA):**
-
-- Reranking: High-throughput processing
-- Recommended batch size: 128-256
-- Memory: Dedicated GPU memory
-
-**Apple Silicon (MPS):**
-
-- Reranking: ~46 seconds for 241 passages
-- Recommended batch size: 64
-- Memory: Unified memory architecture
-
-**CPU Fallback:**
-
-- Reranking: Standard CPU processing
-- Recommended batch size: 32
-- Memory: System RAM
-
-### Modal Architecture Performance
-
-- Reranking: High-throughput GPU processing
-- Scaling: Automatic based on demand
-- Batch Size: 256+ (optimized for dedicated GPUs)
-
 ## Development Workflow
 
 ### Local Development (Hybrid)
 
 1. Start hybrid architecture: `./start_hybrid.sh`
-2. Access UI: `http://localhost:3000`
+2. Access UI: `http://localhost:8080`
 3. Monitor reranker logs: `tail -f api/logs/reranker_service.log`
 4. Stop services: `Ctrl+C` in terminal
 
@@ -254,7 +219,7 @@ If rate limiting is disabled (variables not set or set to -1), the system will o
 curl http://localhost:8001/health
 
 # Test reranking
-curl -X POST "http://localhost:8001/rerank" \
+curl -X POST "http://localhost:10001/rerank" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "machine learning",
@@ -305,7 +270,7 @@ bash start_hybrid.sh
 
 - Ensure Docker Desktop is running
 - Check port availability:
-  - Linux/macOS: `lsof -i :8000,8001,3000`
+  - Linux/macOS: `lsof -i :8000,10001,8080`
   - Windows: `netstat -an | findstr :8000`
 - Rebuild containers: `docker-compose down && docker-compose up --build`
 
@@ -322,17 +287,6 @@ bash start_hybrid.sh
 - Ensure Rosetta 2 is installed if needed: `softwareupdate --install-rosetta`
 - Use native ARM64 Docker images when possible
 
-**Windows:**
-
-- Use WSL2 for better Docker performance
-- Ensure Windows Subsystem for Linux is enabled
-- Consider using Git Bash for shell script execution
-
-**Linux:**
-
-- Verify GPU drivers are properly installed
-- Check Docker permissions: `sudo usermod -aG docker $USER`
-
 ## Production Deployment
 
 For production deployments, consider:
@@ -348,7 +302,7 @@ Configure appropriate monitoring, logging, and error handling for production env
 Once services are running, access interactive API documentation:
 
 - Main API: `http://localhost:8000/docs`
-- Reranker Service: `http://localhost:8001/docs`
+- Reranker Service: `http://localhost:10001/docs`
 
 ### Install TypeScript Types (if using TypeScript)
 
