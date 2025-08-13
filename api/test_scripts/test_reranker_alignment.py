@@ -110,7 +110,7 @@ def test_reranker(reranker_name: str, test_cases: List[Tuple[str, List[str]]]) -
         # Create reranker instance
         if reranker_name == "remote":
             reranker = RERANKER_MAPPING[reranker_name](
-                service_url="http://localhost:8001",
+                service_url="http://localhost:10001",  # Updated to match main service port
                 model_name_or_path="mixedbread-ai/mxbai-rerank-large-v1",
                 reranker_type="crossencoder"
             )
@@ -169,7 +169,7 @@ def test_cross_reranker_consistency() -> bool:
         try:
             if reranker_name == "remote":
                 reranker = RERANKER_MAPPING[reranker_name](
-                    service_url="http://localhost:8001",
+                    service_url="http://localhost:10001",  # Updated to match main service port
                     model_name_or_path="mixedbread-ai/mxbai-rerank-large-v1",
                     reranker_type="crossencoder"
                 )
@@ -224,7 +224,7 @@ def main():
     try:
         import httpx
         with httpx.Client(timeout=5.0) as client:
-            response = client.get("http://localhost:8001/health")
+            response = client.get("http://localhost:10001/health")  # Updated to match main service port
             if response.status_code == 200:
                 rerankers_to_test.append("remote")
                 logger.info("✅ Remote reranker service detected")

@@ -14,7 +14,7 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-RERANKER_SERVICE_URL = "http://localhost:8001"
+RERANKER_SERVICE_URL = "http://localhost:10001"  # Updated to match main service port
 MAIN_API_URL = "http://localhost:8000"
 
 async def test_remote_reranker_service():

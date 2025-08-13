@@ -69,7 +69,7 @@ def test_exact_mapping():
     try:
         logger.info("Testing with Remote Reranker...")
         remote_reranker = RERANKER_MAPPING["remote"](
-            service_url="http://localhost:8001",
+            service_url="http://localhost:10001",  # Updated to match main service port
             model_name_or_path="mixedbread-ai/mxbai-rerank-large-v1",
             reranker_type="crossencoder"
         )
