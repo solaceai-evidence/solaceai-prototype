@@ -161,7 +161,15 @@ class ScholarQA:
         # retrieval from vespa index
         start = time()
         rewritten_query = llm_processed_query.rewritten_query
+        self.update_task_state(
+            f"Reformulated query for semantic search:\n{rewritten_query}",
+            step_estimated_time=1,
+        )
         keyword_query = llm_processed_query.keyword_query
+        self.update_task_state(
+            f"Keyword search query: {keyword_query}",
+            step_estimated_time=1,
+        )
         self.update_task_state(
             f"Retrieving relevant passages from a corpus of 8M+ open access papers",
             step_estimated_time=5,
@@ -208,7 +216,7 @@ class ScholarQA:
         if self.paper_finder.n_rerank > 0:
             self.update_task_state(
                 f"Further re-rank and aggregate passages to focus on up to top {self.paper_finder.n_rerank} papers",
-                step_estimated_time=10,
+                step_estimated_time=30,
             )
         start = time()
         reranked_candidates = self.paper_finder.rerank(user_query, retrieved_candidates)
@@ -245,7 +253,7 @@ class ScholarQA:
     ) -> CostAwareLLMResult:
         logger.info("Running Step 1 - quote extraction")
         self.update_task_state(
-            "Extracting salient key statements from papers", step_estimated_time=15
+            "Extracting salient key statements from papers", step_estimated_time=50
         )
         logger.info(
             f"{scored_df.shape[0]} papers with relevance_judgement >= {self.paper_finder.context_threshold} to start with."
