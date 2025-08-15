@@ -1,8 +1,8 @@
-# Solace AI Scholar QA System
+# Solace-AI (ScholarQA) System
 
 ## Overview
 
-The Solace AI System provides intelligent question-answering capabilities over a large corpus of academic papers. The system supports multiple deployment architectures to accommodate different performance requirements and infrastructure constraints.
+The Solace-AI System provides intelligent question-answering capabilities over a large corpus of online scientific literature, aiming to create real-time evidence synthesis to support policy and humanitarian responses to climate-change health emergencies. The system supports multiple deployment architectures to accommodate different performance requirements and infrastructure constraints.
 
 ## Supported Architectures
 
