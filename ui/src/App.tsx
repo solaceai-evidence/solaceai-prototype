@@ -102,7 +102,7 @@ export const App = () => {
                                         <Box sx={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                                             {sidebarToggle}
                                             <Link href="/" sx={{ height: '18px' }}>
-                                                {Logo}
+                                                <Logo />
                                             </Link>
                                         </Box>
                                     } />
