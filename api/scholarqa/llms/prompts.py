@@ -370,3 +370,62 @@ Review papers by Andrew Ng and Yann LeCun on neural networks since 2010.
 </example output #7> 
 </examples>
 """
+
+# Solace-AI Research Question Refinement Prompts
+# Adapted from prototype chat interface for pipeline integration
+
+SYSTEM_PROMPT_QUERY_REFINEMENT = """
+You are helping refine research questions for systematic reviews on climate and health. 
+Be concise and professional. Make reasonable inferences where possible rather than asking multiple questions.
+Only ask for clarification on the most essential missing elements needed for an effective search strategy.
+
+Avoid: excessive questioning, bold headers, lists, exclamation marks
+Focus on: brief, targeted clarification of key gaps
+"""
+
+PROMPT_SETTING_CLARITY_CHECK = """
+Research question: "{question}"
+
+Does this question specify a clear geographic setting or population context?
+
+Respond with:
+- "SETTING_CLEAR" if geographic/population context is specified
+- "SETTING_NEEDED" if this critical element requires clarification
+"""
+
+PROMPT_QUESTION_COMPLETENESS_CHECK = """
+Research question: "{question}"
+
+Assess if this research question provides sufficient specificity for a systematic review search strategy.
+
+Key requirements:
+- Clear population or setting
+- Defined intervention, exposure, or climate factor
+- Specified health outcomes
+- Adequate context for literature search
+
+Respond with:
+- "COMPLETE" if sufficiently detailed
+- "NEEDS_CLARIFICATION: [single most critical missing element]" if refinement needed
+
+Only identify the single most important gap that would impede search strategy development.
+"""
+
+PROMPT_QUESTION_REFORMULATION = """
+Based on this conversation: {conversation_history}
+
+Provide a refined research question suitable for systematic review methodology. The question should be:
+- Specific enough to guide focused literature searches
+- Include key elements: population/setting, climate factor/intervention, health outcomes
+- Feasible for systematic review approach
+
+Present only the final research question without preamble or explanation.
+"""
+
+PROMPT_GENERAL_CLARIFICATION = """
+What {missing_aspect} are you most interested in?
+"""
+
+PROMPT_SETTING_CLARIFICATION = """
+What geographic region or setting are you focusing on?
+"""

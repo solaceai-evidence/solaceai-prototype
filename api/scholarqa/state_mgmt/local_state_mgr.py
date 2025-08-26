@@ -53,6 +53,10 @@ class AbsStateMgrClient(ABC):
     def report_llm_usage(self, completion_costs: List[CompletionResult], cost_args: CostReportingArgs) -> float:
         pass
 
+    def store_refinement_analysis(self, refinement_result):
+        """Store query refinement analysis for potential interactive use."""
+        pass
+
 
 class LocalStateMgrClient(AbsStateMgrClient):
     def __init__(self, logs_dir: str, async_state_dir: str = "async_state"):
@@ -78,6 +82,16 @@ class LocalStateMgrClient(AbsStateMgrClient):
         logger.info(f"report_llm_usage for {cost_args.description}: {len(completion_costs)} completions, tokens={token_usage}")
         
         return tot_cost, token_usage
+
+    def store_refinement_analysis(self, refinement_result):
+        """Store query refinement analysis for potential interactive use."""
+        # For now, just log it - this could be extended to store in task state
+        # for interactive features in the future
+        if refinement_result and refinement_result.needs_clarification:
+            logger.info(f"Query refinement analysis: needs_clarification={refinement_result.needs_clarification}, "
+                       f"suggestion={refinement_result.analysis.clarification_suggestion}")
+        else:
+            logger.info("Query refinement analysis: query is sufficiently clear")
 
     def init_task(self, task_id: str, tool_request: ToolRequest):
         try:

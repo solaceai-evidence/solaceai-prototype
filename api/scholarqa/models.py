@@ -34,6 +34,17 @@ class ToolRequest(BaseModel):
     opt_in: Optional[bool] = Field(default=True, description=(
         "Flag to indicate whether to include the query and response in public release"))
     user_id: Optional[str] = Field(default=None, description="The user id of the user who posed the query")
+    
+    # Interactive query refinement fields
+    refined_query: Optional[str] = Field(default=None, description=(
+        "The refined query after interactive clarification, if available"
+    ))
+    conversation_context: Optional[str] = Field(default=None, description=(
+        "Conversation context from interactive refinement session"
+    ))
+    skip_refinement: Optional[bool] = Field(default=False, description=(
+        "Whether to skip query refinement (e.g., if already done interactively)"
+    ))
 
 
 class CitationSrc(BaseModel):
