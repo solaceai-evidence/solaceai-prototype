@@ -267,6 +267,61 @@ def create_app() -> FastAPI:
             steps=[started_task_step],
         )
 
+    @app.post("/query_refinement")
+    def query_refinement(
+        tool_request: ToolRequest,
+    ) -> dict:
+        """
+        Interactive query refinement endpoint.
+        Analyzes a query and returns clarification questions without starting the full pipeline.
+        """
+        if not app_config.state_mgr_client:
+            app_config.state_mgr_client = lazy_load_state_mgr_client()
+            
+        try:
+            # Import here to avoid circular imports
+            from scholarqa.preprocess.query_refiner import run_query_refinement_step
+            
+            # Run query analysis
+            refinement_result, completions = run_query_refinement_step(
+                query=tool_request.query,
+                llm_model="anthropic/claude-3-5-sonnet-20241022",  # Use same model as main pipeline
+                conversation_context=getattr(tool_request, 'conversation_context', None),
+                max_tokens=1024
+            )
+            
+            # Return interactive response
+            response = {
+                "original_query": refinement_result.original_query,
+                "refined_query": refinement_result.refined_query,
+                "needs_clarification": refinement_result.needs_clarification,
+                "conversation_ready": refinement_result.conversation_ready,
+                "analysis": {
+                    "setting_clear": refinement_result.analysis.setting_clear,
+                    "question_complete": refinement_result.analysis.question_complete,
+                    "missing_element": refinement_result.analysis.missing_element,
+                    "clarification_suggestion": refinement_result.analysis.clarification_suggestion
+                }
+            }
+            
+            # If clarification is needed, return the suggestion
+            if refinement_result.needs_clarification and refinement_result.analysis.clarification_suggestion:
+                response["clarification_question"] = refinement_result.analysis.clarification_suggestion
+                response["status"] = "needs_clarification"
+            else:
+                response["status"] = "ready_to_proceed"
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Query refinement failed: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "original_query": tool_request.query,
+                "needs_clarification": False
+            }
+
     app.state.use_tool_fn = use_tool
     return app
 

@@ -34,6 +34,7 @@ from scholarqa.preprocess.query_preprocessor import (
     decompose_query,
     LLMProcessedQuery,
 )
+from scholarqa.preprocess.query_refiner import run_query_refinement_step
 from scholarqa.rag.multi_step_qa_pipeline import MultiStepQAPipeline
 from scholarqa.rag.retrieval import PaperFinder
 from scholarqa.state_mgmt.local_state_mgr import AbsStateMgrClient, LocalStateMgrClient
@@ -218,7 +219,7 @@ class ScholarQA:
         self,
         user_query: str,
         retrieved_candidates: List[Dict[str, Any]],
-        filter_paper_metadata: [Dict[str, Any]],
+    filter_paper_metadata: Dict[str, Any],
     ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         if self.paper_finder.n_rerank > 0:
             self.update_task_state(
@@ -826,6 +827,74 @@ class ScholarQA:
             req,
             user_id=user_id,
         )
+        # Optional Step -1: Query refinement analysis (silent analysis for potential interaction)
+        refinement_result = None
+        
+        # Check if interactive refinement was already done
+        skip_refinement = getattr(req, 'skip_refinement', False)
+        refined_query_from_interaction = getattr(req, 'refined_query', None)
+        
+        try:
+            enable_refinement = bool(os.getenv("ENABLE_QUERY_REFINEMENT", "false").lower() in ["1", "true", "yes"]) or bool(
+                getattr(self, "llm_kwargs", {}).get("enable_query_refinement", False)
+            )
+        except Exception:
+            enable_refinement = False
+
+        # Use refined query from interactive session if available
+        working_query = refined_query_from_interaction or query
+        
+        if enable_refinement and not skip_refinement:
+            # Run refinement analysis silently (no UI updates yet)
+            try:
+                refinement_cost_args = CostReportingArgs(
+                    task_id=task_id,
+                    user_id=user_id,
+                    description="Step -1: Query refinement analysis",
+                    model=self.decomposer_llm,
+                    msg_id=msg_id,
+                )
+                # Use the same kwargs envelope we use elsewhere for LLMs
+                llm_args = {"max_tokens": 1024}
+                if self.llm_kwargs:
+                    llm_args.update(self.llm_kwargs)
+                refinement_result, refine_costs = run_query_refinement_step(
+                    working_query, self.decomposer_llm, conversation_context=None, **llm_args
+                )
+                # Report cost via state_mgr for consistency
+                if refine_costs:
+                    self.state_mgr.report_llm_usage(
+                        completion_costs=refine_costs, cost_args=refinement_cost_args
+                    )
+                
+                # Store refinement result in task state for potential interactive use
+                self.state_mgr.store_refinement_analysis(refinement_result)
+                
+                # Check if this query needs interactive clarification
+                if refinement_result and refinement_result.needs_clarification:
+                    # TODO: This is where interactive mode would pause for user input
+                    # For now, we log the analysis was done but continue with pipeline
+                    self.update_task_state(
+                        "Query analysis completed - continuing with current question",
+                        step_estimated_time=1,
+                    )
+                else:
+                    # Query is clear enough, proceed normally
+                    self.update_task_state(
+                        "Query analysis completed - question is sufficiently clear",
+                        step_estimated_time=1,
+                    )
+                    
+            except Exception as e:
+                logger.warning(f"Query refinement analysis failed: {e}")
+                # Continue with pipeline on failure
+        elif skip_refinement and refined_query_from_interaction:
+            # Interactive refinement was already done
+            self.update_task_state(
+                "Using refined query from interactive session",
+                step_estimated_time=1,
+            )
+
         cost_args = CostReportingArgs(
             task_id=task_id,
             user_id=user_id,
@@ -833,7 +902,7 @@ class ScholarQA:
             model=self.llm_model,
             msg_id=msg_id,
         )
-        llm_processed_query = self.preprocess_query(query, cost_args)
+        llm_processed_query = self.preprocess_query(working_query, cost_args)
         event_trace.trace_decomposition_event(llm_processed_query)
 
         # Paper finder step - retrieve relevant paper passages from semantic scholar index and api
@@ -843,7 +912,7 @@ class ScholarQA:
         retrieved_candidates = snippet_srch_res + s2_srch_res
         if not retrieved_candidates:
             raise Exception(
-                f"There is no relevant information in the retrieved snippets for query: {query}."
+                f"There is no relevant information in the retrieved snippets for query: {working_query}."
             )
         event_trace.trace_retrieval_event(retrieved_candidates)
 
