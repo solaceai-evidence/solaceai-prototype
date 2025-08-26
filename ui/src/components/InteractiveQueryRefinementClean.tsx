@@ -3,12 +3,18 @@ import { queryRefinement } from '../api/utils';
 import './InteractiveQueryRefinement.css';
 
 interface QueryAnalysisResult {
-    analysis_summary: string;
-    clarity_score: number;
-    ambiguity_detection: string[];
-    missing_context: string[];
-    clarification_questions: string[];
-    suggested_refinements: string[];
+    original_query: string;
+    refined_query: string;
+    needs_clarification: boolean;
+    conversation_ready: boolean;
+    analysis: {
+        setting_clear: boolean;
+        question_complete: boolean;
+        missing_element?: string;
+        clarification_suggestion?: string;
+    };
+    clarification_question?: string;
+    status: string;
 }
 
 interface ConversationEntry {
@@ -34,6 +40,7 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
     const [currentQuery, setCurrentQuery] = useState(initialQuery);
     const [analysisResult, setAnalysisResult] = useState<QueryAnalysisResult | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isRefining, setIsRefining] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -62,6 +69,8 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
             });
 
             console.log('Analysis result:', result);
+
+            // The API now returns a different structure, so we use it directly
             setAnalysisResult(result);
         } catch (err) {
             console.error('Analysis failed:', err);
@@ -71,10 +80,25 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
         }
     }, [userId, conversationHistory]);
 
-    const handleAnswerSubmit = useCallback(() => {
-        if (!analysisResult || !currentAnswer.trim()) return;
+    const analyzeQuery = useCallback(async (query: string, userId: string, conversationHistory: ConversationEntry[]): Promise<QueryAnalysisResult> => {
+        const conversation_context = conversationHistory.length > 0
+            ? conversationHistory.map(entry => `Q: ${entry.question}\nA: ${entry.answer}`).join('\n\n')
+            : undefined;
 
-        const question = analysisResult.clarification_questions[currentQuestionIndex];
+        const result = await queryRefinement({
+            query,
+            user_id: userId,
+            opt_in: true,
+            conversation_context
+        });
+
+        return result;
+    }, []);
+
+    const handleAnswerSubmit = useCallback(async () => {
+        if (!analysisResult || !currentAnswer.trim() || !analysisResult.clarification_question) return;
+
+        const question = analysisResult.clarification_question;
         const newEntry: ConversationEntry = {
             question,
             answer: currentAnswer.trim()
@@ -84,16 +108,34 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
         setConversationHistory(updatedHistory);
         setCurrentAnswer('');
 
-        // Move to next question or complete if all answered
-        if (currentQuestionIndex + 1 < analysisResult.clarification_questions.length) {
-            setCurrentQuestionIndex(currentQuestionIndex + 1);
-        } else {
-            // All questions answered, proceed with refined query
-            handleGenerateRefinement(updatedHistory);
-        }
-    }, [analysisResult, currentQuestionIndex, currentAnswer, conversationHistory]);
+        // Create refined query with conversation context
+        const conversation_context = updatedHistory.map(entry =>
+            `Q: ${entry.question}\nA: ${entry.answer}`
+        ).join('\n\n');
 
-    const handleGenerateRefinement = useCallback(async (history: ConversationEntry[]) => {
+        const refinedQuery = `${currentQuery}\n\nAdditional context:\n${conversation_context}`;
+
+        // Re-analyze the refined query to see if more clarification is needed
+        setIsRefining(true);
+        try {
+            const newAnalysis = await analyzeQuery(refinedQuery, userId, updatedHistory);
+            setAnalysisResult(newAnalysis);
+
+            // If no more clarification needed, proceed to next step
+            if (!newAnalysis.needs_clarification &&
+                newAnalysis.analysis.setting_clear &&
+                newAnalysis.analysis.question_complete &&
+                !newAnalysis.analysis.missing_element) {
+                onRefinementComplete(refinedQuery, initialQuery, conversation_context);
+            }
+            // Otherwise, the UI will show the next clarification question
+        } catch (error) {
+            console.error('Error re-analyzing query:', error);
+            setError('Failed to process your answer. Please try again.');
+        } finally {
+            setIsRefining(false);
+        }
+    }, [analysisResult, currentAnswer, conversationHistory, currentQuery, initialQuery, userId, analyzeQuery, onRefinementComplete]); const handleGenerateRefinement = useCallback(async (history: ConversationEntry[]) => {
         const conversation_context = history.map(entry =>
             `Q: ${entry.question}\nA: ${entry.answer}`
         ).join('\n\n');
@@ -159,8 +201,32 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
         return null;
     }
 
-    const currentQuestion = analysisResult.clarification_questions[currentQuestionIndex];
-    const hasAnsweredAllQuestions = conversationHistory.length === analysisResult.clarification_questions.length;
+    // Clean up the clarification question text to fix formatting issues
+    const cleanupClarificationQuestion = (question: string | undefined): string | undefined => {
+        if (!question) return question;
+        
+        let cleaned = question.trim();
+        
+        // Fix the duplicate "What Which" issue
+        cleaned = cleaned.replace(/^What Which/, 'Which');
+        
+        // Fix incomplete ending "are you most interested in?" -> "What are you most interested in?"
+        cleaned = cleaned.replace(/\s+are you most interested in\?$/, ' What are you most interested in?');
+        
+        return cleaned;
+    };
+
+    const currentQuestion = cleanupClarificationQuestion(analysisResult.clarification_question);
+    const hasAnsweredAllQuestions = conversationHistory.length > 0 && !analysisResult.clarification_question; // Has conversation history but no more questions
+
+    // Determine if refinement is actually needed based on multiple factors
+    const needsRefinement =
+        analysisResult.needs_clarification || // API explicitly says clarification needed
+        !analysisResult.analysis.setting_clear || // Setting not clear
+        !analysisResult.analysis.question_complete || // Question incomplete
+        Boolean(analysisResult.analysis.missing_element); // Has missing elements
+
+    const shouldShowClarification = needsRefinement && !hasAnsweredAllQuestions && currentQuestion;
 
     return (
         <div className="refinement-container">
@@ -204,38 +270,27 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
             </div>
 
             {/* Analysis Results */}
-            <div className="section">
+            {/* Analysis Results Display */}
+            <div className="section analysis-section">
                 <h3 className="section-title">Query Analysis:</h3>
-                <p className="analysis-text">{analysisResult.analysis_summary}</p>
-
-                {analysisResult.clarity_score !== undefined && (
-                    <div className="score-display">
-                        <span className="score-label">Clarity Score:</span>
-                        <span className="score-value">{analysisResult.clarity_score}/10</span>
+                <div className="analysis-details">
+                    <div className="analysis-item">
+                        <strong>Question Complete:</strong> {analysisResult.analysis.question_complete ? 'Yes' : 'No'}
                     </div>
-                )}
-
-                {analysisResult.ambiguity_detection.length > 0 && (
-                    <div className="issue-section">
-                        <h4 className="issue-title">Potential Ambiguities:</h4>
-                        <ul className="issue-list">
-                            {analysisResult.ambiguity_detection.map((issue, idx) => (
-                                <li key={idx} className="issue-item">{issue}</li>
-                            ))}
-                        </ul>
+                    <div className="analysis-item">
+                        <strong>Setting Clear:</strong> {analysisResult.analysis.setting_clear ? 'Yes' : 'No'}
                     </div>
-                )}
-
-                {analysisResult.missing_context.length > 0 && (
-                    <div className="issue-section">
-                        <h4 className="issue-title">Missing Context:</h4>
-                        <ul className="issue-list">
-                            {analysisResult.missing_context.map((context, idx) => (
-                                <li key={idx} className="issue-item">{context}</li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
+                    {analysisResult.analysis.missing_element && (
+                        <div className="analysis-item">
+                            <strong>Missing Element:</strong> {analysisResult.analysis.missing_element}
+                        </div>
+                    )}
+                    {analysisResult.analysis.clarification_suggestion && (
+                        <div className="analysis-item">
+                            <strong>Suggestion:</strong> {analysisResult.analysis.clarification_suggestion}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Conversation History */}
@@ -254,7 +309,7 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
             )}
 
             {/* Current Question or Complete Actions */}
-            {!hasAnsweredAllQuestions && currentQuestion ? (
+            {shouldShowClarification ? (
                 <div className="section question-section">
                     <h3 className="section-title">Clarification Needed:</h3>
                     <div className="question-text">{currentQuestion}</div>
@@ -270,12 +325,30 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
                         <button
                             className="primary-button"
                             onClick={handleAnswerSubmit}
-                            disabled={!currentAnswer.trim()}
+                            disabled={!currentAnswer.trim() || isRefining}
                         >
-                            {currentQuestionIndex + 1 < analysisResult.clarification_questions.length
-                                ? 'Next Question'
-                                : 'Generate Refined Query'
-                            }
+                            {isRefining ? 'Processing...' : 'Submit Answer'}
+                        </button>
+                    </div>
+                </div>
+            ) : needsRefinement ? (
+                <div className="section question-section">
+                    <h3 className="section-title">Query Needs Improvement:</h3>
+                    <div className="question-text">
+                        Based on the analysis, your query could benefit from more specific details. Please consider editing your question to be more precise.
+                    </div>
+                    <div className="button-container">
+                        <button
+                            className="primary-button"
+                            onClick={handleQueryEdit}
+                        >
+                            ✏️ Edit Query for Better Results
+                        </button>
+                        <button
+                            className="secondary-button"
+                            onClick={() => onRefinementComplete(currentQuery, initialQuery)}
+                        >
+                            Continue Anyway
                         </button>
                     </div>
                 </div>
@@ -283,7 +356,10 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
                 <div className="section action-section">
                     <h3 className="section-title">Ready to Proceed:</h3>
                     <p className="action-text">
-                        All clarification questions have been answered. We can now proceed with your refined query.
+                        {hasAnsweredAllQuestions
+                            ? "All clarification questions have been answered. We can now proceed with your refined query."
+                            : "Your query is clear and ready for research."
+                        }
                     </p>
                     <div className="button-container">
                         <button
