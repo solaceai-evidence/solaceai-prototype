@@ -139,6 +139,47 @@ export const createTask = async (query: string, optin: boolean, userId: string) 
   return await response.json() as unknown as AsyncTaskState;
 }
 
+export const queryRefinement = async (params: {
+  query: string;
+  user_id: string;
+  opt_in: boolean;
+  conversation_context?: string;
+}) => {
+  const response = await fetch('/api/query_refinement', {
+    ...BACKEND_DEFAULT_INIT,
+    body: JSON.stringify(params)
+  });
+  
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+
+export const createTaskWithRefinement = async (params: {
+  query: string;
+  refined_query?: string;
+  conversation_context?: string;
+  skip_refinement?: boolean;
+  opt_in: boolean;
+  user_id: string;
+}) => {
+  const response = await fetch(BACKEND_ENDPOINT, {
+    ...BACKEND_DEFAULT_INIT,
+    body: JSON.stringify({
+      ...params,
+      feedback_toggle: true
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  
+  return await response.json() as unknown as AsyncTaskState;
+}
+
 export interface Evidence {
   // bboxs?: BoundingBox[];
   heading?: string;
