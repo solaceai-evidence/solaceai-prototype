@@ -185,3 +185,8 @@ logs
 # node modules
 node_modules/
 .DS_Store
+
+# tests
+*.test.ts
+*.test.tsx
+api/test_scripts/
