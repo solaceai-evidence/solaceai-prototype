@@ -204,19 +204,91 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
     // Clean up the clarification question text to fix formatting issues
     const cleanupClarificationQuestion = (question: string | undefined): string | undefined => {
         if (!question) return question;
-        
+
         let cleaned = question.trim();
-        
+
         // Fix the duplicate "What Which" issue
         cleaned = cleaned.replace(/^What Which/, 'Which');
-        
+
         // Fix incomplete ending "are you most interested in?" -> "What are you most interested in?"
         cleaned = cleaned.replace(/\s+are you most interested in\?$/, ' What are you most interested in?');
-        
+
         return cleaned;
     };
 
+    // Generate a concise suggestion from missing element when suggestion is poor/duplicate
+    const generateConciseSuggestion = (missingElement: string | undefined, suggestion: string | undefined): string | undefined => {
+        if (!missingElement) return suggestion;
+
+        // Clean up suggestion for comparison
+        const cleanSuggestion = suggestion?.trim().replace(/\n/g, ' ').replace(/\s+/g, ' ');
+        const cleanMissingElement = missingElement.trim().replace(/\n/g, ' ').replace(/\s+/g, ' ');
+
+        // Check if suggestion contains the missing element (indicating duplication)
+        const isDuplicate = cleanSuggestion && (
+            cleanSuggestion.includes(cleanMissingElement) ||
+            cleanMissingElement.includes(cleanSuggestion) ||
+            cleanSuggestion === cleanMissingElement
+        );
+
+        // If we have a good suggestion that's different and concise, use it
+        if (cleanSuggestion &&
+            !isDuplicate &&
+            cleanSuggestion.length < missingElement.length * 0.6 &&
+            cleanSuggestion.includes('?')) {
+            return cleanSuggestion;
+        }
+
+        // Generate a concise question from the missing element
+        let concise = missingElement;
+
+        // Handle "What specific interventions..." pattern
+        if (concise.includes('What specific interventions') || concise.includes('specific interventions')) {
+            return "What specific interventions are you most interested in?";
+        }
+
+        // Handle "Which specific..." pattern
+        if (concise.includes('Which specific')) {
+            const match = concise.match(/Which specific ([^?]+)/);
+            if (match) {
+                return `Which specific ${match[1].split(/\s+should|\s+\(/)[0].trim()} are you most interested in?`;
+            }
+        }
+
+        // Handle "Please specify..." pattern
+        if (concise.includes('Please specify')) {
+            const match = concise.match(/Please specify (?:the )?([^(]+)/);
+            if (match) {
+                return `What ${match[1].trim().replace(/\s+for.*/, '')} are you focusing on?`;
+            }
+        }
+
+        // Handle "What specific..." patterns generally
+        if (concise.includes('What specific')) {
+            const match = concise.match(/What specific ([^?]+)/);
+            if (match) {
+                const subject = match[1].split(/\s+are being|\s+should|\s+\(/)[0].trim();
+                return `What specific ${subject} are you most interested in?`;
+            }
+        }
+
+        // Generic fallback for other patterns
+        if (concise.length > 100) {
+            // Take first sentence and make it a question
+            const firstSentence = concise.split(/[.!?]/)[0].trim();
+            if (firstSentence.length > 20) {
+                return `${firstSentence}?`;
+            }
+        }
+
+        return "What specific aspect would you like to focus on?";
+    };
+
     const currentQuestion = cleanupClarificationQuestion(analysisResult.clarification_question);
+    const conciseSuggestion = generateConciseSuggestion(
+        analysisResult.analysis.missing_element,
+        analysisResult.analysis.clarification_suggestion
+    );
     const hasAnsweredAllQuestions = conversationHistory.length > 0 && !analysisResult.clarification_question; // Has conversation history but no more questions
 
     // Determine if refinement is actually needed based on multiple factors
@@ -275,19 +347,33 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
                 <h3 className="section-title">Query Analysis:</h3>
                 <div className="analysis-details">
                     <div className="analysis-item">
-                        <strong>Question Complete:</strong> {analysisResult.analysis.question_complete ? 'Yes' : 'No'}
+                        <strong>Question Complete:</strong>
+                        <span className={`status-badge ${analysisResult.analysis.question_complete ? 'status-yes' : 'status-no'}`}>
+                            {analysisResult.analysis.question_complete ? 'Yes' : 'No'}
+                        </span>
                     </div>
                     <div className="analysis-item">
-                        <strong>Setting Clear:</strong> {analysisResult.analysis.setting_clear ? 'Yes' : 'No'}
+                        <strong>Setting Clear:</strong>
+                        <span className={`status-badge ${analysisResult.analysis.setting_clear ? 'status-yes' : 'status-no'}`}>
+                            {analysisResult.analysis.setting_clear ? 'Yes' : 'No'}
+                        </span>
+                    </div>
+                    <div className="analysis-item">
+                        <strong>Needs Clarification:</strong>
+                        <span className={`status-badge ${analysisResult.needs_clarification ? 'status-no' : 'status-yes'}`}>
+                            {analysisResult.needs_clarification ? 'Yes' : 'No'}
+                        </span>
                     </div>
                     {analysisResult.analysis.missing_element && (
                         <div className="analysis-item">
-                            <strong>Missing Element:</strong> {analysisResult.analysis.missing_element}
+                            <strong>Missing Element:</strong>
+                            <div className="analysis-description">{analysisResult.analysis.missing_element}</div>
                         </div>
                     )}
-                    {analysisResult.analysis.clarification_suggestion && (
+                    {conciseSuggestion && (
                         <div className="analysis-item">
-                            <strong>Suggestion:</strong> {analysisResult.analysis.clarification_suggestion}
+                            <strong>Suggestion:</strong>
+                            <div className="analysis-description suggestion-text">{conciseSuggestion}</div>
                         </div>
                     )}
                 </div>
@@ -309,7 +395,7 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
             )}
 
             {/* Current Question or Complete Actions */}
-            {shouldShowClarification ? (
+            {shouldShowClarification && !isRefining ? (
                 <div className="section question-section">
                     <h3 className="section-title">Clarification Needed:</h3>
                     <div className="question-text">{currentQuestion}</div>
@@ -329,6 +415,14 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
                         >
                             {isRefining ? 'Processing...' : 'Submit Answer'}
                         </button>
+                    </div>
+                </div>
+            ) : isRefining ? (
+                <div className="section question-section">
+                    <h3 className="section-title">Processing Your Answer...</h3>
+                    <div className="loading-container">
+                        <div className="loading-spinner">🔍</div>
+                        <div className="loading-text">Analyzing your response and determining next steps...</div>
                     </div>
                 </div>
             ) : needsRefinement ? (
