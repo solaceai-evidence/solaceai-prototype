@@ -1,0 +1,40 @@
+version: "3.8"
+
+# Override for hybrid development
+# Usage: docker-compose -f docker-compose.yaml -f docker-compose.hybrid.yaml up -d
+
+services:
+  # Add reranker as external service reference
+  reranker:
+    image: alpine:latest
+    command:
+      - sh
+      - -c
+      - |
+        echo "Reranker service should be running natively at host.docker.internal:10001"
+        echo "Start it with: make start-reranker"
+        sleep infinity
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--spider",
+          "-q",
+          "http://host.docker.internal:10001/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    labels:
+      - "hybrid.service=reranker-proxy"
+
+  # Override API to depend on reranker health
+  api:
+    depends_on:
+      reranker:
+        condition: service_healthy
+    environment:
+      - RERANKER_SERVICE_URL=http://host.docker.internal:${RERANKER_PORT:-10001}

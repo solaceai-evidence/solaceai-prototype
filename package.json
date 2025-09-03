@@ -1,4 +1,18 @@
 {
+  "name": "solaceai-prototype",
+  "version": "1.0.0",
+  "description": "Solace AI - ScholarQA System",
+  "scripts": {
+    "start": "make start",
+    "stop": "make stop",
+    "restart": "make restart",
+    "dev": "make dev",
+    "logs": "make logs",
+    "health": "make health",
+    "setup": "make setup",
+    "test": "make test",
+    "clean": "make clean"
+  },
   "devDependencies": {
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7"

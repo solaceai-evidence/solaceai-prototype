@@ -4,6 +4,54 @@
 
 The Solace-AI System provides intelligent question-answering capabilities over a large corpus of online scientific literature, aiming to create real-time evidence synthesis to support policy and humanitarian responses to climate-change health emergencies. The system supports multiple deployment architectures to accommodate different performance requirements and infrastructure constraints.
 
+## Quick Start
+
+Choose your preferred launch method:
+
+### Option 1: Tilt (Recommended for Development)
+
+```bash
+# Setup (first time only)
+make setup        # or make setup-python if you need a Python environment
+tilt up           # Start with web dashboard at http://localhost:10350
+```
+
+### Option 2: Make (Universal)
+
+```bash
+# Setup (first time only)
+make setup        # or make setup-python if you need a Python environment
+make start        # Start all services
+make status       # Check service status
+make logs         # View logs
+make stop         # Stop all services
+```
+
+### Option 3: npm/yarn (JavaScript Ecosystem)
+
+```bash
+npm run setup     # First time setup
+npm start         # Start all services
+npm run status    # Check status
+npm run logs      # View logs
+npm stop          # Stop services
+```
+
+### Option 4: Docker Compose + Script (Manual)
+
+```bash
+# Traditional approach
+cp .env.example .env  # Edit with your API keys
+./start_hybrid.sh     # Start hybrid architecture
+```
+
+**All methods provide the same functionality:**
+
+- 🌐 **Web App**: http://localhost:8080
+- 🔧 **API**: http://localhost:8000
+- 🎨 **UI**: http://localhost:4000
+- 📊 **Tilt Dashboard**: http://localhost:10350 (Tilt only)
+
 ## Supported Architectures
 
 ### 1. Hybrid Architecture (Local Development with GPU Optimization)
@@ -221,12 +269,51 @@ If rate limiting is disabled (variables not set or set to -1), the system will o
 
 ## Development Workflow
 
+### Quick Start Options
+
+Choose your preferred development workflow:
+
+#### Option 1: Tilt (Recommended for Development)
+
+```bash
+tilt up    # Start all services with web UI
+tilt down  # Stop all services
+```
+
+- Web UI: `http://localhost:10350`
+- Live reload and dependency management
+- Real-time logs and service monitoring
+
+#### Option 2: Makefile (Universal)
+
+```bash
+make start   # Start all services
+make stop    # Stop all services
+make health  # Check service health
+make logs    # View logs
+make help    # See all commands
+```
+
+#### Option 3: npm/yarn Scripts
+
+```bash
+npm start     # Start services
+npm stop      # Stop services
+npm run health # Check health
+```
+
+#### Option 4: Traditional Script
+
+```bash
+./start_hybrid.sh  # Original startup script
+```
+
 ### Local Development (Hybrid)
 
-1. Start hybrid architecture: `./start_hybrid.sh`
-2. Access UI: `http://localhost:8080`
-3. Monitor reranker logs: `tail -f api/logs/reranker_service.log`
-4. Stop services: `Ctrl+C` in terminal
+1. **Start services** (choose any method above)
+2. **Access UI**: `http://localhost:8080`
+3. **Monitor logs**: `make logs` or `tilt logs`
+4. **Stop services**: `make stop` or `tilt down` or `Ctrl+C`
 
 ### Testing Reranker Service
 
