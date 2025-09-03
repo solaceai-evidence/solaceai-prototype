@@ -9,6 +9,23 @@ set -e
 echo "Solace AI - Hybrid Architecture Startup"
 echo "═══════════════════════════════════════════"
 
+# Detect docker compose command
+detect_docker_compose() {
+    if command -v docker-compose &> /dev/null; then
+        echo "docker-compose"
+    elif docker compose version &> /dev/null; then
+        echo "docker compose"
+    else
+        echo "ERROR: Neither 'docker-compose' nor 'docker compose' is available" >&2
+        echo "Please install Docker Compose: https://docs.docker.com/compose/install/" >&2
+        exit 1
+    fi
+}
+
+DOCKER_COMPOSE_CMD=$(detect_docker_compose)
+echo "Using Docker Compose command: $DOCKER_COMPOSE_CMD"
+echo ""
+
 # Configuration
 export RERANKER_PORT=$(grep '^RERANKER_PORT=' .env | cut -d '=' -f2- || echo "")
 export RERANKER_HOST=$(grep '^RERANKER_HOST=' .env | cut -d '=' -f2- || echo "")
@@ -46,11 +63,12 @@ cleanup_and_exit() {
 
         # Stop docker services
         echo "   Stopping Docker services"
-        docker-compose down 2>/dev/null || true
+        $DOCKER_COMPOSE_CMD down 2>/dev/null || true
         exit $1
 }
 
 echo " Configuration:"
+echo "   • Web Application: http://localhost:8080 (Nginx Proxy)"
 echo "   • Reranker Service: http://$RERANKER_HOST:$RERANKER_PORT (Native Reranker Service)"
 echo "   • Main API: http://localhost:$MAIN_API_PORT (Dockerized API)"
 echo "   • Config: $CONFIG_FILE"
@@ -65,6 +83,8 @@ if lsof -Pi :$RERANKER_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
 fi
 
 echo "   Launching reranker service ..."
+# Ensure logs directory exists
+mkdir -p api/logs
 nohup env PYTHONPATH=api python reranker_service.py > api/logs/reranker_service.log 2>&1 &
 RERANKER_PID=$!
 
@@ -97,7 +117,7 @@ fi
 
 # Start main services with docker-compose
 echo "   Starting Docker services..."
-docker-compose up -d --build
+$DOCKER_COMPOSE_CMD up -d --build
 
 # Wait for main API
 echo "   Waiting for main API..."
@@ -109,7 +129,7 @@ for i in {1..20}; do
     if [ $i -eq 20 ]; then
         echo "   Main API failed to start"
         echo "   Docker service logs (last 200 lines):"
-        docker-compose logs --no-color --tail=200 || true
+        $DOCKER_COMPOSE_CMD logs --no-color --tail=200 || true
         cleanup_and_exit 1
     fi
     sleep 3
@@ -135,6 +155,7 @@ echo " Startup Complete!"
 echo "═══════════════════════"
 echo ""
 echo " Service Status:"
+echo "   • Web Application: http://localhost:8080"
 echo "   • Native Reranker: http://$RERANKER_HOST:$RERANKER_PORT/health"
 echo "     - Process ID: $RERANKER_PID"
 echo "     - Logs: api/logs/reranker_service.log"
