@@ -29,10 +29,62 @@ The hybrid architecture combines containerized API services with a native rerank
 
    ```bash
    cp .env.example .env
-   # Edit .env to configure ports and service URLs
+   # Edit .env with your API keys and configuration
    ```
 
-2. **Install Native Dependencies:**
+   **Required Environment Variables:**
+
+   ```bash
+   # API key for Semantic Scholar - used to retrieve paper passages, search results, and metadata
+   S2_API_KEY=your_semantic_scholar_api_key
+
+   # API key for Anthropic Claude models - primary LLM for content generation and analysis
+   ANTHROPIC_API_KEY=your_anthropic_api_key
+
+   # API key for OpenAI models - used as fallback LLM and for content moderation/validation
+   OPENAI_API_KEY=your_openai_api_key
+
+   # Modal cloud platform credentials - required when using Modal for remote model deployment
+   MODAL_TOKEN=your_modal_token
+   MODAL_TOKEN_SECRET=your_modal_secret
+
+   # Remote reranker service configuration
+   # Configure these when using a standalone reranker service (not Modal or Docker)
+   # Host address for the remote reranker service
+   RERANKER_HOST=0.0.0.0
+   # Port number for the remote reranker service
+   RERANKER_PORT=10001
+
+   # LLM concurrency and rate limiting configuration
+   # Maximum number of concurrent LLM workers for parallel processing
+   MAX_LLM_WORKERS=3
+
+   # Maximum API requests per minute - set according to your LLM provider quota
+   RATE_LIMIT_RPM=50
+
+   # Maximum input tokens per minute across all LLM requests - prevents quota overrun
+   RATE_LIMIT_ITPM=30000
+
+   # Maximum output tokens per minute across all LLM requests - controls generation limits
+   RATE_LIMIT_OTPM=8000
+
+   # Reranker service timeout and concurrency settings
+   # Client timeout in seconds when communicating with remote reranker
+   RERANKER_CLIENT_TIMEOUT=120
+
+   # Maximum concurrent reranker requests - controls resource usage
+   MAX_CONCURRENCY=1
+
+   # Request processing timeout in milliseconds for reranker operations
+   RERANKER_TIMEOUT_MS=120000
+
+   # Queue wait timeout in milliseconds before rejecting reranker requests
+   RERANKER_QUEUE_TIMEOUT_MS=10000
+   ```
+
+2. **Install Native Dependencies (Reranker Service Only):**
+
+   The API dependencies are automatically installed via Docker. You only need to install dependencies for the native reranker service:
 
    ```bash
    # Create conda environment
@@ -49,8 +101,6 @@ The hybrid architecture combines containerized API services with a native rerank
    # For CPU-only:
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
-   # Install reranker dependencies
-   pip install -r reranker_requirements.txt
    ```
 
 3. **Start Hybrid Architecture:**
@@ -69,9 +119,10 @@ The system automatically detects and uses the best available device:
 **Configuration:**
 The configuration can be modified by tuning the .env file. Below are the default parameters.
 
+- **Web Application**: `http://localhost:8080` (Nginx Proxy - Main Entry Point)
 - Main API: `http://localhost:8000`
 - Native Reranker: `http://0.0.0.0:10001`
-- Web UI: `http://localhost:3000`
+- Web UI: `http://localhost:3000` (Direct UI access)
 
 The hybrid approach provides:
 
@@ -160,42 +211,7 @@ The system supports multiple reranker backends through configuration:
 
 **Environment Variables:**
 
-#### API Keys
-
-```bash
-S2_API_KEY=your_semantic_scholar_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
-OPENAI_API_KEY=your_openai_api_key
-```
-
-#### Modal Integration (Optional)
-
-```bash
-MODAL_TOKEN=your_modal_token
-MODAL_TOKEN_SECRET=your_modal_secret
-```
-
-#### Reranker Service (Optional)
-
-We provide a suitable configuration for the reranker service when it is remotely accessed, and locally installed. (The timeout for the reranker client is set in seconds.)
-
-```bash
-RERANKER_HOST=0.0.0.0
-RERANKER_PORT=10001
-RERANKER_CLIENT_TIMEOUT=120
-MAX_CONCURRENCY=1
-RERANKER_TIMEOUT_MS=120000
-RERANKER_QUEUE_TIMEOUT_MS=10000
-```
-
-#### Rate limiting configuration
-
-```bash
-MAX_LLM_WORKERS=the maximum number of concurrent workers for active LLM model (e.g., 3)
-RATE_LIMIT_RPM=maximum API requests/min. Set according to your LLM quota (e.g., 50)
-RATE_LIMIT_ITPM=maximum input tokens/min across all requests to LLM. Set according to LLM quota (e.g., 30000)
-RATE_LIMIT_OTPM=maximum output tokens/min across all requests to LLM. Set according to LLM quota (e.g., 8000)
-```
+Environment variables are configured in the `.env` file as detailed in the setup section above.
 
 ## Usage
 
@@ -285,6 +301,9 @@ bash start_hybrid.sh
 **Apple Silicon:**
 
 - Ensure Rosetta 2 is installed if needed: `softwareupdate --install-rosetta`
+
+  **What is Rosetta 2?** Apple's translation layer that allows Intel-based (x86_64) applications to run on Apple Silicon (M1/M2/M3) processors. Some Docker images and Python packages may still be Intel-only and require Rosetta 2 for compatibility.
+
 - Use native ARM64 Docker images when possible
 
 ## Production Deployment
