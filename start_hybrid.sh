@@ -9,6 +9,95 @@ set -e
 echo "Solace AI - Hybrid Architecture Startup"
 echo "═══════════════════════════════════════════"
 
+# Python Environment Setup
+setup_python_environment() {
+    echo "Checking Python environment..."
+    
+    if command -v conda >/dev/null 2>&1; then
+        # Conda is available - use conda environment
+        if conda env list | grep -q "solaceai"; then
+            echo "    Found conda environment 'solaceai'"
+        else
+            echo "    Creating conda environment 'solaceai'..."
+            conda create -n solaceai python=3.11 -y
+            echo "    Conda environment 'solaceai' created"
+        fi
+        
+        # Activate conda environment
+        echo "    Activating conda environment 'solaceai'..."
+        export CONDA_ENV_ACTIVATED=true
+        export PYTHON_CMD="conda run -n solaceai python"
+        export PIP_CMD="conda run -n solaceai pip"
+        
+    elif command -v python3 >/dev/null 2>&1; then
+        # No conda - use venv
+        if [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
+            echo "    Found virtual environment 'venv'"
+        else
+            echo "    Creating virtual environment 'venv'..."
+            python3 -m venv venv
+            echo "    Virtual environment 'venv' created"
+        fi
+        
+        # Activate venv environment
+        echo "    Activating virtual environment 'venv'..."
+        source venv/bin/activate
+        export PYTHON_CMD="python"
+        export PIP_CMD="pip"
+        
+    else
+        echo "    Neither conda nor python3 found. Please install Python 3.11+"
+        echo "    Install options:"
+        echo "      - Anaconda/Miniconda: https://docs.conda.io/en/latest/miniconda.html"
+        echo "      - Python: https://www.python.org/downloads/"
+        exit 1
+    fi
+}
+
+# Install dependencies in the environment
+install_dependencies() {
+    echo " Installing dependencies for native reranker (not via docker)..."
+    
+    # Install PyTorch first (required for GPU acceleration)
+    echo "   Installing PyTorch..."
+    if [[ "$CONDA_ENV_ACTIVATED" == "true" ]]; then
+        # Use conda for PyTorch installation when using conda environment
+        conda run -n solaceai pip install torch torchvision torchaudio > /dev/null 2>&1 || {
+            echo "     Failed to install PyTorch via conda"
+        }
+    else
+        # Use pip for PyTorch installation when using venv
+        $PIP_CMD install torch torchvision torchaudio > /dev/null 2>&1 || {
+            echo "     Failed to install PyTorch via pip"
+        }
+    fi
+    
+    # Install reranker requirements (needed for native GPU reranker service)
+    if [ -f "api/reranker_requirements.txt" ]; then
+        echo "   Installing reranker requirements..."
+        $PIP_CMD install -r api/reranker_requirements.txt > /dev/null 2>&1 || {
+            echo "     Failed to install reranker requirements"
+            echo "    You may need to install manually: $PIP_CMD install -r api/reranker_requirements.txt"
+        }
+    fi
+    
+    # Install API package (needed for reranker imports: from api.scholarqa.rag.reranker...)
+    if [ -f "api/pyproject.toml" ]; then
+        echo "   Installing API package..."
+        $PIP_CMD install -e api/ > /dev/null 2>&1 || {
+            echo "     Failed to install API package"
+            echo "    You may need to install manually: $PIP_CMD install -e api/"
+        }
+    fi
+    
+    echo "    Native reranker dependencies installed"
+    echo "    Note: Dockerized API has its own copy of dependencies"
+}
+
+# Setup Python environment
+setup_python_environment
+install_dependencies
+
 # Detect docker compose command
 detect_docker_compose() {
     if command -v docker-compose &> /dev/null; then
@@ -68,6 +157,7 @@ cleanup_and_exit() {
 }
 
 echo " Configuration:"
+echo "   • Python Environment: $(echo $PYTHON_CMD | sed 's/.*conda.*/conda (solaceai)/' | sed 's/.*venv.*/venv/' | sed 's/.*\.venv.*/.venv/')"
 echo "   • Web Application: http://localhost:8080 (Nginx Proxy)"
 echo "   • Reranker Service: http://$RERANKER_HOST:$RERANKER_PORT (Native Reranker Service)"
 echo "   • Main API: http://localhost:$MAIN_API_PORT (Dockerized API)"
@@ -85,7 +175,7 @@ fi
 echo "   Launching reranker service ..."
 # Ensure logs directory exists
 mkdir -p api/logs
-nohup env PYTHONPATH=api python reranker_service.py > api/logs/reranker_service.log 2>&1 &
+nohup env PYTHONPATH=api $PYTHON_CMD reranker_service.py > api/logs/reranker_service.log 2>&1 &
 RERANKER_PID=$!
 
 # Wait for service to start
@@ -107,7 +197,7 @@ done
 # Step 2
 echo ""
 echo "Step 2: Starting Main API with Docker..."
-echo "   📄 Using config: $CONFIG_FILE"
+echo "    Using config: $CONFIG_FILE"
 
 # Make sure we have the config
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -155,6 +245,7 @@ echo " Startup Complete!"
 echo "═══════════════════════"
 echo ""
 echo " Service Status:"
+echo "   • Python Environment: $(echo $PYTHON_CMD | sed 's/.*conda.*/conda (solaceai)/' | sed 's/.*venv.*/venv/' | sed 's/.*\.venv.*/.venv/')"
 echo "   • Web Application: http://localhost:8080"
 echo "   • Native Reranker: http://$RERANKER_HOST:$RERANKER_PORT/health"
 echo "     - Process ID: $RERANKER_PID"
