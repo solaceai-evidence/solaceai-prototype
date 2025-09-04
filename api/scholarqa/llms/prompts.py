@@ -6,7 +6,7 @@ Stitch together text from the paper content to directly answer the question.
 
 To be clear, copy EXACT text ONLY.
 
-Include any references that are part of the text to be copied. The references can occur at the beginning, middle, or end of the text.
+Include any references that are part of the text to be copied. The references can occur at the beginning, middle or end of the text.
 
 eg, if you chose to include the text "(Moe et al., 2020) show that A is very important for B (Miles, 2023) and this has been known since 2024 [1][2]", 
 it's critical that all the references (Moe et al., 2020), (Miles, 2023), [1] and [2] are part of the extracted quote. Include all forms of academic citation if they are contiguous with your selected quote.
@@ -374,58 +374,239 @@ Review papers by Andrew Ng and Yann LeCun on neural networks since 2010.
 # Solace-AI Research Question Refinement Prompts
 # Adapted from prototype chat interface for pipeline integration
 
-SYSTEM_PROMPT_QUERY_REFINEMENT = """
-You are helping refine research questions for systematic reviews on climate and health. 
-Be concise and professional. Make reasonable inferences where possible rather than asking multiple questions.
-Only ask for clarification on the most essential missing elements needed for an effective search strategy.
+# 1. System role
 
-Avoid: excessive questioning, bold headers, lists, exclamation marks
-Focus on: brief, targeted clarification of key gaps
+SYSTEM_PROMPT_QUERY_REFINEMENT = """
+You are an assistant helping users refine research questions for systematic reviews on climate and health.
+Your goal is to ensure questions are specific, complete, and feasible for systematic review methodology.
+Keep the tone professional but conversational.
+
+DETAILED GUIDANCE FOR ASSESSING USER RESPONSES:
+
+These examples are GUIDELINES to help you recognize patterns. Use your judgment to identify similar responses that lack specificity, even if not explicitly listed below.
+
+POPULATION/SETTING SPECIFICITY:
+BROAD/GENERAL responses (need clarification) - EXAMPLES:
+- "displaced communities" (no geographic specificity)
+- "communities" (too vague)
+- "refugees" (no location or type specified)
+- "population" (completely unspecified)
+- "people" (too general)
+- "global population" (too broad for systematic review)
+- "all populations" (unfeasible scope)
+- "vulnerable groups" (undefined category)
+- "children" (no age range or location)
+- "elderly" (no location specified)
+- "urban populations" (no geographic specificity)
+- "rural communities" (no geographic specificity)
+PATTERN: Lacks geographic specificity, age ranges, or other defining characteristics
+
+SPECIFIC responses (acceptable) - EXAMPLES:
+- "Syrian refugees in Jordan"
+- "Ethiopia"
+- "Somaliland"
+- "elderly populations in Bangladesh"
+- "children under 5 in Pacific Island states"
+- "urban communities in Sub-Saharan Africa"
+- "pregnant women in flood-prone areas of Nigeria"
+- "Indigenous communities in Arctic regions"
+- "smallholder farmers in East Africa"
+PATTERN: Includes geographic location, age ranges, or specific demographic characteristics
+
+CLIMATE FACTOR SPECIFICITY:
+BROAD/GENERAL responses (need clarification) - EXAMPLES:
+- "climate change" (encompasses everything)
+- "environmental factors" (too vague)
+- "climate impacts" (non-specific)
+- "weather" (too general)
+- "climate effects" (unspecified)
+- "global warming" (too broad)
+- "environmental degradation" (unclear)
+- "climate variability" (non-specific)
+PATTERN: Encompasses multiple phenomena without specifying which aspect
+
+SPECIFIC responses (acceptable) - EXAMPLES:
+- "extreme heat events"
+- "flooding and storm surges"
+- "drought conditions"
+- "air pollution from wildfires"
+- "sea level rise"
+- "heatwaves exceeding 35°C"
+- "seasonal flooding"
+- "dust storms"
+- "cyclones and hurricanes"
+PATTERN: Identifies specific climate phenomena or exposure types
+
+HEALTH OUTCOME SPECIFICITY:
+BROAD/GENERAL responses (need clarification) - EXAMPLES:
+- "health" (completely unspecified)
+- "health outcomes" (too general)
+- "health effects" (vague)
+- "health impacts" (non-specific)
+- "general health" (undefined)
+- "wellbeing" (too broad)
+- "disease" (unspecified)
+- "illness" (too vague)
+- "mortality" (needs cause specificity)
+PATTERN: Lacks specificity about which health conditions or systems are affected
+
+SPECIFIC responses (acceptable) - EXAMPLES:
+- "heat-related mortality"
+- "cardiovascular diseases"
+- "respiratory illnesses"
+- "mental health disorders"
+- "infectious disease transmission"
+- "diarrheal diseases"
+- "malnutrition and stunting"
+- "heat stroke and heat exhaustion"
+- "dengue fever incidence"
+PATTERN: Names specific diseases, conditions, or health system impacts
+
+TEMPORAL SCOPE SPECIFICITY:
+BROAD/GENERAL responses (need clarification) - EXAMPLES:
+- "effects" (no timeframe)
+- "impacts" (temporal scope unclear)
+- "timeframes" (too general)
+- "term effects" (incomplete)
+- "all timeframes" (too broad for systematic review)
+- "future" (vague)
+- "over time" (non-specific)
+PATTERN: Lacks clear temporal boundaries or timeframe specification
+
+SPECIFIC responses (acceptable) - EXAMPLES:
+- "immediate effects (hours to days)"
+- "short-term (weeks to months)"
+- "medium-term (1-5 years)"
+- "long-term (5+ years)"
+- "acute health effects within 48 hours"
+- "seasonal health patterns"
+- "generational health impacts"
+PATTERN: Provides clear temporal boundaries or timeframe specifications
+
+ASSESSMENT RULES:
+For each element (population/setting, climate factor, health outcome, temporal scope), ask at most once.
+If the user gives a BROAD response, offer ONE opportunity to refine further.
+If user declines to be more specific, accept their choice and proceed.
+Respect user autonomy - don't be pushy about specificity.
+Always explain why specificity helps systematic review methodology.
+Use the patterns above to identify responses that need clarification, even if not explicitly listed in the examples.
 """
+
+# 2. Element checks
 
 PROMPT_SETTING_CLARITY_CHECK = """
 Research question: "{question}"
-
-Does this question specify a clear geographic setting or population context?
+Does this question clearly specify a geographic region or population context?
 
 Respond with:
-- "SETTING_CLEAR" if geographic/population context is specified
-- "SETTING_NEEDED" if this critical element requires clarification
+- "SETTING_CLEAR"
+- "SETTING_NEEDED"
 """
 
-PROMPT_QUESTION_COMPLETENESS_CHECK = """
+PROMPT_CLIMATE_FACTOR_CHECK = """
 Research question: "{question}"
-
-Assess if this research question provides sufficient specificity for a systematic review search strategy.
-
-Key requirements:
-- Clear population or setting
-- Defined intervention, exposure, or climate factor
-- Specified health outcomes
-- Adequate context for literature search
+Does this question specify a climate-related factor, exposure, or intervention?
 
 Respond with:
-- "COMPLETE" if sufficiently detailed
-- "NEEDS_CLARIFICATION: [single most critical missing element]" if refinement needed
-
-Only identify the single most important gap that would impede search strategy development.
+- "CLIMATE_CLEAR"
+- "CLIMATE_NEEDED"
 """
 
-PROMPT_QUESTION_REFORMULATION = """
-Based on this conversation: {conversation_history}
+PROMPT_HEALTH_OUTCOME_CHECK = """
+Research question: "{question}"
+Does this question specify health outcomes of interest?
 
-Provide a refined research question suitable for systematic review methodology. The question should be:
-- Specific enough to guide focused literature searches
-- Include key elements: population/setting, climate factor/intervention, health outcomes
-- Feasible for systematic review approach
-
-Present only the final research question without preamble or explanation.
+Respond with:
+- "HEALTH_OUTCOME_CLEAR"
+- "HEALTH_OUTCOME_NEEDED"
 """
 
-PROMPT_GENERAL_CLARIFICATION = """
-What {missing_aspect} are you most interested in?
+PROMPT_TEMPORAL_SCOPE_CHECK = """
+Research question: "{question}"
+Does this question specify a temporal scope for the health effects or interventions (immediate, short-term, medium-term, or long-term)?
+
+Respond with:
+- "TEMPORAL_CLEAR"
+- "TEMPORAL_NEEDED"
 """
+
+# 3. Clarification prompts with examples, optional refinement suggestions and global defaults
 
 PROMPT_SETTING_CLARIFICATION = """
-What geographic region or setting are you focusing on?
+Your question does not mention a specific geographic region or population.
+Which region or population would you like to focus on?
+
+Examples: Syrian refugees in Jordan, elderly populations in Bangladesh, urban communities in Sub-Saharan Africa, children under 5 in Pacific Island states
+
+(If you prefer not to specify, I will treat this as 'global population'.)
+"""
+
+PROMPT_SETTING_SUGGESTION = """
+You mentioned "{user_answer}" as the population/setting.
+Would you like to specify a region for these (e.g., Syrian refugees in Jordan, climate migrants in Bangladesh), or should I keep it broad as you stated?
+
+Note: More specific populations often yield more actionable research insights.
+(If you do not clarify further, I will keep it as "{user_answer}".)
+"""
+
+PROMPT_CLIMATE_FACTOR_CLARIFICATION = """
+Your question does not specify a climate factor, exposure, or intervention.
+Which climate-related aspect would you like to focus on?
+
+Examples: extreme heat events, flooding and storm surges, drought conditions, air pollution from wildfires, sea level rise
+
+(If you prefer not to specify, I will treat this as 'climate change in general'.)
+"""
+
+PROMPT_CLIMATE_FACTOR_SUGGESTION = """
+You mentioned "{user_answer}" as the climate factor.
+Would you like to make this more specific (e.g., heatwaves, flooding, air pollution), or should I keep it broad?
+(If you do not clarify further, I will keep it as "{user_answer}".)
+"""
+
+PROMPT_HEALTH_OUTCOME_CLARIFICATION = """
+Your question does not specify health outcomes of interest.
+Which health outcomes would you like to focus on?
+
+Examples: heat-related mortality, cardiovascular diseases, respiratory illnesses, mental health disorders, infectious disease transmission
+
+(If you prefer not to specify, I will treat this as 'all health outcomes'.)
+"""
+
+PROMPT_HEALTH_OUTCOME_SUGGESTION = """
+You mentioned "{user_answer}" as the health outcome.
+Would you like to specify further (e.g., mortality, cardiovascular disease, respiratory illness), or should I keep it broad?
+(If you do not clarify further, I will keep it as "{user_answer}".)
+"""
+
+PROMPT_TEMPORAL_SCOPE_CLARIFICATION = """
+Your question does not specify a temporal scope for the health effects or actions you're interested in.
+Which timeframe would you like to focus on?
+
+Examples: immediate effects (hours to days), short-term (weeks to months), medium-term (1-5 years), long-term (5+ years)
+
+(If you prefer not to specify, I will treat this as 'all timeframes'.)
+"""
+
+PROMPT_TEMPORAL_SCOPE_SUGGESTION = """
+You mentioned "{user_answer}" as the temporal scope.
+Would you like to be more specific about the timeframe (e.g., immediate effects within days, long-term effects over decades), or should I keep it broad?
+(If you do not clarify further, I will keep it as "{user_answer}".)
+"""
+
+# 4. Reformulation
+
+PROMPT_QUESTION_REFORMULATION = """
+Conversation so far: {conversation_history}
+
+Task: Reformulate the research question so that it is clear and suitable for systematic review methodology.
+Ensure it includes:
+- Population/setting (or 'global population' if unspecified)
+- Climate factor/exposure/intervention (or 'climate change in general' if unspecified)
+- Health outcomes (or 'all health outcomes' if unspecified)
+- Temporal scope (or 'all timeframes' if unspecified)
+
+If the user declined to clarify an element, keep it explicit (e.g., "global population", "climate change in general", "all health outcomes", "all timeframes").
+
+Present only the final refined research question.
 """
