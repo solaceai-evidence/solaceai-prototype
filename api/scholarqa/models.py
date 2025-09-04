@@ -45,6 +45,9 @@ class ToolRequest(BaseModel):
     skip_refinement: Optional[bool] = Field(default=False, description=(
         "Whether to skip query refinement (e.g., if already done interactively)"
     ))
+    user_responses: Optional[Dict[str, List[str]]] = Field(default=None, description=(
+        "User responses for interactive refinement. Format: {element_type: [response1, response2]}"
+    ))
 
 
 class CitationSrc(BaseModel):

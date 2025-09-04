@@ -143,6 +143,7 @@ export const queryRefinement = async (params: {
   query: string;
   user_id: string;
   opt_in: boolean;
+  user_responses?: { [key: string]: string[] };
   conversation_context?: string;
 }) => {
   const response = await fetch('/api/query_refinement', {

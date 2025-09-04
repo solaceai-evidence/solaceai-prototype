@@ -5,21 +5,33 @@ import './InteractiveQueryRefinement.css';
 interface QueryAnalysisResult {
     original_query: string;
     refined_query: string;
-    needs_clarification: boolean;
-    conversation_ready: boolean;
-    analysis: {
+    needs_interaction: boolean;
+    status: string;
+    analysis?: {
         setting_clear: boolean;
-        question_complete: boolean;
-        missing_element?: string;
-        clarification_suggestion?: string;
+        climate_factor_clear: boolean;
+        health_outcome_clear: boolean;
+        temporal_scope_clear: boolean;
+        needs_clarification: boolean;
+    };
+    refined_elements?: {
+        setting?: string;
+        climate_factor?: string;
+        health_outcome?: string;
+        temporal_scope?: string;
     };
     clarification_question?: string;
-    status: string;
-}
-
-interface ConversationEntry {
-    question: string;
-    answer: string;
+    element_type?: string;
+    is_suggestion?: boolean;
+    interactive_steps?: Array<{
+        element_type: string;
+        prompt: string;
+        is_suggestion: boolean;
+    }>;
+    conversation_history?: Array<{
+        role: string;
+        message: string;
+    }>;
 }
 
 interface InteractiveQueryRefinementProps {
@@ -42,8 +54,8 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isRefining, setIsRefining] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([]);
-    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [currentStepIndex, setCurrentStepIndex] = useState(0);
+    const [userResponses, setUserResponses] = useState<{ [key: string]: string[] }>({});
     const [currentAnswer, setCurrentAnswer] = useState('');
     const [error, setError] = useState<string | null>(null);
 
@@ -52,100 +64,76 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
         performAnalysis(initialQuery);
     }, [initialQuery]);
 
-    const performAnalysis = useCallback(async (query: string) => {
+    const performAnalysis = useCallback(async (query: string, responses?: { [key: string]: string[] }) => {
         setIsAnalyzing(true);
         setError(null);
 
         try {
-            const conversation_context = conversationHistory.length > 0
-                ? conversationHistory.map(entry => `Q: ${entry.question}\nA: ${entry.answer}`).join('\n\n')
-                : undefined;
-
             const result = await queryRefinement({
                 query,
                 user_id: userId,
                 opt_in: true,
-                conversation_context
+                user_responses: responses
             });
 
             console.log('Analysis result:', result);
-
-            // The API now returns a different structure, so we use it directly
             setAnalysisResult(result);
+
+            // If refinement is complete, proceed
+            if (result.status === 'complete' || !result.needs_interaction) {
+                const conversationContext = result.conversation_history
+                    ? result.conversation_history.map((h: { role: string; message: string }) => `${h.role}: ${h.message}`).join('\n')
+                    : undefined;
+                onRefinementComplete(result.refined_query, result.original_query, conversationContext);
+            }
         } catch (err) {
             console.error('Analysis failed:', err);
             setError('Failed to analyze query. Please try again.');
         } finally {
             setIsAnalyzing(false);
         }
-    }, [userId, conversationHistory]);
+    }, [userId, onRefinementComplete]);
 
-    const analyzeQuery = useCallback(async (query: string, userId: string, conversationHistory: ConversationEntry[]): Promise<QueryAnalysisResult> => {
-        const conversation_context = conversationHistory.length > 0
-            ? conversationHistory.map(entry => `Q: ${entry.question}\nA: ${entry.answer}`).join('\n\n')
-            : undefined;
+    const handleAnswerSubmit = useCallback(() => {
+        if (!analysisResult || !currentAnswer.trim() || !analysisResult.element_type) return;
 
-        const result = await queryRefinement({
-            query,
-            user_id: userId,
-            opt_in: true,
-            conversation_context
-        });
-
-        return result;
-    }, []);
-
-    const handleAnswerSubmit = useCallback(async () => {
-        if (!analysisResult || !currentAnswer.trim() || !analysisResult.clarification_question) return;
-
-        const question = analysisResult.clarification_question;
-        const newEntry: ConversationEntry = {
-            question,
-            answer: currentAnswer.trim()
+        const elementType = analysisResult.element_type;
+        const updatedResponses = {
+            ...userResponses,
+            [elementType]: [...(userResponses[elementType] || []), currentAnswer.trim()]
         };
 
-        const updatedHistory = [...conversationHistory, newEntry];
-        setConversationHistory(updatedHistory);
+        setUserResponses(updatedResponses);
         setCurrentAnswer('');
-
-        // Create refined query with conversation context
-        const conversation_context = updatedHistory.map(entry =>
-            `Q: ${entry.question}\nA: ${entry.answer}`
-        ).join('\n\n');
-
-        const refinedQuery = `${currentQuery}\n\nAdditional context:\n${conversation_context}`;
-
-        // Re-analyze the refined query to see if more clarification is needed
         setIsRefining(true);
-        try {
-            const newAnalysis = await analyzeQuery(refinedQuery, userId, updatedHistory);
-            setAnalysisResult(newAnalysis);
 
-            // If no more clarification needed, proceed to next step
-            if (!newAnalysis.needs_clarification &&
-                newAnalysis.analysis.setting_clear &&
-                newAnalysis.analysis.question_complete &&
-                !newAnalysis.analysis.missing_element) {
-                onRefinementComplete(refinedQuery, initialQuery, conversation_context);
-            }
-            // Otherwise, the UI will show the next clarification question
-        } catch (error) {
-            console.error('Error re-analyzing query:', error);
-            setError('Failed to process your answer. Please try again.');
-        } finally {
+        // Send updated responses to API
+        performAnalysis(currentQuery, updatedResponses).then(() => {
             setIsRefining(false);
-        }
-    }, [analysisResult, currentAnswer, conversationHistory, currentQuery, initialQuery, userId, analyzeQuery, onRefinementComplete]); const handleGenerateRefinement = useCallback(async (history: ConversationEntry[]) => {
-        const conversation_context = history.map(entry =>
-            `Q: ${entry.question}\nA: ${entry.answer}`
-        ).join('\n\n');
+        });
+    }, [analysisResult, currentAnswer, userResponses, currentQuery, performAnalysis]);
 
-        // For now, just proceed with the current query and conversation context
-        // In a full implementation, we could call the API again to generate a refined query
-        onRefinementComplete(currentQuery, initialQuery, conversation_context);
-    }, [currentQuery, initialQuery, onRefinementComplete]);
+    const handleSkipElement = useCallback(() => {
+        if (!analysisResult || !analysisResult.element_type) return;
 
-    const handleSkip = useCallback(() => {
+        const elementType = analysisResult.element_type;
+
+        // Add a "skip" response to indicate the user chose not to specify this element
+        const updatedResponses = {
+            ...userResponses,
+            [elementType]: [...(userResponses[elementType] || []), "[SKIP]"]
+        };
+
+        setUserResponses(updatedResponses);
+        setIsRefining(true);
+
+        // Send updated responses to API
+        performAnalysis(currentQuery, updatedResponses).then(() => {
+            setIsRefining(false);
+        });
+    }, [analysisResult, userResponses, currentQuery, performAnalysis]);
+
+    const handleSkipAll = useCallback(() => {
         onSkipRefinement(initialQuery);
     }, [initialQuery, onSkipRefinement]);
 
@@ -155,12 +143,40 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
 
     const handleQuerySave = useCallback(() => {
         setIsEditing(false);
+        // Reset refinement state
+        setUserResponses({});
+        setCurrentStepIndex(0);
         // Re-analyze with the new query
         performAnalysis(currentQuery);
-        // Reset conversation state
-        setConversationHistory([]);
-        setCurrentQuestionIndex(0);
     }, [currentQuery, performAnalysis]);
+
+    const getElementDisplayName = (elementType: string): string => {
+        switch (elementType) {
+            case 'setting':
+                return 'Population/Setting';
+            case 'climate_factor':
+                return 'Climate Factor';
+            case 'health_outcome':
+                return 'Health Outcome';
+            case 'temporal_scope':
+                return 'Temporal Scope';
+            default:
+                return elementType;
+        }
+    }; const getElementExamples = (elementType: string): string => {
+        switch (elementType) {
+            case 'setting':
+                return 'Examples: Sub-Saharan Africa, urban populations, displaced communities, elderly people in rural areas';
+            case 'climate_factor':
+                return 'Examples: extreme heat, flooding, air pollution, drought, heatwaves exceeding 35°C';
+            case 'health_outcome':
+                return 'Examples: cardiovascular mortality, respiratory diseases, infectious diseases, mental health outcomes';
+            case 'temporal_scope':
+                return 'Examples: immediate effects (hours-days), short-term (weeks-months), medium-term (1-5 years), long-term (5+ years)';
+            default:
+                return '';
+        }
+    };
 
     if (isAnalyzing) {
         return (
@@ -187,7 +203,7 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
                         </button>
                         <button
                             className="secondary-button"
-                            onClick={handleSkip}
+                            onClick={handleSkipAll}
                         >
                             Skip Analysis
                         </button>
@@ -200,105 +216,6 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
     if (!analysisResult) {
         return null;
     }
-
-    // Clean up the clarification question text to fix formatting issues
-    const cleanupClarificationQuestion = (question: string | undefined): string | undefined => {
-        if (!question) return question;
-
-        let cleaned = question.trim();
-
-        // Fix the duplicate "What Which" issue
-        cleaned = cleaned.replace(/^What Which/, 'Which');
-
-        // Fix incomplete ending "are you most interested in?" -> "What are you most interested in?"
-        cleaned = cleaned.replace(/\s+are you most interested in\?$/, ' What are you most interested in?');
-
-        return cleaned;
-    };
-
-    // Generate a concise suggestion from missing element when suggestion is poor/duplicate
-    const generateConciseSuggestion = (missingElement: string | undefined, suggestion: string | undefined): string | undefined => {
-        if (!missingElement) return suggestion;
-
-        // Clean up suggestion for comparison
-        const cleanSuggestion = suggestion?.trim().replace(/\n/g, ' ').replace(/\s+/g, ' ');
-        const cleanMissingElement = missingElement.trim().replace(/\n/g, ' ').replace(/\s+/g, ' ');
-
-        // Check if suggestion contains the missing element (indicating duplication)
-        const isDuplicate = cleanSuggestion && (
-            cleanSuggestion.includes(cleanMissingElement) ||
-            cleanMissingElement.includes(cleanSuggestion) ||
-            cleanSuggestion === cleanMissingElement
-        );
-
-        // If we have a good suggestion that's different and concise, use it
-        if (cleanSuggestion &&
-            !isDuplicate &&
-            cleanSuggestion.length < missingElement.length * 0.6 &&
-            cleanSuggestion.includes('?')) {
-            return cleanSuggestion;
-        }
-
-        // Generate a concise question from the missing element
-        let concise = missingElement;
-
-        // Handle "What specific interventions..." pattern
-        if (concise.includes('What specific interventions') || concise.includes('specific interventions')) {
-            return "What specific interventions are you most interested in?";
-        }
-
-        // Handle "Which specific..." pattern
-        if (concise.includes('Which specific')) {
-            const match = concise.match(/Which specific ([^?]+)/);
-            if (match) {
-                return `Which specific ${match[1].split(/\s+should|\s+\(/)[0].trim()} are you most interested in?`;
-            }
-        }
-
-        // Handle "Please specify..." pattern
-        if (concise.includes('Please specify')) {
-            const match = concise.match(/Please specify (?:the )?([^(]+)/);
-            if (match) {
-                return `What ${match[1].trim().replace(/\s+for.*/, '')} are you focusing on?`;
-            }
-        }
-
-        // Handle "What specific..." patterns generally
-        if (concise.includes('What specific')) {
-            const match = concise.match(/What specific ([^?]+)/);
-            if (match) {
-                const subject = match[1].split(/\s+are being|\s+should|\s+\(/)[0].trim();
-                return `What specific ${subject} are you most interested in?`;
-            }
-        }
-
-        // Generic fallback for other patterns
-        if (concise.length > 100) {
-            // Take first sentence and make it a question
-            const firstSentence = concise.split(/[.!?]/)[0].trim();
-            if (firstSentence.length > 20) {
-                return `${firstSentence}?`;
-            }
-        }
-
-        return "What specific aspect would you like to focus on?";
-    };
-
-    const currentQuestion = cleanupClarificationQuestion(analysisResult.clarification_question);
-    const conciseSuggestion = generateConciseSuggestion(
-        analysisResult.analysis.missing_element,
-        analysisResult.analysis.clarification_suggestion
-    );
-    const hasAnsweredAllQuestions = conversationHistory.length > 0 && !analysisResult.clarification_question; // Has conversation history but no more questions
-
-    // Determine if refinement is actually needed based on multiple factors
-    const needsRefinement =
-        analysisResult.needs_clarification || // API explicitly says clarification needed
-        !analysisResult.analysis.setting_clear || // Setting not clear
-        !analysisResult.analysis.question_complete || // Question incomplete
-        Boolean(analysisResult.analysis.missing_element); // Has missing elements
-
-    const shouldShowClarification = needsRefinement && !hasAnsweredAllQuestions && currentQuestion;
 
     return (
         <div className="refinement-container">
@@ -342,63 +259,98 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
             </div>
 
             {/* Analysis Results */}
-            {/* Analysis Results Display */}
             <div className="section analysis-section">
                 <h3 className="section-title">Query Analysis:</h3>
                 <div className="analysis-details">
                     <div className="analysis-item">
-                        <strong>Question Complete:</strong>
-                        <span className={`status-badge ${analysisResult.analysis.question_complete ? 'status-yes' : 'status-no'}`}>
-                            {analysisResult.analysis.question_complete ? 'Yes' : 'No'}
+                        <strong>Population/Setting Clear:</strong>
+                        <span className={`status-badge ${analysisResult.analysis?.setting_clear ? 'status-yes' : 'status-no'}`}>
+                            {analysisResult.analysis?.setting_clear ? 'Yes' : 'No'}
                         </span>
                     </div>
                     <div className="analysis-item">
-                        <strong>Setting Clear:</strong>
-                        <span className={`status-badge ${analysisResult.analysis.setting_clear ? 'status-yes' : 'status-no'}`}>
-                            {analysisResult.analysis.setting_clear ? 'Yes' : 'No'}
+                        <strong>Climate Factor Clear:</strong>
+                        <span className={`status-badge ${analysisResult.analysis?.climate_factor_clear ? 'status-yes' : 'status-no'}`}>
+                            {analysisResult.analysis?.climate_factor_clear ? 'Yes' : 'No'}
                         </span>
                     </div>
                     <div className="analysis-item">
-                        <strong>Needs Clarification:</strong>
-                        <span className={`status-badge ${analysisResult.needs_clarification ? 'status-no' : 'status-yes'}`}>
-                            {analysisResult.needs_clarification ? 'Yes' : 'No'}
+                        <strong>Health Outcome Clear:</strong>
+                        <span className={`status-badge ${analysisResult.analysis?.health_outcome_clear ? 'status-yes' : 'status-no'}`}>
+                            {analysisResult.analysis?.health_outcome_clear ? 'Yes' : 'No'}
                         </span>
                     </div>
-                    {analysisResult.analysis.missing_element && (
-                        <div className="analysis-item">
-                            <strong>Missing Element:</strong>
-                            <div className="analysis-description">{analysisResult.analysis.missing_element}</div>
-                        </div>
-                    )}
-                    {conciseSuggestion && (
-                        <div className="analysis-item">
-                            <strong>Suggestion:</strong>
-                            <div className="analysis-description suggestion-text">{conciseSuggestion}</div>
-                        </div>
-                    )}
+                    <div className="analysis-item">
+                        <strong>Temporal Scope Clear:</strong>
+                        <span className={`status-badge ${analysisResult.analysis?.temporal_scope_clear ? 'status-yes' : 'status-no'}`}>
+                            {analysisResult.analysis?.temporal_scope_clear ? 'Yes' : 'No'}
+                        </span>
+                    </div>
                 </div>
             </div>
 
-            {/* Conversation History */}
-            {conversationHistory.length > 0 && (
+            {/* Show refined elements if available */}
+            {(analysisResult.refined_elements?.setting || analysisResult.refined_elements?.climate_factor || analysisResult.refined_elements?.health_outcome || analysisResult.refined_elements?.temporal_scope) && (
                 <div className="section">
-                    <h3 className="section-title">Previous Clarifications:</h3>
-                    <div className="conversation-list">
-                        {conversationHistory.map((entry, idx) => (
-                            <div key={idx} className="conversation-item">
-                                <div className="conversation-question">Q: {entry.question}</div>
-                                <div className="conversation-answer">A: {entry.answer}</div>
+                    <h3 className="section-title">Identified Elements:</h3>
+                    <div className="refined-elements">
+                        {analysisResult.refined_elements?.setting && (
+                            <div className="element-item">
+                                <strong>Population/Setting:</strong> {analysisResult.refined_elements.setting}
+                            </div>
+                        )}
+                        {analysisResult.refined_elements?.climate_factor && (
+                            <div className="element-item">
+                                <strong>Climate Factor:</strong> {analysisResult.refined_elements.climate_factor}
+                            </div>
+                        )}
+                        {analysisResult.refined_elements?.health_outcome && (
+                            <div className="element-item">
+                                <strong>Health Outcome:</strong> {analysisResult.refined_elements.health_outcome}
+                            </div>
+                        )}
+                        {analysisResult.refined_elements?.temporal_scope && (
+                            <div className="element-item">
+                                <strong>Temporal Scope:</strong> {analysisResult.refined_elements.temporal_scope}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Show user responses so far */}
+            {Object.keys(userResponses).length > 0 && (
+                <div className="section">
+                    <h3 className="section-title">Your Responses:</h3>
+                    <div className="user-responses">
+                        {Object.entries(userResponses).map(([elementType, responses]) => (
+                            <div key={elementType} className="response-item">
+                                <strong>{getElementDisplayName(elementType)}:</strong>
+                                <ul>
+                                    {responses.map((response, idx) => (
+                                        <li key={idx} className={response === "[SKIP]" ? "skipped-response" : ""}>
+                                            {response === "[SKIP]" ? "Skipped - keeping broad" : response}
+                                        </li>
+                                    ))}
+                                </ul>
                             </div>
                         ))}
                     </div>
                 </div>
             )}
 
-            {/* Current Question or Complete Actions */}
-            {shouldShowClarification && !isRefining ? (
+            {/* Current clarification question or completion */}
+            {analysisResult.needs_interaction && analysisResult.status === 'needs_clarification' && !isRefining ? (
                 <div className="section question-section">
-                    <h3 className="section-title">Clarification Needed:</h3>
-                    <div className="question-text">{currentQuestion}</div>
+                    <h3 className="section-title">
+                        Clarification Needed: {getElementDisplayName(analysisResult.element_type || '')}
+                    </h3>
+
+                    <div className="question-text">{analysisResult.clarification_question}</div>
+
+                    <div className="examples-text">
+                        {getElementExamples(analysisResult.element_type || '')}
+                    </div>
 
                     <textarea
                         className="answer-textarea"
@@ -413,69 +365,70 @@ export const InteractiveQueryRefinement: React.FC<InteractiveQueryRefinementProp
                             onClick={handleAnswerSubmit}
                             disabled={!currentAnswer.trim() || isRefining}
                         >
-                            {isRefining ? 'Processing...' : 'Submit Answer'}
+                            Submit Answer
                         </button>
+                        <button
+                            className="secondary-button"
+                            onClick={handleSkipElement}
+                            disabled={isRefining}
+                        >
+                            Skip - Keep Broad
+                        </button>
+                    </div>
+
+                    <div className="skip-explanation">
+                        <p>💡 You can skip any clarification to keep your query broad if you prefer.</p>
                     </div>
                 </div>
             ) : isRefining ? (
                 <div className="section question-section">
-                    <h3 className="section-title">Processing Your Answer...</h3>
+                    <h3 className="section-title">Processing Your Response...</h3>
                     <div className="loading-container">
                         <div className="loading-spinner">🔍</div>
                         <div className="loading-text">Analyzing your response and determining next steps...</div>
                     </div>
                 </div>
-            ) : needsRefinement ? (
-                <div className="section question-section">
-                    <h3 className="section-title">Query Needs Improvement:</h3>
-                    <div className="question-text">
-                        Based on the analysis, your query could benefit from more specific details. Please consider editing your question to be more precise.
-                    </div>
-                    <div className="button-container">
-                        <button
-                            className="primary-button"
-                            onClick={handleQueryEdit}
-                        >
-                            ✏️ Edit Query for Better Results
-                        </button>
-                        <button
-                            className="secondary-button"
-                            onClick={() => onRefinementComplete(currentQuery, initialQuery)}
-                        >
-                            Continue Anyway
-                        </button>
-                    </div>
-                </div>
             ) : (
                 <div className="section action-section">
-                    <h3 className="section-title">Ready to Proceed:</h3>
+                    <h3 className="section-title">Ready to Proceed!</h3>
                     <p className="action-text">
-                        {hasAnsweredAllQuestions
-                            ? "All clarification questions have been answered. We can now proceed with your refined query."
-                            : "Your query is clear and ready for research."
+                        {analysisResult.status === 'complete'
+                            ? "Your query has been refined and is ready for research."
+                            : "Your query is clear enough to proceed with research."
                         }
                     </p>
+                    {analysisResult.refined_query !== analysisResult.original_query && (
+                        <div className="refined-query-preview">
+                            <strong>Refined Query:</strong>
+                            <div className="refined-query-text">{analysisResult.refined_query}</div>
+                        </div>
+                    )}
                     <div className="button-container">
                         <button
                             className="primary-button"
-                            onClick={() => handleGenerateRefinement(conversationHistory)}
+                            onClick={() => {
+                                const conversationContext = analysisResult.conversation_history
+                                    ? analysisResult.conversation_history.map((h: { role: string; message: string }) => `${h.role}: ${h.message}`).join('\n')
+                                    : undefined;
+                                onRefinementComplete(analysisResult.refined_query, analysisResult.original_query, conversationContext);
+                            }}
                         >
-                            🚀 Proceed with Refined Query
+                            🚀 Proceed with Research
                         </button>
                     </div>
                 </div>
             )}
 
-            {/* Skip Option */}
+            {/* Skip All Option */}
             <div className="skip-section">
                 <p className="skip-text">
                     Don't want to refine your query? You can proceed with the original question.
                 </p>
                 <button
                     className="secondary-button"
-                    onClick={handleSkip}
+                    onClick={handleSkipAll}
                 >
-                    Skip Refinement & Proceed
+                    Skip All Refinement & Proceed
                 </button>
             </div>
         </div>
