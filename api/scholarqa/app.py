@@ -274,26 +274,37 @@ def create_app() -> FastAPI:
         """
         Interactive query refinement endpoint.
         Analyzes a query and returns clarification questions or processes user responses.
-        
+
         Usage:
         1. Initial analysis: Send just the query to get clarification questions
         2. With responses: Send query + user_responses to get refined question
         """
+        logger.info(f"Query refinement request - Query: '{tool_request.query}', User: {getattr(tool_request, 'user_id', 'N/A')}")
+        if tool_request.user_responses:
+            logger.info(f"User responses provided: {tool_request.user_responses}")
+
         if not app_config.state_mgr_client:
             app_config.state_mgr_client = lazy_load_state_mgr_client()
-            
+
         try:
             # Import here to avoid circular imports
-            from scholarqa.preprocess.query_refiner import run_query_refinement_step, get_next_refinement_step
-            
+            from scholarqa.preprocess.query_refiner import (
+                run_query_refinement_step,
+                get_next_refinement_step,
+            )
+
+            logger.info("Starting query refinement pipeline...")
+
             # Run query analysis/refinement
             refinement_result, completions = run_query_refinement_step(
                 query=tool_request.query,
                 llm_model="anthropic/claude-3-5-sonnet-20241022",  # Use same model as main pipeline
                 user_responses=tool_request.user_responses,
-                max_tokens=1024
+                max_tokens=1024,
             )
-            
+
+            logger.info("Building API response...")
+
             # Build response based on the refinement state
             response = {
                 "original_query": refinement_result.original_query,
@@ -301,58 +312,84 @@ def create_app() -> FastAPI:
                 "needs_interaction": refinement_result.needs_interaction,
                 "analysis": {
                     "setting_clear": refinement_result.analysis.is_setting_clear,
-                    "climate_factor_clear": refinement_result.analysis.is_climate_factor_clear,
-                    "health_outcome_clear": refinement_result.analysis.is_health_outcome_clear,
-                    "temporal_scope_clear": refinement_result.analysis.is_temporal_scope_clear,
-                    "needs_clarification": refinement_result.analysis.needs_clarification
+                    "climate_factor_clear": (
+                        refinement_result.analysis.is_climate_factor_clear
+                    ),
+                    "health_outcome_clear": (
+                        refinement_result.analysis.is_health_outcome_clear
+                    ),
+                    "temporal_scope_clear": (
+                        refinement_result.analysis.is_temporal_scope_clear
+                    ),
+                    "needs_clarification": (
+                        refinement_result.analysis.needs_clarification
+                    ),
                 },
                 "refined_elements": {
                     "setting": refinement_result.refined_elements.setting,
                     "climate_factor": refinement_result.refined_elements.climate_factor,
                     "health_outcome": refinement_result.refined_elements.health_outcome,
-                    "temporal_scope": refinement_result.refined_elements.temporal_scope
-                }
+                    "temporal_scope": refinement_result.refined_elements.temporal_scope,
+                },
             }
-            
+
             if refinement_result.needs_interaction:
+                logger.info("Interaction needed - adding clarification step")
                 # Return the next clarification question needed
                 if refinement_result.interactive_steps:
                     current_step = refinement_result.interactive_steps[0]
-                    response.update({
-                        "status": "needs_clarification",
-                        "clarification_question": current_step.prompt,
-                        "element_type": current_step.element_type,
-                        "is_suggestion": current_step.is_suggestion,
-                        "interactive_steps": [
-                            {
-                                "element_type": step.element_type,
-                                "prompt": step.prompt,
-                                "is_suggestion": step.is_suggestion
-                            }
-                            for step in refinement_result.interactive_steps
-                        ]
-                    })
+                    response.update(
+                        {
+                            "status": "needs_clarification",
+                            "clarification_question": current_step.prompt,
+                            "element_type": current_step.element_type,
+                            "is_suggestion": current_step.is_suggestion,
+                            "interactive_steps": [
+                                {
+                                    "element_type": step.element_type,
+                                    "prompt": step.prompt,
+                                    "is_suggestion": step.is_suggestion,
+                                }
+                                for step in refinement_result.interactive_steps
+                            ],
+                        }
+                    )
+                    logger.info(
+                        f"Next clarification needed: {current_step.element_type} ({'suggestion' if current_step.is_suggestion else 'initial'})"
+                    )
                 else:
                     response["status"] = "ready_to_proceed"
+                    logger.info("Ready to proceed without clarification")
             else:
+                logger.info("Refinement complete")
                 # Query is complete or refinement finished
-                response.update({
-                    "status": "complete",
-                    "conversation_history": [
-                        {"role": role, "message": message}
-                        for role, message in refinement_result.conversation_history
-                    ]
-                })
-            
+                response.update(
+                    {
+                        "status": "complete",
+                        "conversation_history": [
+                            {"role": role, "message": message}
+                            for role, message in refinement_result.conversation_history
+                        ],
+                    }
+                )
+
+            total_cost = sum(c.cost for c in completions)
+            logger.info(
+                f"Query refinement response ready - Status: {response['status']}, "
+                f"cost: ${total_cost:.4f}, needs_interaction: {response['needs_interaction']}"
+            )
+            if response.get("element_type"):
+                logger.info(f"Next element needed: {response['element_type']}")
+
             return response
-            
+
         except Exception as e:
-            logger.error(f"Query refinement failed: {e}")
+            logger.error(f"Query refinement failed: {e}", exc_info=True)
             return {
                 "status": "error",
                 "error": str(e),
                 "original_query": tool_request.query,
-                "needs_interaction": False
+                "needs_interaction": False,
             }
 
     app.state.use_tool_fn = use_tool
