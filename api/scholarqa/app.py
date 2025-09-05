@@ -44,6 +44,7 @@ started_task_step = None
 
 T = TypeVar("T", bound=ScholarQA)
 
+
 def lazy_load_state_mgr_client():
     return LocalStateMgrClient(logs_config.log_dir, "async_state")
 
@@ -112,29 +113,31 @@ def _estimate_task_length(tool_request: ToolRequest) -> str:
 def setup_rate_limiter():
     """Initialize rate limiter from environment variables"""
     max_requests_per_minute = int(os.getenv("RATE_LIMIT_RPM", "-1"))
-    
-    if max_requests_per_minute <=0:
+
+    if max_requests_per_minute <= 0:
         logger.info("Rate limiting is disabled")
         return None
-        
+
     input_TKP = int(os.getenv("RATE_LIMIT_ITPM", "30000"))
     output_TKP = int(os.getenv("RATE_LIMIT_OTPM", "8000"))
     workers = int(os.getenv("MAX_LLM_WORKERS", "3"))
-    
+
     rate_limiter = RateLimiter(
-        max_requests_per_minute = max_requests_per_minute,
-        max_input_tokens_per_minute = input_TKP,
-        max_output_tokens_per_minute = output_TKP,
-        max_workers = workers
+        max_requests_per_minute=max_requests_per_minute,
+        max_input_tokens_per_minute=input_TKP,
+        max_output_tokens_per_minute=output_TKP,
+        max_workers=workers,
     )
-        
+
     # Set the rate limiter in the litellm helper
     litellm_helper.set_rate_limiter(rate_limiter)
-        
-    logger.info(f"Rate limiter initialized: {max_requests_per_minute} RPM, "
-                f"{input_TKP} Input TPM, "
-                f"{output_TKP} Output TPM, "
-                f"{workers} workers")
+
+    logger.info(
+        f"Rate limiter initialized: {max_requests_per_minute} RPM, "
+        f"{input_TKP} Input TPM, "
+        f"{output_TKP} Output TPM, "
+        f"{workers} workers"
+    )
     # Return the rate limiter instance for use in the app
     return rate_limiter
 
@@ -147,7 +150,7 @@ def setup_rate_limiter():
 # root_path="/api"
 def create_app() -> FastAPI:
     app = FastAPI()
-    
+
     # Store rate limiter
     app.state.rate_limiter = setup_rate_limiter()
 
@@ -158,16 +161,13 @@ def create_app() -> FastAPI:
     @app.get("/health", status_code=204)
     def health():
         return "OK"
-    
+
     # Add rate limiter status endpoint
     @app.get("/rate_limiter_status")
     def get_rate_limiter_status(request: Request):
         rate_limiter = request.app.state.rate_limiter
         if rate_limiter:
-            return {
-                "enabled": True,
-                "usage": rate_limiter.get_current_usage()
-            }
+            return {"enabled": True, "usage": rate_limiter.get_current_usage()}
         return {"enabled": False}
 
     @app.post("/query_corpusqa")
@@ -203,26 +203,37 @@ def create_app() -> FastAPI:
         """
         Interactive query refinement endpoint.
         Analyzes a query and returns clarification questions or processes user responses.
-        
+
         Usage:
         1. Initial analysis: Send just the query to get clarification questions
         2. With responses: Send query + user_responses to get refined question
         """
+        logger.info(f"Query refinement request - Query: '{tool_request.query}', User: {getattr(tool_request, 'user_id', 'N/A')}")
+        if tool_request.user_responses:
+            logger.info(f"User responses provided: {tool_request.user_responses}")
+
         if not app_config.state_mgr_client:
             app_config.state_mgr_client = lazy_load_state_mgr_client()
-            
+
         try:
             # Import here to avoid circular imports
-            from scholarqa.preprocess.query_refiner import run_query_refinement_step, get_next_refinement_step
-            
+            from scholarqa.preprocess.query_refiner import (
+                run_query_refinement_step,
+                get_next_refinement_step,
+            )
+
+            logger.info("Starting query refinement pipeline...")
+
             # Run query analysis/refinement
             refinement_result, completions = run_query_refinement_step(
                 query=tool_request.query,
                 llm_model="anthropic/claude-3-5-sonnet-20241022",  # Use same model as main pipeline
                 user_responses=tool_request.user_responses,
-                max_tokens=1024
+                max_tokens=1024,
             )
-            
+
+            logger.info("Building API response...")
+
             # Build response based on the refinement state
             response = {
                 "original_query": refinement_result.original_query,
@@ -230,58 +241,84 @@ def create_app() -> FastAPI:
                 "needs_interaction": refinement_result.needs_interaction,
                 "analysis": {
                     "setting_clear": refinement_result.analysis.is_setting_clear,
-                    "climate_factor_clear": refinement_result.analysis.is_climate_factor_clear,
-                    "health_outcome_clear": refinement_result.analysis.is_health_outcome_clear,
-                    "temporal_scope_clear": refinement_result.analysis.is_temporal_scope_clear,
-                    "needs_clarification": refinement_result.analysis.needs_clarification
+                    "climate_factor_clear": (
+                        refinement_result.analysis.is_climate_factor_clear
+                    ),
+                    "health_outcome_clear": (
+                        refinement_result.analysis.is_health_outcome_clear
+                    ),
+                    "temporal_scope_clear": (
+                        refinement_result.analysis.is_temporal_scope_clear
+                    ),
+                    "needs_clarification": (
+                        refinement_result.analysis.needs_clarification
+                    ),
                 },
                 "refined_elements": {
                     "setting": refinement_result.refined_elements.setting,
                     "climate_factor": refinement_result.refined_elements.climate_factor,
                     "health_outcome": refinement_result.refined_elements.health_outcome,
-                    "temporal_scope": refinement_result.refined_elements.temporal_scope
-                }
+                    "temporal_scope": refinement_result.refined_elements.temporal_scope,
+                },
             }
-            
+
             if refinement_result.needs_interaction:
+                logger.info("Interaction needed - adding clarification step")
                 # Return the next clarification question needed
                 if refinement_result.interactive_steps:
                     current_step = refinement_result.interactive_steps[0]
-                    response.update({
-                        "status": "needs_clarification",
-                        "clarification_question": current_step.prompt,
-                        "element_type": current_step.element_type,
-                        "is_suggestion": current_step.is_suggestion,
-                        "interactive_steps": [
-                            {
-                                "element_type": step.element_type,
-                                "prompt": step.prompt,
-                                "is_suggestion": step.is_suggestion
-                            }
-                            for step in refinement_result.interactive_steps
-                        ]
-                    })
+                    response.update(
+                        {
+                            "status": "needs_clarification",
+                            "clarification_question": current_step.prompt,
+                            "element_type": current_step.element_type,
+                            "is_suggestion": current_step.is_suggestion,
+                            "interactive_steps": [
+                                {
+                                    "element_type": step.element_type,
+                                    "prompt": step.prompt,
+                                    "is_suggestion": step.is_suggestion,
+                                }
+                                for step in refinement_result.interactive_steps
+                            ],
+                        }
+                    )
+                    logger.info(
+                        f"Next clarification needed: {current_step.element_type} ({'suggestion' if current_step.is_suggestion else 'initial'})"
+                    )
                 else:
                     response["status"] = "ready_to_proceed"
+                    logger.info("Ready to proceed without clarification")
             else:
+                logger.info("Refinement complete")
                 # Query is complete or refinement finished
-                response.update({
-                    "status": "complete",
-                    "conversation_history": [
-                        {"role": role, "message": message}
-                        for role, message in refinement_result.conversation_history
-                    ]
-                })
-            
+                response.update(
+                    {
+                        "status": "complete",
+                        "conversation_history": [
+                            {"role": role, "message": message}
+                            for role, message in refinement_result.conversation_history
+                        ],
+                    }
+                )
+
+            total_cost = sum(c.cost for c in completions)
+            logger.info(
+                f"Query refinement response ready - Status: {response['status']}, "
+                f"cost: ${total_cost:.4f}, needs_interaction: {response['needs_interaction']}"
+            )
+            if response.get("element_type"):
+                logger.info(f"Next element needed: {response['element_type']}")
+
             return response
-            
+
         except Exception as e:
-            logger.error(f"Query refinement failed: {e}")
+            logger.error(f"Query refinement failed: {e}", exc_info=True)
             return {
                 "status": "error",
                 "error": str(e),
                 "original_query": tool_request.query,
-                "needs_interaction": False
+                "needs_interaction": False,
             }
 
     app.state.use_tool_fn = use_tool
