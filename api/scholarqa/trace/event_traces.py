@@ -11,7 +11,14 @@ logger = logging.getLogger(__name__)
 
 
 class EventTrace:
-    def __init__(self, task_id: str, n_retrieval: int, n_rerank: int, req: ToolRequest, user_id: str = None):
+    def __init__(
+        self,
+        task_id: str,
+        n_retrieval: int,
+        n_rerank: int,
+        req: ToolRequest,
+        user_id: str = None,
+    ):
         self.query = req.query
         if not user_id:
             try:
@@ -44,7 +51,7 @@ class EventTrace:
         self.decomposed_query["model"] = decomposed_query.models[0]
         self.decomposed_query["tokens"] = decomposed_query.tokens._asdict()
         self.total_cost += decomposed_query.tot_cost
-        for k,v in self.tokens.items():
+        for k, v in self.tokens.items():
             self.tokens[k] += self.decomposed_query["tokens"][k]
 
     def trace_retrieval_event(self, retrieved: List[Dict[str, Any]]):
@@ -56,8 +63,10 @@ class EventTrace:
         self.candidates = candidates
 
     def trace_quote_event(self, paper_summaries: CostAwareLLMResult):
-        topk = [{"idx": i, "key": k, "snippets": v} for
-                i, (k, v) in enumerate(paper_summaries.result.items())]
+        topk = [
+            {"idx": i, "key": k, "snippets": v}
+            for i, (k, v) in enumerate(paper_summaries.result.items())
+        ]
         topk_models = paper_summaries.models
         for idx, tk in enumerate(topk):
             tk["model"] = topk_models[idx]
@@ -69,7 +78,9 @@ class EventTrace:
         for k, v in self.tokens.items():
             self.tokens[k] += self.quotes["tokens"][k]
 
-    def trace_clustering_event(self, cluster_json: CostAwareLLMResult, plan_str: Dict[str, Any]):
+    def trace_clustering_event(
+        self, cluster_json: CostAwareLLMResult, plan_str: Dict[str, Any]
+    ):
         self.cluster["cost"] = cluster_json.tot_cost
         self.cluster["tokens"] = cluster_json.tokens._asdict()
         self.cluster["cot"] = cluster_json.result["cot"]
@@ -79,17 +90,39 @@ class EventTrace:
         for k, v in self.tokens.items():
             self.tokens[k] += self.cluster["tokens"][k]
 
-    def trace_inline_citation_following_event(self, paper_summaries_extd: Dict[str, Any], quotes_metadata: Dict[str, List[Dict[str, Any]]]):
+    def trace_inline_citation_following_event(
+        self,
+        paper_summaries_extd: Dict[str, Any],
+        quotes_metadata: Dict[str, List[Dict[str, Any]]],
+    ):
         for quote_obj in self.quotes["quotes"]:
-            quote_obj["snippets"] = paper_summaries_extd[quote_obj["key"]].get("quote", quote_obj["snippets"])
-            quote_obj["inline_citations"] = paper_summaries_extd[quote_obj["key"]].get("inline_citations", dict())
+            quote_obj["snippets"] = paper_summaries_extd[quote_obj["key"]].get(
+                "quote", quote_obj["snippets"]
+            )
+            quote_obj["inline_citations"] = paper_summaries_extd[quote_obj["key"]].get(
+                "inline_citations", dict()
+            )
             quote_obj["metadata"] = quotes_metadata.get(quote_obj["key"], [])
 
-    def trace_summary_event(self, json_summary: List[Dict[str, Any]], cost_result: CostAwareLLMResult, tab_costs: List[Dict] = None):
-        logger.info(f"trace_summary_event called with cost_result.tokens: {cost_result.tokens}")
-        logger.info(f"trace_summary_event: current self.tokens before update: {self.tokens}")
-        
-        self.summary = {"sections": json_summary, "cost": cost_result.tot_cost, "tokens": cost_result.tokens._asdict(), "table_costs": tab_costs}
+    def trace_summary_event(
+        self,
+        json_summary: List[Dict[str, Any]],
+        cost_result: CostAwareLLMResult,
+        tab_costs: List[Dict] = None,
+    ):
+        logger.info(
+            f"trace_summary_event called with cost_result.tokens: {cost_result.tokens}"
+        )
+        logger.info(
+            f"trace_summary_event: current self.tokens before update: {self.tokens}"
+        )
+
+        self.summary = {
+            "sections": json_summary,
+            "cost": cost_result.tot_cost,
+            "tokens": cost_result.tokens._asdict(),
+            "table_costs": tab_costs,
+        }
         for idx, section in enumerate(self.summary["sections"]):
             section["model"] = cost_result.models[idx]
         self.total_cost += cost_result.tot_cost
@@ -99,29 +132,63 @@ class EventTrace:
         logger.info(f"trace_summary_event: self.tokens after update: {self.tokens}")
 
         if tab_costs:
+            none_tables = sum(1 for tcost in tab_costs if tcost is None)
+            valid_tables = len(tab_costs) - none_tables
+            logger.info(
+                f"Processing table costs: {valid_tables} valid tables, {none_tables} None entries"
+            )
+
             for tcost in tab_costs:
+                # Skip None cost entries
+                if tcost is None:
+                    continue
+
                 column_cost = tcost.get("column_cost", 0.0)
                 if column_cost:
                     self.total_cost += column_cost["cost_value"]
                     self.tokens["input"] += column_cost["tokens"]["prompt"]
                     self.tokens["output"] += column_cost["tokens"]["completion"]
                     self.tokens["total"] += column_cost["tokens"]["total"]
-                    self.tokens["reasoning"] += column_cost["tokens"].get("reasoning", 0)
+                    self.tokens["reasoning"] += column_cost["tokens"].get(
+                        "reasoning", 0
+                    )
 
                 cell_cost = tcost.get("cell_cost", 0.0)
                 if cell_cost:
+                    none_cells = 0
+                    valid_cells = 0
                     for ccost in cell_cost:
+                        # Skip None entries in the cell_cost list
+                        if ccost is None:
+                            none_cells += 1
+                            continue
                         if not isinstance(ccost, dict):
                             continue
                         for v in ccost.values():
+                            # Check if v is None before accessing its properties
+                            if v is None:
+                                none_cells += 1
+                                continue
+                            valid_cells += 1
                             self.total_cost += v["cost_value"]
                             self.tokens["input"] += v["tokens"]["prompt"]
                             self.tokens["output"] += v["tokens"]["completion"]
                             self.tokens["total"] += v["tokens"]["total"]
                             self.tokens["reasoning"] += v["tokens"].get("reasoning", 0)
 
+                    if none_cells > 0:
+                        logger.info(
+                            f"Table cost aggregation: {valid_cells} valid cells, {none_cells} None cost entries"
+                        )
+        else:
+            logger.info("No table costs to process")
 
     def persist_trace(self, logs_config: LogsConfig):
-        trace_writer = GCSWriter(bucket_name=logs_config.event_trace_loc) if logs_config.tracing_mode == "gcs" \
-            else LocalWriter(local_dir=f"{logs_config.log_dir}/{logs_config.event_trace_loc}")
+        trace_writer = (
+            GCSWriter(bucket_name=logs_config.event_trace_loc)
+            if logs_config.tracing_mode == "gcs"
+            else LocalWriter(
+                local_dir=f"{logs_config.log_dir}/{logs_config.event_trace_loc}"
+            )
+        )
         trace_writer.write(trace_json=self, file_name=self.task_id)

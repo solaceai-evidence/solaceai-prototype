@@ -8,10 +8,10 @@ build-backend = "setuptools.build_meta"
 [project]
 #Help generate the rest of the file
 name = "solaceai-prototype"
-version = "0.7.0"
+version = "0.8.0"
 readme = "README.md"
 license = {text = 'Apache-2.0'}
-description = "Python package to embed the Ai2 Scholar QA functionality in another application"
+description = "Python package to embed the Solace-ai (Ai2 Scholar QA) functionality in another application"
 authors = [{ name = "Amanpreet Singh", email = "amanpreets@allenai.org" },
            { name = "Sergey Feldman", email = "sergey@allenai.org"},
             { name = "Joseph Chang", email = "josephc@allenai.org"},
@@ -33,14 +33,14 @@ dependencies = [
     "numpy",
     "pandas",
     "requests",
-    "openai==1.69.0",
+    "openai==1.106.1",
     "bs4",
     "fuzzy-match",
     "googlesearch-python",
     "tqdm",
     "google-cloud-storage==2.18.2",
     "filelock==3.16.1",
-    "litellm==1.68.0",
+    "litellm==1.76.2",
     "pandas==2.2.2",
     "diskcache==5.6.3",
     "langsmith==0.1.142",

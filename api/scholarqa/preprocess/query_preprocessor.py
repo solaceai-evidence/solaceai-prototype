@@ -92,20 +92,15 @@ def decompose_query(
         logger.error(f"Error while decomposing query: {e}")
         rewritten_query = query
         keyword_query = ""
-        if decomp_query_res is not None:
-            decomp_query_res = decomp_query_res._replace(
-                model=f"error-{decomp_query_res.model}"
-            )
-        else:
-            decomp_query_res = CompletionResult(
-                content="",
-                model="error-unknown",
-                cost=0.0,
-                input_tokens=0,
-                output_tokens=0,
-                total_tokens=0,
-                reasoning_tokens=0,
-            )
+        decomp_query_res = CompletionResult(
+            content="",
+            model=f"error-{decomposer_llm_model}",
+            cost=0.0,
+            input_tokens=0,
+            output_tokens=0,
+            total_tokens=0,
+            reasoning_tokens=0,
+        )
 
     return (
         LLMProcessedQuery(

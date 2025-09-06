@@ -1,7 +1,7 @@
 {
   "logs": {
     "log_dir": "logs",
-    "log_level": "INFO",
+    "log_level": "DEBUG",
     "llm_cache_dir": "llm_cache",
     "event_trace_loc": "scholarqa_traces",
     "tracing_mode": "local"

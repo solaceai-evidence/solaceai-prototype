@@ -11,7 +11,13 @@ from anyascii import anyascii
 from langsmith import traceable
 
 from scholarqa.config.config_setup import LogsConfig
-from scholarqa.llms.constants import CostAwareLLMResult, GPT_4o, CLAUDE_4_SONNET, CLAUDE_35_SONNET
+from scholarqa.llms.constants import (
+    CostAwareLLMResult,
+    CLAUDE_4_SONNET,
+    CLAUDE_37_SONNET,
+    GPT_4_1,
+)
+
 from scholarqa.llms.litellm_helper import (
     CostAwareLLMCaller,
     CostReportingArgs,
@@ -63,7 +69,7 @@ class ScholarQA:
         # Required for webapp since a new process is created for each request, for library task_id can be None initially and assigned for each request as below
         paper_finder: PaperFinder,
         task_id: str = None,
-        llm_model: str = CLAUDE_35_SONNET,
+        llm_model: str = CLAUDE_4_SONNET,
         multi_step_pipeline: MultiStepQAPipeline = None,
         state_mgr: AbsStateMgrClient = None,
         logs_config: LogsConfig = None,
@@ -81,7 +87,7 @@ class ScholarQA:
         self.task_id = task_id
         self.paper_finder = paper_finder
         self.llm_model = llm_model
-        fallback_llm = kwargs.get("fallback_llm", GPT_4o)
+        fallback_llm = kwargs.get("fallback_llm", f"{GPT_4_1},{CLAUDE_37_SONNET}")
         self.validate = kwargs.get("validate", "OPENAI_API_KEY" in os.environ)
         if not self.validate:
             logger.warning("Validation of the query for harmful content is turned off")
@@ -149,6 +155,7 @@ class ScholarQA:
             method=decompose_query,
             query=query,
             decomposer_llm_model=self.decomposer_llm,
+            fallback=self.multi_step_pipeline.fallback_llm,
             **llm_args,
         )
 
@@ -347,12 +354,20 @@ class ScholarQA:
             iteration_count = 0
             while True:
                 iteration_count += 1
-                logger.info(f"About to call next() on sec_generator (iteration {iteration_count})")
+                logger.info(
+                    f"About to call next() on sec_generator (iteration {iteration_count})"
+                )
                 response = next(sec_generator)
-                logger.info(f"Got response from sec_generator: {type(response)} (iteration {iteration_count})")
-                logger.info(f"About to yield response.content (iteration {iteration_count})")
+                logger.info(
+                    f"Got response from sec_generator: {type(response)} (iteration {iteration_count})"
+                )
+                logger.info(
+                    f"About to yield response.content (iteration {iteration_count})"
+                )
                 yield response.content
-                logger.info(f"Yielded response.content successfully (iteration {iteration_count})")
+                logger.info(
+                    f"Yielded response.content successfully (iteration {iteration_count})"
+                )
         except StopIteration as e:
             logger.info(f"StopIteration caught with value: {type(e.value)}")
             return_val = e.value
@@ -360,12 +375,15 @@ class ScholarQA:
             logger.error(f"Exception in iterative summary generation: {e}")
             logger.error(f"Exception type: {type(e)}")
             import traceback
+
             traceback.print_exc()
             raise  # Re-raise the original exception to fail fast
-            
+
         if return_val is None:
-            raise ValueError("Step 3 completed but return_val is None - iterative generation failed to produce aggregated results")
-            
+            raise ValueError(
+                "Step 3 completed but return_val is None - iterative generation failed to produce aggregated results"
+            )
+
         logger.info(
             f"Step 3 done, cost: {return_val.tot_cost}, tokens: {return_val.tokens}, time: {time() - start:.2f}"
         )
@@ -703,7 +721,9 @@ class ScholarQA:
         cit_ids: List[int],
         tlist: List[Any],
     ) -> Thread:
-        def call_table_generator(didx: int, payload: Dict[str, Any], cost_args: CostReportingArgs):
+        def call_table_generator(
+            didx: int, payload: Dict[str, Any], cost_args: CostReportingArgs
+        ):
             logger.info(
                 "Received table generation request for topic: "
                 + payload["section_title"]
@@ -716,7 +736,6 @@ class ScholarQA:
                 corpus_ids=payload["cit_ids"],
                 column_model=payload["column_model"],
                 value_model=payload["value_model"],
-                cost_args=cost_args,
             )
             tlist[dim["idx"]] = (table, costs)
 
@@ -785,7 +804,7 @@ class ScholarQA:
         self.tool_request = req
         self.update_task_state(
             "Processing user query",
-            task_estimated_time="~3 minutes",
+            task_estimated_time="~5 minutes",
             step_estimated_time=5,
         )
         task_id = self.task_id if self.task_id else req.task_id
@@ -918,7 +937,9 @@ class ScholarQA:
                     )
                 logger.info(f"About to call next(gen_iter) for section {idx + 1}")
                 section_text = next(gen_iter)
-                logger.info(f"Got section_text from gen_iter for section {idx + 1}: {len(section_text) if section_text else 'None'} chars")
+                logger.info(
+                    f"Got section_text from gen_iter for section {idx + 1}: {len(section_text) if section_text else 'None'} chars"
+                )
                 section_json = get_json_summary(
                     self.multi_step_pipeline.llm_model,
                     [section_text],
@@ -976,17 +997,24 @@ class ScholarQA:
                     tcosts.append(tcost)
                 else:
                     tables_val = tables[sidx]
+                    tcosts.append(None)  # Append None for consistency when no cost data
+            else:
+                tcosts.append(None)  # Append None when no table exists
             json_summary[sidx]["table"] = tables_val.to_dict() if tables_val else None
             generated_sections[sidx].table = tables_val if tables_val else None
         self.postprocess_json_output(json_summary, quotes_meta=quotes_metadata)
         event_trace.trace_summary_event(json_summary, all_sections, tcosts)
         event_trace.persist_trace(self.logs_config)
-        
-        logger.info(f"Creating TaskResult with cost: {event_trace.total_cost}, tokens: {event_trace.tokens}")
-        
+
+        logger.info(
+            f"Creating TaskResult with cost: {event_trace.total_cost}, tokens: {event_trace.tokens}"
+        )
+
         if event_trace.tokens is None:
-            raise ValueError("event_trace.tokens is None when creating TaskResult - this indicates a critical failure in token aggregation")
-        
+            raise ValueError(
+                "event_trace.tokens is None when creating TaskResult - this indicates a critical failure in token aggregation"
+            )
+
         return TaskResult(
             sections=generated_sections,
             cost=event_trace.total_cost,
