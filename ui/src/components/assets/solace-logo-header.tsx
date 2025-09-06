@@ -1,25 +1,19 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 
 const SolaceLogoHeader = (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Box
-            component="img"
-            src="/solace-logo.svg"
-            alt="Solace-AI Logo"
-            sx={{ height: '18px', width: 'auto' }}
-        />
-        <Typography
-            variant="body2"
-            sx={{
-                color: 'inherit',
-                fontWeight: '500',
-                fontSize: '14px'
-            }}
-        >
-            Solace-ai
-        </Typography>
-    </Box>
+    <Box
+        component="img"
+        src="/solace-logo.svg"
+        alt="Solace-AI Logo"
+        sx={{
+            height: '32px',
+            width: 'auto',
+            backgroundColor: '#ef529b', // Same pink background as Home page
+            borderRadius: '6px',
+            padding: '4px 8px'
+        }}
+    />
 );
 
 export default SolaceLogoHeader;
