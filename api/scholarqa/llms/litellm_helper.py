@@ -305,44 +305,44 @@ def batch_llm_completion(
             **llm_lite_params,
         )
 
-    for i, res in enumerate(responses):
-        original_idx = pending[i]  # Map back to original index
-        try:
-            res_cost = round(litellm.completion_cost(res), 6)
-            res_usage = res.usage
-            reasoning_tokens = (
-                0
-                if not (
-                    res_usage.completion_tokens_details
-                    and res_usage.completion_tokens_details.reasoning_tokens
+        for i, res in enumerate(responses):
+            original_idx = pending[i]  # Map back to original index
+            try:
+                res_cost = round(litellm.completion_cost(res), 6)
+                res_usage = res.usage
+                reasoning_tokens = (
+                    0
+                    if not (
+                        res_usage.completion_tokens_details
+                        and res_usage.completion_tokens_details.reasoning_tokens
+                    )
+                    else res_usage.completion_tokens_details.reasoning_tokens
                 )
-                else res_usage.completion_tokens_details.reasoning_tokens
-            )
-            res_str = res["choices"][0]["message"]["content"].strip()
-            cost_tuple = CompletionResult(
-                content=res_str,
-                model=res["model"],
-                cost=res_cost if not res.get("cache_hit") else 0.0,
-                input_tokens=res_usage.prompt_tokens,
-                output_tokens=res_usage.completion_tokens,
-                total_tokens=res_usage.total_tokens,
-                reasoning_tokens=reasoning_tokens,
-            )
-            results[original_idx] = cost_tuple  # Use original index
-        except Exception as e:
-            if curr_retry == NUM_RETRIES:
-                logger.error(
-                    f"Error received for instance {original_idx} in batch llm job, no more retries left: {e}"
+                res_str = res["choices"][0]["message"]["content"].strip()
+                cost_tuple = CompletionResult(
+                    content=res_str,
+                    model=res["model"],
+                    cost=res_cost if not res.get("cache_hit") else 0.0,
+                    input_tokens=res_usage.prompt_tokens,
+                    output_tokens=res_usage.completion_tokens,
+                    total_tokens=res_usage.total_tokens,
+                    reasoning_tokens=reasoning_tokens,
                 )
-                raise e
+                results[original_idx] = cost_tuple  # Use original index
+            except Exception as e:
+                if curr_retry == NUM_RETRIES:
+                    logger.error(
+                        f"Error received for instance {original_idx} in batch llm job, no more retries left: {e}"
+                    )
+                    raise e
 
-    pending = [i for i, r in enumerate(results) if not r]
-    curr_retry += 1
-    if pending:
-        logger.info(
-            f"Retrying {len(pending)} failed instances in batch llm job, attempt {curr_retry}"
-        )
-        sleep(2**curr_retry)
+        pending = [i for i, r in enumerate(results) if not r]
+        curr_retry += 1
+        if pending:
+            logger.info(
+                f"Retrying {len(pending)} failed instances in batch llm job, attempt {curr_retry}"
+            )
+            sleep(2**curr_retry)
 
     return results
 
