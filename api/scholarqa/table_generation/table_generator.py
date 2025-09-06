@@ -1,5 +1,6 @@
 from typing import List, Dict, Optional
 import uuid
+import os
 
 import itertools
 from concurrent.futures import ThreadPoolExecutor
@@ -23,7 +24,7 @@ class TableGenerator:
         self,
         paper_finder: PaperFinder,
         llm_caller: CostAwareLLMCaller,
-        max_threads: int = 1,
+        max_threads: int = int(os.getenv("MAX_LLM_WORKERS", "3")),
     ) -> None:
         self.paper_finder = paper_finder
         self.llm_caller = llm_caller
