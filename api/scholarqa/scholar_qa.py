@@ -804,7 +804,7 @@ class ScholarQA:
         self.tool_request = req
         self.update_task_state(
             "Processing user query",
-            task_estimated_time="~3 minutes",
+            task_estimated_time="~5 minutes",
             step_estimated_time=5,
         )
         task_id = self.task_id if self.task_id else req.task_id

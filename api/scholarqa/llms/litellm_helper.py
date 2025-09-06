@@ -306,6 +306,7 @@ def batch_llm_completion(
         )
 
     for i, res in enumerate(responses):
+        original_idx = pending[i]  # Map back to original index
         try:
             res_cost = round(litellm.completion_cost(res), 6)
             res_usage = res.usage
@@ -327,11 +328,11 @@ def batch_llm_completion(
                 total_tokens=res_usage.total_tokens,
                 reasoning_tokens=reasoning_tokens,
             )
-            results[i] = cost_tuple
+            results[original_idx] = cost_tuple  # Use original index
         except Exception as e:
             if curr_retry == NUM_RETRIES:
                 logger.error(
-                    f"Error received for instance {i} in batch llm job, no more retries left: {e}"
+                    f"Error received for instance {original_idx} in batch llm job, no more retries left: {e}"
                 )
                 raise e
 

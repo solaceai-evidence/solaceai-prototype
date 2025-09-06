@@ -36,13 +36,15 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-TIMEOUT = 240
+# Increased timeout for Claude 4.1 processing
+TIMEOUT = 300
 
 async_context = multiprocessing.get_context("fork")
 
 started_task_step = None
 
 T = TypeVar("T", bound=ScholarQA)
+
 
 def lazy_load_state_mgr_client():
     return LocalStateMgrClient(logs_config.log_dir, "async_state")
@@ -97,14 +99,15 @@ def _do_task(tool_request: ToolRequest, task_id: str) -> TaskResult:
     return scholar_qa.run_qa_pipeline(tool_request)
 
 
-def _estimate_task_length(tool_request: ToolRequest) -> str:
+def _estimate_task_length(
+    tool_request: ToolRequest,
+) -> str:
     """
-
     For telling the user how long to wait before asking for a status
     update on async tasks. This can just be a static guess, but you
     have access to the request if you want to do something fancier.
     """
-    return "~3 minutes"
+    return "~5 minutes"
 
 
 # Initialize rate limiter from environment variables
@@ -112,29 +115,31 @@ def _estimate_task_length(tool_request: ToolRequest) -> str:
 def setup_rate_limiter():
     """Initialize rate limiter from environment variables"""
     max_requests_per_minute = int(os.getenv("RATE_LIMIT_RPM", "-1"))
-    
-    if max_requests_per_minute <=0:
+
+    if max_requests_per_minute <= 0:
         logger.info("Rate limiting is disabled")
         return None
-        
+
     input_TKP = int(os.getenv("RATE_LIMIT_ITPM", "30000"))
     output_TKP = int(os.getenv("RATE_LIMIT_OTPM", "8000"))
     workers = int(os.getenv("MAX_LLM_WORKERS", "3"))
-    
+
     rate_limiter = RateLimiter(
-        max_requests_per_minute = max_requests_per_minute,
-        max_input_tokens_per_minute = input_TKP,
-        max_output_tokens_per_minute = output_TKP,
-        max_workers = workers
+        max_requests_per_minute=max_requests_per_minute,
+        max_input_tokens_per_minute=input_TKP,
+        max_output_tokens_per_minute=output_TKP,
+        max_workers=workers,
     )
-        
+
     # Set the rate limiter in the litellm helper
     litellm_helper.set_rate_limiter(rate_limiter)
-        
-    logger.info(f"Rate limiter initialized: {max_requests_per_minute} RPM, "
-                f"{input_TKP} Input TPM, "
-                f"{output_TKP} Output TPM, "
-                f"{workers} workers")
+
+    logger.info(
+        f"Rate limiter initialized: {max_requests_per_minute} RPM, "
+        f"{input_TKP} Input TPM, "
+        f"{output_TKP} Output TPM, "
+        f"{workers} workers"
+    )
     # Return the rate limiter instance for use in the app
     return rate_limiter
 
@@ -147,7 +152,7 @@ def setup_rate_limiter():
 # root_path="/api"
 def create_app() -> FastAPI:
     app = FastAPI()
-    
+
     # Store rate limiter
     app.state.rate_limiter = setup_rate_limiter()
 
@@ -158,16 +163,13 @@ def create_app() -> FastAPI:
     @app.get("/health", status_code=204)
     def health():
         return "OK"
-    
+
     # Add rate limiter status endpoint
     @app.get("/rate_limiter_status")
     def get_rate_limiter_status(request: Request):
         rate_limiter = request.app.state.rate_limiter
         if rate_limiter:
-            return {
-                "enabled": True,
-                "usage": rate_limiter.get_current_usage()
-            }
+            return {"enabled": True, "usage": rate_limiter.get_current_usage()}
         return {"enabled": False}
 
     @app.post("/query_corpusqa")
@@ -275,7 +277,7 @@ def _handle_async_task_check_in(
         return AsyncToolResponse(
             task_id=task_id,
             query="",
-            estimated_time="~3 minutes",
+            estimated_time="~5 minutes",
             task_status=f"{time()}: Processing user query",
             task_result=None,
         )
