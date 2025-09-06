@@ -49,38 +49,34 @@ The hybrid architecture combines containerized API services with a native rerank
    MODAL_TOKEN_SECRET=your_modal_secret
 
    # Remote reranker service configuration
-   # Configure these when using a standalone reranker service (not Modal or Docker)
-   # Host address for the remote reranker service
    RERANKER_HOST=0.0.0.0
-   # Port number for the remote reranker service
    RERANKER_PORT=10001
 
    # LLM concurrency and rate limiting configuration
-   # Maximum number of concurrent LLM workers for parallel processing
    MAX_LLM_WORKERS=3
+   RATE_LIMIT_RPM=120
+   RATE_LIMIT_ITPM=100000
+   RATE_LIMIT_OTPM=25000
 
-   # Maximum API requests per minute - set according to your LLM provider quota
-   RATE_LIMIT_RPM=50
-
-   # Maximum input tokens per minute across all LLM requests - prevents quota overrun
-   RATE_LIMIT_ITPM=30000
-
-   # Maximum output tokens per minute across all LLM requests - controls generation limits
-   RATE_LIMIT_OTPM=8000
+   # Query processing timeout (7 minutes for complex queries with table generation)
+   QUERY_TIMEOUT_SECONDS=420
 
    # Reranker service timeout and concurrency settings
-   # Client timeout in seconds when communicating with remote reranker
-   RERANKER_CLIENT_TIMEOUT=120
-
-   # Maximum concurrent reranker requests - controls resource usage
+   RERANKER_CLIENT_TIMEOUT=180
    MAX_CONCURRENCY=1
-
-   # Request processing timeout in milliseconds for reranker operations
-   RERANKER_TIMEOUT_MS=120000
-
-   # Queue wait timeout in milliseconds before rejecting reranker requests
+   RERANKER_TIMEOUT_MS=180000
    RERANKER_QUEUE_TIMEOUT_MS=10000
+
+   # Query refinement step configuration
+   ENABLE_QUERY_REFINEMENT=true
    ```
+
+   **Configuration Notes:**
+
+   - The default settings are optimized for laptop development with Claude 4 Sonnet
+   - Rate limits are conservative to ensure stable performance on local hardware
+   - Timeout values accommodate complex queries including table generation
+   - All settings can be adjusted based on your hardware capabilities and API quotas
 
 2. **Install Native Dependencies (Reranker Service Only):**
 
@@ -215,9 +211,20 @@ Environment variables are configured in the `.env` file as detailed in the setup
 
 ## Usage
 
-The rate limiter is automatically enabled when the environment variables are configured. It operates transparently within the LLM pipeline to ensure API calls remain within configured limits.
+The system automatically loads configuration from the `.env` file on startup. Rate limiting is enabled by default to ensure stable performance and prevent API quota overrun.
 
-If rate limiting is disabled (variables not set or set to -1), the system will operate without rate limiting controls.
+**Configuration Management:**
+
+- Rate limits are set for laptop development with Claude 4 Sonnet
+- Query timeout is set to 7 minutes to accommodate table generation
+- All settings can be adjusted in `.env` file without code changes
+- Set rate limit values to -1 to disable rate limiting (not recommended)
+
+**Query Processing:**
+
+- Simple queries typically complete in 2-3 minutes
+- Complex queries with table generation may take 5-7 minutes
+- System provides real-time status updates during processing
 
 ## Development Workflow
 
@@ -278,9 +285,10 @@ bash start_hybrid.sh
 
 **Rate Limiting Errors:**
 
-- Reduce `max_workers` in configuration
-- Increase `request_timeout` values
-- Monitor API usage quotas
+- Adjust rate limiting values in .env file: RATE_LIMIT_RPM, RATE_LIMIT_ITPM, RATE_LIMIT_OTPM
+- Reduce MAX_LLM_WORKERS if experiencing API rejections
+- Increase QUERY_TIMEOUT_SECONDS for complex queries with table generation
+- Monitor API usage quotas with your LLM provider
 
 **Docker Issues:**
 
