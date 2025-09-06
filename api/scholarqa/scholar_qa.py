@@ -13,10 +13,11 @@ from langsmith import traceable
 from scholarqa.config.config_setup import LogsConfig
 from scholarqa.llms.constants import (
     CostAwareLLMResult,
-    GPT_4o,
     CLAUDE_4_SONNET,
-    CLAUDE_35_SONNET,
+    CLAUDE_37_SONNET,
+    GPT_4_1,
 )
+
 from scholarqa.llms.litellm_helper import (
     CostAwareLLMCaller,
     CostReportingArgs,
@@ -68,7 +69,7 @@ class ScholarQA:
         # Required for webapp since a new process is created for each request, for library task_id can be None initially and assigned for each request as below
         paper_finder: PaperFinder,
         task_id: str = None,
-        llm_model: str = CLAUDE_35_SONNET,
+        llm_model: str = CLAUDE_4_SONNET,
         multi_step_pipeline: MultiStepQAPipeline = None,
         state_mgr: AbsStateMgrClient = None,
         logs_config: LogsConfig = None,
@@ -86,7 +87,7 @@ class ScholarQA:
         self.task_id = task_id
         self.paper_finder = paper_finder
         self.llm_model = llm_model
-        fallback_llm = kwargs.get("fallback_llm", GPT_4o)
+        fallback_llm = kwargs.get("fallback_llm", f"{GPT_4_1},{CLAUDE_37_SONNET}")
         self.validate = kwargs.get("validate", "OPENAI_API_KEY" in os.environ)
         if not self.validate:
             logger.warning("Validation of the query for harmful content is turned off")
@@ -154,6 +155,7 @@ class ScholarQA:
             method=decompose_query,
             query=query,
             decomposer_llm_model=self.decomposer_llm,
+            fallback=self.multi_step_pipeline.fallback_llm,
             **llm_args,
         )
 
