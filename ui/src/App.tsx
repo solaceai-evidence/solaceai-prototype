@@ -13,6 +13,7 @@ import Sidebar from './components/Sidebar';
 import { CookiesProvider, useCookies } from 'react-cookie';
 import { Section } from './pages/Section';
 import Logo from './components/assets/logo';
+import SolaceLogoHeader from './components/assets/solace-logo-header';
 import { useQueryHistory } from './components/shared';
 import { COOKIES_SET_OPTIONS } from './api/utils';
 import { v4 as uuidv4 } from 'uuid';
@@ -102,7 +103,7 @@ export const App = () => {
                                         <Box sx={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                                             {sidebarToggle}
                                             <Link href="/" sx={{ height: '18px' }}>
-                                                {Logo}
+                                                {SolaceLogoHeader}
                                             </Link>
                                         </Box>
                                     } />
