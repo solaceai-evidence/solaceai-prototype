@@ -62,6 +62,7 @@ class TableGenerator:
             model=column_model,
             llm_caller=self.llm_caller,
             column_num=column_num,
+            cost_args=cost_args,
         )
         column_cost = output.get("cost", {})
         
