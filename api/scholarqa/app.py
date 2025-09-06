@@ -36,8 +36,10 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Increased timeout for Claude 4.1 processing
-TIMEOUT = 300
+# Configurable timeout for query processing
+# Default: 7 minutes for complex queries with table generation on laptop setups
+# Can be adjusted via QUERY_TIMEOUT_SECONDS environment variable
+TIMEOUT = int(os.getenv("QUERY_TIMEOUT_SECONDS", "420"))
 
 async_context = multiprocessing.get_context("fork")
 
