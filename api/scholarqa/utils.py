@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import time
 from collections import namedtuple
 from logging import Formatter
 from typing import Any, Dict, Optional, Set, List
@@ -18,8 +19,21 @@ S2_APIKEY = os.getenv("S2_API_KEY", "")
 S2_HEADERS = {"x-api-key": S2_APIKEY}
 S2_API_BASE_URL = "https://api.semanticscholar.org/graph/v1/"
 # TODO: Adapt meta_fields based on SOLACE-AI requirements
-NUMERIC_META_FIELDS = {"year", "citationCount", "referenceCount", "influentialCitationCount"}
-CATEGORICAL_META_FIELDS = {"title", "abstract", "corpusId", "authors", "venue", "isOpenAccess", "openAccessPdf"}
+NUMERIC_META_FIELDS = {
+    "year",
+    "citationCount",
+    "referenceCount",
+    "influentialCitationCount",
+}
+CATEGORICAL_META_FIELDS = {
+    "title",
+    "abstract",
+    "corpusId",
+    "authors",
+    "venue",
+    "isOpenAccess",
+    "openAccessPdf",
+}
 METADATA_FIELDS = ",".join(CATEGORICAL_META_FIELDS.union(NUMERIC_META_FIELDS))
 
 
@@ -34,15 +48,12 @@ class TaskIdAwareLogFormatter(Formatter):
         return f"{og_message} - {task_id_part}- {record.getMessage()}"
 
 
-def init_settings(logs_dir: str, log_level: str = "INFO",
-                  litellm_cache_dir: str = "litellm_cache") -> TaskIdAwareLogFormatter:
+def init_settings(
+    logs_dir: str, log_level: str = "INFO", litellm_cache_dir: str = "litellm_cache"
+) -> TaskIdAwareLogFormatter:
     def setup_logging() -> TaskIdAwareLogFormatter:
         # If LOG_FORMAT is "google:json" emit log message as JSON in a format Google Cloud can parse
-        loggers = [
-            "LiteLLM Proxy",
-            "LiteLLM Router",
-            "LiteLLM"
-        ]
+        loggers = ["LiteLLM Proxy", "LiteLLM Router", "LiteLLM"]
 
         for logger_name in loggers:
             litellm_logger = logging.getLogger(logger_name)
@@ -99,21 +110,67 @@ def get_ref_author_str(authors: List[Dict[str, str]]) -> str:
 
 
 def query_s2_api(
-        end_pt: str = "paper/batch",
-        params: Dict[str, Any] = None,
-        payload: Dict[str, Any] = None,
-        method="get",
+    end_pt: str,
+    params: Optional[Dict[str, Any]] = None,
+    payload: Optional[Dict[str, Any]] = None,
+    method="get",
+    max_retries=3,
+    retry_delay=1.0,
 ):
     url = S2_API_BASE_URL + end_pt
     req_method = requests.get if method == "get" else requests.post
-    response = req_method(url, headers=S2_HEADERS, params=params, json=payload)
-    if response.status_code != 200:
-        logging.exception(f"S2 API request to end point {end_pt} failed with status code {response.status_code}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"S2 API request failed with status code {response.status_code}",
-        )
-    return response.json()
+
+    for attempt in range(max_retries):
+        try:
+            response = req_method(url, headers=S2_HEADERS, params=params, json=payload)
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code in [500, 502, 503, 504]:
+                # Server errors that might be transient
+                if attempt < max_retries - 1:
+                    logging.warning(
+                        f"S2 API request to {end_pt} failed with status {response.status_code}, retrying in {retry_delay * (2 ** attempt)}s (attempt {attempt + 1}/{max_retries})"
+                    )
+                    time.sleep(retry_delay * (2**attempt))  # Exponential backoff
+                    continue
+                else:
+                    logging.error(
+                        f"S2 API request to {end_pt} failed with status code {response.status_code} after {max_retries} attempts"
+                    )
+                    raise HTTPException(
+                        status_code=503,  # Service Unavailable
+                        detail=f"Semantic Scholar API is temporarily unavailable (status: {response.status_code}). Please try again later.",
+                    )
+            else:
+                # Client errors (4xx) - don't retry
+                logging.error(
+                    f"S2 API request to {end_pt} failed with status code {response.status_code}"
+                )
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid request to Semantic Scholar API (status: {response.status_code})",
+                )
+        except requests.exceptions.RequestException as e:
+            if attempt < max_retries - 1:
+                logging.warning(
+                    f"S2 API request to {end_pt} failed with network error: {e}, retrying in {retry_delay * (2 ** attempt)}s (attempt {attempt + 1}/{max_retries})"
+                )
+                time.sleep(retry_delay * (2**attempt))
+                continue
+            else:
+                logging.error(
+                    f"S2 API request to {end_pt} failed with network error after {max_retries} attempts: {e}"
+                )
+                raise HTTPException(
+                    status_code=503,
+                    detail="Semantic Scholar API is currently unreachable. Please try again later.",
+                )
+
+    # This should never be reached
+    raise HTTPException(
+        status_code=503,
+        detail="Semantic Scholar API request failed after all retry attempts.",
+    )
 
 
 def get_paper_metadata(corpus_ids: Set[str], fields=METADATA_FIELDS) -> Dict[str, Any]:
@@ -121,15 +178,17 @@ def get_paper_metadata(corpus_ids: Set[str], fields=METADATA_FIELDS) -> Dict[str
         return {}
     paper_data = query_s2_api(
         end_pt="paper/batch",
-        params={
-            "fields": fields
-        },
+        params={"fields": fields},
         payload={"ids": ["CorpusId:{0}".format(cid) for cid in corpus_ids]},
         method="post",
     )
     paper_metadata = {
-        str(pdata["corpusId"]): {k: make_int(v) if k in NUMERIC_META_FIELDS else pdata.get(k) for k, v in pdata.items()}
-        for pdata in paper_data if pdata and "corpusId" in pdata
+        str(pdata["corpusId"]): {
+            k: make_int(v) if k in NUMERIC_META_FIELDS else pdata.get(k)
+            for k, v in pdata.items()
+        }
+        for pdata in paper_data
+        if pdata and "corpusId" in pdata
     }
     return paper_metadata
 
