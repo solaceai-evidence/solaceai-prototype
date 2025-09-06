@@ -997,6 +997,9 @@ class ScholarQA:
                     tcosts.append(tcost)
                 else:
                     tables_val = tables[sidx]
+                    tcosts.append(None)  # Append None for consistency when no cost data
+            else:
+                tcosts.append(None)  # Append None when no table exists
             json_summary[sidx]["table"] = tables_val.to_dict() if tables_val else None
             generated_sections[sidx].table = tables_val if tables_val else None
         self.postprocess_json_output(json_summary, quotes_meta=quotes_metadata)

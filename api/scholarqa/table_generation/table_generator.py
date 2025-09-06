@@ -1,6 +1,7 @@
 from typing import List, Dict, Optional
 import uuid
 import os
+import logging
 
 import itertools
 from concurrent.futures import ThreadPoolExecutor
@@ -17,6 +18,8 @@ from scholarqa.utils import get_paper_metadata
 from scholarqa.rag.retrieval import PaperFinder
 from scholarqa.llms.constants import GPT_4o
 from scholarqa.llms.litellm_helper import CostAwareLLMCaller, CostReportingArgs
+
+logger = logging.getLogger(__name__)
 
 
 class TableGenerator:
@@ -51,6 +54,9 @@ class TableGenerator:
         under which the table will be displayed and corpus IDs of all
         papers to be included (i.e., ones cited in the section).
         """
+        logger.info(
+            f"Starting table generation for section: '{section_title}' with {len(corpus_ids)} papers"
+        )
 
         # Step 1: Construct a query for the column suggestion tool using
         # the section title and original user query as input. Also create
@@ -76,6 +82,9 @@ class TableGenerator:
             cost_args=cost_args,
         )
         column_cost = output.get("cost", {})
+        logger.info(
+            f"Generated {len(output.get('columns', []))} columns with cost: {column_cost.get('cost_value', 0)}"
+        )
 
         # Step 2: Create a new table data structure with suggested columns.
         # While creating a column, also create requests to call the value
@@ -139,6 +148,9 @@ class TableGenerator:
 
         # Step 4: Run value generation requests for all columns in parallel and add cells to the table
         all_cell_costs = []
+        logger.info(
+            f"Starting cell value generation with {self.max_threads} workers for {len(value_gen_requests)} columns"
+        )
         with ThreadPoolExecutor(max_workers=self.max_threads) as executor:
             output = list(
                 executor.map(
@@ -147,19 +159,53 @@ class TableGenerator:
                     value_gen_requests,
                 )
             )
+            successful_columns = 0
+            failed_columns = 0
+            total_cell_cost = 0.0
             for item in output:
                 new_cells = item.get("cells", {})
                 cell_costs = item.get("cost", {})
                 table.cells.update(new_cells)
                 all_cell_costs.append(cell_costs)
 
+                # Count successful vs failed cell generations
+                if cell_costs:
+                    none_costs = sum(1 for cost in cell_costs.values() if cost is None)
+                    valid_costs = len(cell_costs) - none_costs
+                    if valid_costs > 0:
+                        successful_columns += 1
+                        column_total = sum(
+                            cost.get("cost_value", 0)
+                            for cost in cell_costs.values()
+                            if cost
+                        )
+                        total_cell_cost += column_total
+                    if none_costs > 0:
+                        logger.warning(
+                            f"Column had {none_costs}/{len(cell_costs)} failed cell generations"
+                        )
+                else:
+                    failed_columns += 1
+
+        logger.info(
+            f"Cell generation complete: {successful_columns} successful, {failed_columns} failed columns. Total cell cost: ${total_cell_cost:.4f}"
+        )
+
         if run_subselection:
+            original_cells = len(table.cells)
             table = self.subselect_columns_and_rows(table)
+            logger.info(
+                f"Table subselection: {len(table.columns)} columns, {len(table.rows)} rows, {len(table.cells)} cells (from {original_cells})"
+            )
+
         final_cost_dict = {
             "column_cost": column_cost,
             "cell_cost": all_cell_costs,
         }
 
+        logger.info(
+            f"Table generation complete for '{section_title}': {len(table.columns)}x{len(table.rows)} table"
+        )
         return table, final_cost_dict
 
     """
