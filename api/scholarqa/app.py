@@ -1,6 +1,7 @@
 import logging
 import multiprocessing
 import os
+import threading
 from json import JSONDecodeError
 from time import time
 from typing import Union
@@ -42,6 +43,49 @@ logger = logging.getLogger(__name__)
 TIMEOUT = int(os.getenv("QUERY_TIMEOUT_SECONDS", "420"))
 
 async_context = multiprocessing.get_context("fork")
+
+# =============================================================================
+# QUERY CONCURRENCY CONTROL (added to original ScholarQA code by Jesus Dominguez)
+# =============================================================================
+# This semaphore controls the maximum number of concurrent queries that can
+# execute simultaneously. This is critical for:
+#
+# 1. RESOURCE MANAGEMENT: Prevents multiple queries from competing for:
+#    - Rate-limited APIs (Claude, OpenAI, Semantic Scholar)
+#    - CPU/Memory during table generation and reranking
+#    - GPU resources when using local reranker
+#
+# 2. TIMEOUT PREVENTION: Concurrent queries can cause individual queries to
+#    exceed timeout limits due to shared resource contention
+#
+# 3. API QUOTA PROTECTION: Prevents rapid quota exhaustion from parallel calls
+#
+# CONFIGURATION GUIDELINES:
+# - Laptop/Development: MAX_CONCURRENT_QUERIES=1 (prevents timeouts, resource conflicts)
+# - Small Server: MAX_CONCURRENT_QUERIES=2-3 (balance throughput vs stability)
+# - Production/Cloud: MAX_CONCURRENT_QUERIES=5-10 (with higher rate limits, more resources)
+# - High-Performance: MAX_CONCURRENT_QUERIES=-1 to disable (requires robust infrastructure)
+#
+# When increasing concurrency, consider:
+# - Increasing QUERY_TIMEOUT_SECONDS proportionally (e.g., 600s for 2 queries, 900s for 3)
+# - Scaling rate limits: RATE_LIMIT_RPM, RATE_LIMIT_ITPM, RATE_LIMIT_OTPM
+# - Ensuring adequate CPU, memory, and GPU resources
+# =============================================================================
+
+MAX_CONCURRENT_QUERIES = int(os.getenv("MAX_CONCURRENT_QUERIES", "1"))
+
+# Initialize semaphore for query concurrency control
+# Set to None if MAX_CONCURRENT_QUERIES is -1 (unlimited concurrency)
+if MAX_CONCURRENT_QUERIES <= 0:
+    query_semaphore = None  # Unlimited concurrency for high-performance deployments
+    logger.info(
+        "Query concurrency control DISABLED - unlimited concurrent queries allowed"
+    )
+else:
+    query_semaphore = threading.Semaphore(MAX_CONCURRENT_QUERIES)
+    logger.info(
+        f"Query concurrency control ENABLED - max {MAX_CONCURRENT_QUERIES} concurrent queries"
+    )
 
 started_task_step = None
 
@@ -85,20 +129,43 @@ app_config.load_scholarqa = lazy_load_scholarqa
 
 def _do_task(tool_request: ToolRequest, task_id: str) -> TaskResult:
     """
-    TODO: BYO logic here. Don't forget to define `ToolRequest` and `TaskResult`
-    in `models.py`!
+    Execute a ScholarQA task with optional concurrency control.
 
-    The meat of whatever it is your tool or task agent actually
-    does should be kicked off in here. This will be run synchonrously
-    unless `_needs_to_be_async()` above returns True, in which case
-    it will be run in a background process.
+    CONCURRENCY CONTROL IMPLEMENTATION:
+    - Uses a semaphore to limit concurrent query execution when enabled
+    - Prevents resource contention between multiple heavy queries
+    - Can be disabled for high-performance production deployments
 
-    If you need to update state for an asynchronously running task, you can
-    use `task_state_manager.read_state(task_id)` to retrieve, and `.write_state()`
-    to write back.
+    The concurrency control was added to address timeout issues caused by:
+    1. Multiple queries competing for rate-limited APIs (Claude, Semantic Scholar)
+    2. Shared CPU/memory resources during table generation
+    3. GPU contention when using local reranker services
+
+    Configuration via MAX_CONCURRENT_QUERIES environment variable:
+    - 1: Single query execution (laptop/development - prevents timeouts)
+    - 2-10: Limited concurrency (production with adequate resources)
+    - -1: Unlimited concurrency (high-performance deployments only)
     """
-    scholar_qa = app_config.load_scholarqa(task_id)
-    return scholar_qa.run_qa_pipeline(tool_request)
+
+    if query_semaphore is not None:
+        # Semaphore-controlled execution for resource management
+        logger.info(
+            f"[{task_id}] - Acquiring query semaphore "
+            f"(max concurrent: {MAX_CONCURRENT_QUERIES})"
+        )
+        with query_semaphore:
+            logger.info(f"[{task_id}] - Query semaphore acquired, starting execution")
+            scholar_qa = app_config.load_scholarqa(task_id)
+            result = scholar_qa.run_qa_pipeline(tool_request)
+            logger.info(f"[{task_id}] - Query execution complete, releasing semaphore")
+            return result
+    else:
+        # Unlimited concurrency mode for high-performance deployments
+        logger.info(f"[{task_id}] - Starting execution (unlimited concurrency mode)")
+        scholar_qa = app_config.load_scholarqa(task_id)
+        result = scholar_qa.run_qa_pipeline(tool_request)
+        logger.info(f"[{task_id}] - Query execution complete")
+        return result
 
 
 def _estimate_task_length(

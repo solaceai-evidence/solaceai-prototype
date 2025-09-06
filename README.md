@@ -209,16 +209,39 @@ The system supports multiple reranker backends through configuration:
 
 Environment variables are configured in the `.env` file as detailed in the setup section above.
 
+### Production Scaling Configuration
+
+The system includes concurrency control to prevent resource conflicts when multiple queries run simultaneously.
+
+**Key Settings:**
+
+```bash
+# Laptop/Development (recommended)
+MAX_CONCURRENT_QUERIES=1          # Sequential execution prevents timeouts
+QUERY_TIMEOUT_SECONDS=600          # 10 minutes for table generation
+
+# Production (with adequate resources)
+MAX_CONCURRENT_QUERIES=3           # Allow 3 simultaneous queries
+QUERY_TIMEOUT_SECONDS=900          # 15 minutes (scaled for concurrency)
+RATE_LIMIT_RPM=300                 # Scale rate limits proportionally
+```
+
+**Simple Guidelines:**
+
+- **Laptop**: Use `MAX_CONCURRENT_QUERIES=1` for stable performance
+- **Production**: Increase to 2-5 with proportional timeout and rate limit scaling
+- **High-Performance**: Set to `-1` for unlimited concurrency (requires robust infrastructure)
+
 ## Usage
 
 The system automatically loads configuration from the `.env` file on startup. Rate limiting is enabled by default to ensure stable performance and prevent API quota overrun.
 
 **Configuration Management:**
 
-- Rate limits are set for laptop development with Claude 4 Sonnet
-- Query timeout is set to 7 minutes to accommodate table generation
-- All settings can be adjusted in `.env` file without code changes
-- Set rate limit values to -1 to disable rate limiting (not recommended)
+- Default settings optimized for laptop development with Claude 4 Sonnet
+- Query concurrency limited to 1 for stable laptop performance
+- 10-minute timeout accommodates complex table generation
+- All settings configurable via `.env` file without code changes
 
 **Query Processing:**
 
@@ -289,6 +312,14 @@ bash start_hybrid.sh
 - Reduce MAX_LLM_WORKERS if experiencing API rejections
 - Increase QUERY_TIMEOUT_SECONDS for complex queries with table generation
 - Monitor API usage quotas with your LLM provider
+
+**Query Timeout Issues:**
+
+- **Laptop timeouts**: Ensure `MAX_CONCURRENT_QUERIES=1` to prevent resource conflicts
+- **Complex queries**: Increase `QUERY_TIMEOUT_SECONDS` for table generation
+- **Production scaling**: Scale timeout proportionally with concurrency (e.g., 900s for 2 queries)
+- **Semaphore Deadlocks**: Check logs for "Acquiring/releasing semaphore" messages; restart if queries hang
+- **Unlimited Concurrency**: Use MAX_CONCURRENT_QUERIES=-1 only with robust infrastructure
 
 **Docker Issues:**
 
