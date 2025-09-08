@@ -284,7 +284,7 @@ def generate_value_suggestions(
         # This section uses LLM calls only (no Semantic Scholar API), so can use full MAX_THREADS
         # In addition to answers and costs, we also store corpus IDs for all papers
         # that have answers for the query (i.e., non-N/A values).
-        with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+        with ThreadPoolExecutor(max_workers=S2_API_THREADS) as executor:
             responses = list(
                 executor.map(
                     get_metadata_columns,
