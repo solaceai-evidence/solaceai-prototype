@@ -17,7 +17,7 @@ import '../../public/css/Home.css';
 import solaceaiLogo from '../components/assets/solace-logo.svg';
 
 const SUGGESTIONS: { query: string, shortName: string }[] = [
-  { query: 'How can we tackle mental health problems and substance misuse in displaced communities in Ethiopia?', shortName: 'How can we tackle mental health problems and substance misuse in displaced communities in Ethiopia?' },
+  { query: 'Addressing mental health problems and substance misuse among displaced communities in Ethiopia', shortName: 'Addressing mental health problems and substance misuse among displaced communities in Ethiopia' },
   { query: 'What is the best way to deal with cholera risks after flooding in South Africa?', shortName: 'What is the best way to deal with cholera risks after flooding in South Africa?' },
   { query: 'What is the protocol to respond to arborius outbreaks?', shortName: 'What is the protocol to respond to arborius outbreaks?' },
   { query: 'How does extreme heat hit the heart, especially for vulnerable people in India?', shortName: 'How does extreme heat hit the heart, especially for vulnerable people in India?' },
