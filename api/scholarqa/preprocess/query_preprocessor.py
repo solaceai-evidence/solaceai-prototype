@@ -8,7 +8,7 @@ from typing import Tuple, List, Optional, Union
 from litellm import moderation
 from pydantic import BaseModel, Field
 
-from scholarqa.llms.litellm_helper import llm_completion
+from scholarqa.llms.litellm_helper import llm_completion_with_rate_limiting
 from scholarqa.llms.constants import CompletionResult
 from scholarqa.llms.prompts import QUERY_DECOMPOSER_PROMPT
 
@@ -63,7 +63,7 @@ def decompose_query(
     decomp_query_res = None
     try:
         # decompose query to get llm re-written and keyword query with filters
-        decomp_query_res = llm_completion(
+        decomp_query_res = llm_completion_with_rate_limiting(
             user_prompt=query,
             system_prompt=QUERY_DECOMPOSER_PROMPT,
             model=decomposer_llm_model,
