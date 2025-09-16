@@ -1,121 +1,63 @@
 # ScholarQA Pipeline Test Scripts
 
-This directory contains comprehensive test scripts for each stage of the ScholarQA pipeline, designed for transparency and detailed parameter inspection.
+Concise test drivers for each stage of the ScholarQA pipeline. Outputs are text-only (no emojis) and emphasize transparency of parameters and intermediate results.
 
-## Overview
+## Pipeline Stages
 
-The ScholarQA pipeline consists of three main stages:
+1. Query Decomposition: Rewrite and structure a raw query.
+2. Retrieval: Fetch relevant snippets and additional papers from Semantic Scholar.
+3. Reranking & Aggregation: Rerank candidates and aggregate to paper-level.
+4. Evidence Extraction: Select quotes per paper and report usage/costs.
 
-1. **Query Decomposition** - Processes raw queries into structured search parameters
-2. **Retrieval** - Fetches relevant academic papers and snippets from Semantic Scholar
-3. **Reranking & Aggregation** - Reranks results and aggregates passages to paper level
+## Scripts
 
-## Test Scripts
+- `test_query_decomposition.py`
+   - Purpose: Stage 1 — query decomposition and preprocessing.
+   - Usage:
 
-### 1. test_query_decomposition.py
+      ```bash
+      python test_scripts/test_query_decomposition.py --query "your query"
+      ```
 
-**Purpose**: Test Stage 1 - Query decomposition and preprocessing
+- `test_retrieval.py`
+   - Purpose: Stage 2 — end-to-end retrieval with complete parameter display.
+   - Usage:
 
-**Usage**:
+      ```bash
+      python test_scripts/test_retrieval.py --query "your query" [--max-results N]
+      ```
 
-```bash
-python test_scripts/test_query_decomposition.py --query "your query here"
-```
+   - Notes: Shows all request parameters, deduplication behavior, score ranges, and fetched metadata.
 
-**Features**:
+- `test_reranking.py`
+   - Purpose: Stage 3 — reranking and aggregation with DataFrame inspection.
+   - Usage:
 
-- Shows original vs. rewritten queries
-- Displays keyword queries for different search types
-- Shows search filters and field restrictions
-- Uses LiteLLM with CLAUDE_4_SONNET for query processing
+      ```bash
+      python test_scripts/test_reranking.py --query "your query" [--max-results N]
+      ```
 
-**Sample Output**:
+   - Notes: Prints DataFrame columns, example entries, and aggregation stats.
 
-```
-🔄 TESTING QUERY DECOMPOSITION STAGE
-📝 Input Query: 'machine learning healthcare'
-✅ Decomposed Query Object Created
-📋 Rewritten Query: 'Machine learning applications in healthcare.'
-🔍 Keyword Query: 'machine learning healthcare applications medical'
-🎯 Search Filters: {'fieldsOfStudy': 'Computer Science,Medicine'}
-```
+- `test_evidence_extraction.py`
+   - Purpose: Stage 4 — quote selection with model usage and cost reporting.
+   - Usage:
 
-### 2. test_retrieval.py
+      ```bash
+      python test_scripts/test_evidence_extraction.py --query "your query" [--max-results N]
+      ```
 
-**Purpose**: Test Stage 2 - Comprehensive retrieval process with exhaustive parameter display
-
-**Usage**:
-
-```bash
-python test_scripts/test_retrieval.py --query "your query here" [--max-results N]
-```
-
-**Features**:
-
-- Shows ALL retrieval parameters and configurations
-- Displays detailed search statistics
-- Shows deduplication process
-- Includes paper metadata fetching
-- Suppresses async warnings for clean output
-
-**Sample Output**:
-
-```
-🔄 TESTING RETRIEVAL STAGE
-📝 Input Query: 'machine learning healthcare'
-📊 EXHAUSTIVE RETRIEVAL PARAMETERS:
-   🎯 Query (snippet): 'Machine learning in healthcare.'
-   🔍 Keyword Query: 'machine learning healthcare applications'
-   📏 Limit: 256
-   🏷️ Fields of Study: 'Computer Science,Medicine'
-   📋 API Fields: 'snippet.text,snippet.snippetKind,...'
-✅ Retrieved 222 snippets from 13 unique papers
-📈 Score Range: 0.123 - 0.987
-```
-
-### 3. test_reranking.py
-
-**Purpose**: Test Stage 3 - Reranking and aggregation with complete transparency
-
-**Usage**:
-
-```bash
-python test_scripts/test_reranking.py --query "your query here" [--max-results N]
-```
-
-**Features**:
-
-- Shows reranking process parameters
-- Displays aggregation to paper-level DataFrame
-- Provides exhaustive DataFrame structure analysis
-- Shows top papers with complete metadata
-- Includes aggregation statistics
-
-**Sample Output**:
-
-```
-🔄 TESTING RERANKING & AGGREGATION STAGE
-📝 Input Query: 'machine learning healthcare'
-🎯 STEP 3A: RERANKING
-   📊 Input Candidates: 235 items
-   ✅ Reranked Candidates: 235 items
-   📈 Score Range After Reranking: 0.000 - 0.939
-📊 STEP 3B: AGGREGATION TO PAPER LEVEL
-   📝 Input: 235 passages
-   ✅ Aggregated DataFrame: 178 papers
-```
+   - Notes: Displays papers processed, quotes found, token usage, total cost, and concise evidence previews. Async shutdown noise is suppressed for readability.
 
 ## Requirements
 
-All scripts require:
-
-- Python environment with ScholarQA dependencies
-- S2_API_KEY environment variable for Semantic Scholar API
-- LiteLLM configuration for language model access
+- Python 3.11+ environment with project dependencies.
+- Semantic Scholar API key via `S2_API_KEY`.
+- LLM access configured via LiteLLM (e.g., `CLAUDE_4_SONNET`).
 
 ## Installation
 
-From the api directory:
+From the `api` directory:
 
 ```bash
 pip install -e .
@@ -123,7 +65,7 @@ pip install -e .
 pip install -r requirements.txt
 ```
 
-## Environment Setup
+## Environment
 
 Set your Semantic Scholar API key:
 
@@ -131,45 +73,16 @@ Set your Semantic Scholar API key:
 export S2_API_KEY="your_api_key_here"
 ```
 
-## Design Philosophy
+Recommended: place credentials in a `.env` file at the repository root (loaded by the scripts if `python-dotenv` is available).
 
-These test scripts prioritize:
+## Notes
 
-- **Transparency**: Every parameter and intermediate result is displayed
-- **Completeness**: Exhaustive coverage of all pipeline stages
-- **Clarity**: Clean, emoji-enhanced output for easy reading
-- **Debugging**: Detailed information for troubleshooting pipeline issues
-
-## Common Parameters
-
-All scripts support:
-
-- `--query`: The search query to test
-- `--max-results`: Maximum number of results to display (default varies by script)
-
-## Output Interpretation
-
-Each script provides:
-
-1. **Input Parameters**: What goes into each stage
-2. **Processing Details**: How the stage transforms the data
-3. **Output Metrics**: Statistics about the results
-4. **Sample Results**: Formatted examples of the output
+- Run scripts from the `api` directory to resolve imports.
+- Retrieval uses both snippet search and keyword-based paper expansion.
+- Evidence extraction reports token usage and cost; benign asyncio warnings are suppressed.
 
 ## Troubleshooting
 
-- **Import Errors**: Ensure you're running from the api directory
-- **API Errors**: Check your S2_API_KEY environment variable
-- **Async Warnings**: These are suppressed in retrieval script but may appear in others
-- **Debug Output**: Some debug messages from retriever_base.py are expected
-
-## Next Steps
-
-After running these tests, you can:
-
-1. Identify bottlenecks in specific pipeline stages
-2. Validate parameter configurations
-3. Debug retrieval quality issues
-4. Understand the complete data flow through the pipeline
-
-These scripts serve as both testing tools and documentation for the ScholarQA pipeline architecture.
+- Import errors: confirm you are in the `api` directory and the package is installed.
+- API errors: validate `S2_API_KEY` and network access.
+- Rate limits/provider overload: re-run with fewer results or retry later.
