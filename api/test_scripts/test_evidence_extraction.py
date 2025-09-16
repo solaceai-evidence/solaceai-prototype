@@ -10,12 +10,8 @@ import logging
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-# Suppress warnings and async logging issues
+# Suppress noisy runtime warnings (functional logs controlled by --quiet)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
-logging.getLogger("LiteLLM").setLevel(logging.ERROR)
-logging.getLogger("LiteLLM Proxy").setLevel(logging.ERROR)
-logging.getLogger("LiteLLM Router").setLevel(logging.ERROR)
-logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
 # Setup
 api_dir = str(Path(__file__).parent.parent)
@@ -44,8 +40,19 @@ from scholarqa.llms.prompts import SYSTEM_PROMPT_QUOTE_PER_PAPER
 from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
 
 
-def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int = 3):
+def test_evidence_extraction_stage(
+    query: Optional[str] = None,
+    max_results: int = 3,
+    quiet: Optional[bool] = True,
+):
     """Exhaustive test of evidence extraction stage - shows ALL data and metadata returned"""
+
+    # Configure log suppression based on quiet flag
+    if quiet:
+        logging.getLogger("LiteLLM").setLevel(logging.ERROR)
+        logging.getLogger("LiteLLM Proxy").setLevel(logging.ERROR)
+        logging.getLogger("LiteLLM Router").setLevel(logging.ERROR)
+        logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
     # Input handling
     if not query:
@@ -66,8 +73,13 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
         import contextlib
         import io
 
-        stderr_capture = io.StringIO()
-        with contextlib.redirect_stderr(stderr_capture):
+        if quiet:
+            stderr_capture = io.StringIO()
+            with contextlib.redirect_stderr(stderr_capture):
+                decomposed_query, _ = decompose_query(
+                    query=query, decomposer_llm_model=CLAUDE_4_SONNET
+                )
+        else:
             decomposed_query, _ = decompose_query(
                 query=query, decomposer_llm_model=CLAUDE_4_SONNET
             )
@@ -177,8 +189,16 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
         import contextlib
         import io
 
-        _stderr_buf = io.StringIO()
-        with contextlib.redirect_stderr(_stderr_buf):
+        if quiet:
+            _stderr_buf = io.StringIO()
+            with contextlib.redirect_stderr(_stderr_buf):
+                per_paper_summaries = scholar_qa.step_select_quotes(
+                    query=query,
+                    scored_df=aggregated_df,
+                    cost_args=cost_args,
+                    sys_prompt=SYSTEM_PROMPT_QUOTE_PER_PAPER,
+                )
+        else:
             per_paper_summaries = scholar_qa.step_select_quotes(
                 query=query,
                 scored_df=aggregated_df,
@@ -361,6 +381,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max-results", type=int, default=3, help="Max results to display (default: 3)"
     )
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--quiet",
+        dest="quiet",
+        action="store_true",
+        help="Suppress asyncio/logging noise (default)",
+    )
+    group.add_argument(
+        "--no-quiet",
+        dest="quiet",
+        action="store_false",
+        help="Show asyncio/logging output",
+    )
+    parser.set_defaults(quiet=True)
 
     args = parser.parse_args()
-    test_evidence_extraction_stage(args.query, args.max_results)
+    test_evidence_extraction_stage(args.query, args.max_results, args.quiet)

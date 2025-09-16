@@ -47,7 +47,7 @@ Concise test drivers for each stage of the ScholarQA pipeline. Outputs are text-
       python test_scripts/test_evidence_extraction.py --query "your query" [--max-results N]
       ```
 
-   - Notes: Displays papers processed, quotes found, token usage, total cost, and concise evidence previews. Async shutdown noise is suppressed for readability.
+   - Notes: Displays papers processed, quotes found, token usage, total cost, and concise evidence previews. Async shutdown noise can be suppressed for readability using `--quiet` (default) or shown using `--no-quiet`.
 
 ## Requirements
 
