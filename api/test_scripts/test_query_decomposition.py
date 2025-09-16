@@ -3,12 +3,12 @@
 Simple test to demonstrate query decomposition step of the pipeline
 """
 import os
-from dotenv import load_dotenv
 import sys
 from pathlib import Path
-import json
 import logging
-from typing import Dict, Optional
+from typing import Optional
+
+from venv_utils import managed_venv
 
 # Add the API directory to Python path
 api_dir = str(Path(__file__).parent.parent)
@@ -20,9 +20,6 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-# Load environment variables from .env file
-load_dotenv(Path(project_root) / ".env")
 
 # Check for required environment variables
 if not os.getenv("S2_API_KEY"):
@@ -87,4 +84,18 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    test_pipeline_stage_1(args.query)
+    # Use managed virtual environment
+    with managed_venv(__file__, ["requirements.txt"]):
+        from dotenv import load_dotenv
+        from scholarqa.preprocess.query_preprocessor import decompose_query
+        from scholarqa.llms.constants import CLAUDE_4_SONNET
+
+        # Load environment variables from .env file
+        load_dotenv(Path(project_root) / ".env")
+
+        # Check for required environment variables
+        if not os.getenv("S2_API_KEY"):
+            logger.error("Missing S2_API_KEY in environment variables")
+            sys.exit(1)
+
+        test_pipeline_stage_1(args.query)

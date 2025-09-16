@@ -1,63 +1,55 @@
 # ScholarQA Pipeline Test Scripts
 
-Concise test drivers for each stage of the ScholarQA pipeline. Outputs are text-only (no emojis) and emphasize transparency of parameters and intermediate results.
+Test scripts for each stage of the ScholarQA pipeline. Each script creates its own virtual environment for dependencies and cleanup.
 
 ## Pipeline Stages
 
-1. Query Decomposition: Rewrite and structure a raw query.
-2. Retrieval: Fetch relevant snippets and additional papers from Semantic Scholar.
-3. Reranking & Aggregation: Rerank candidates and aggregate to paper-level.
-4. Evidence Extraction: Select quotes per paper and report usage/costs.
+1. Query Decomposition: Process raw queries
+2. Retrieval: Fetch relevant papers
+3. Reranking: Score and aggregate results
+4. Evidence Extraction: Extract relevant quotes
+5. Section Generation: Generate structured sections
+6. Table Generation: Create comparison tables
 
 ## Scripts
 
-- `test_query_decomposition.py`
-   - Purpose: Stage 1 — query decomposition and preprocessing.
-   - Usage:
+Each script automatically sets up a virtual environment with required dependencies and cleans up after execution.
 
-      ```bash
-      python test_scripts/test_query_decomposition.py --query "your query"
-      ```
+- `test_query_decomposition.py`
+
+  ```bash
+  python test_scripts/test_query_decomposition.py --query "your query"
+  ```
 
 - `test_retrieval.py`
-   - Purpose: Stage 2 — end-to-end retrieval with complete parameter display.
-   - Usage:
 
-      ```bash
-      python test_scripts/test_retrieval.py --query "your query" [--max-results N]
-      ```
-
-   - Notes: Shows all request parameters, deduplication behavior, score ranges, and fetched metadata.
+  ```bash
+  python test_scripts/test_retrieval.py --query "your query" [--max-results N]
+  ```
 
 - `test_reranking.py`
-   - Purpose: Stage 3 — reranking and aggregation with DataFrame inspection.
-   - Usage:
 
-      ```bash
-      python test_scripts/test_reranking.py --query "your query" [--max-results N]
-      ```
-
-   - Notes: Prints DataFrame columns, example entries, and aggregation stats.
+  ```bash
+  python test_scripts/test_reranking.py --query "your query" [--max-results N]
+  ```
 
 - `test_evidence_extraction.py`
-   - Purpose: Stage 4 — quote selection with model usage and cost reporting.
-   - Usage:
 
-      ```bash
-      python test_scripts/test_evidence_extraction.py --query "your query" [--max-results N]
-      ```
-
-   - Notes: Displays papers processed, quotes found, token usage, total cost, and concise evidence previews. Async shutdown noise can be suppressed for readability using `--quiet` (default) or shown using `--no-quiet`.
+  ```bash
+  python test_scripts/test_evidence_extraction.py --query "your query" [--max-results N]
+  ```
 
 - `test_section_generation.py`
-  - Purpose: Stage 5 — section generation with parameter visibility.
-  - Usage:
 
-    ```bash
-    python test_scripts/test_section_generation.py --query "your query" [--max-results N]
-    ```
+  ```bash
+  python test_scripts/test_section_generation.py --query "your query" [--max-results N]
+  ```
 
-  - Notes: Shows decomposed query (Stage 1), retrieves minimal evidence (Stage 4), then provides exhaustive visibility into section generation including system configuration (model, prompts, workers), quote clustering results, iterative section generation progress, detailed section structure (titles, word counts, citations), and complete cost analysis (tokens, dollars per section). Ideal for understanding how sections are built and optimizing generation parameters.
+- `test_table_generation.py`
+
+  ```bash
+  python test_scripts/test_table_generation.py --query "your query"
+  ```
 
 ## Requirements
 
