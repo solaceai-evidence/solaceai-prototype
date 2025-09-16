@@ -49,6 +49,16 @@ Concise test drivers for each stage of the ScholarQA pipeline. Outputs are text-
 
    - Notes: Displays papers processed, quotes found, token usage, total cost, and concise evidence previews. Async shutdown noise can be suppressed for readability using `--quiet` (default) or shown using `--no-quiet`.
 
+- `test_section_generation.py`
+  - Purpose: Stage 5 — section generation with parameter visibility.
+  - Usage:
+
+    ```bash
+    python test_scripts/test_section_generation.py --query "your query" [--max-results N]
+    ```
+
+  - Notes: Shows decomposed query (Stage 1), retrieves minimal evidence (Stage 4), then provides exhaustive visibility into section generation including system configuration (model, prompts, workers), quote clustering results, iterative section generation progress, detailed section structure (titles, word counts, citations), and complete cost analysis (tokens, dollars per section). Ideal for understanding how sections are built and optimizing generation parameters.
+
 ## Requirements
 
 - Python 3.11+ environment with project dependencies.
