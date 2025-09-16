@@ -9,13 +9,13 @@ import warnings
 import logging
 from pathlib import Path
 from typing import Optional, Dict, Any
-import pandas as pd
 
 # Suppress warnings and async logging issues
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 logging.getLogger("LiteLLM").setLevel(logging.ERROR)
 logging.getLogger("LiteLLM Proxy").setLevel(logging.ERROR)
 logging.getLogger("LiteLLM Router").setLevel(logging.ERROR)
+logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
 # Setup
 api_dir = str(Path(__file__).parent.parent)
@@ -28,10 +28,10 @@ try:
 
     load_dotenv(Path(project_root) / ".env")
 except ImportError:
-    print("⚠️  dotenv not available, skipping .env file loading")
+    print("Warning: python-dotenv not available, skipping .env file loading")
 
 if not os.getenv("S2_API_KEY"):
-    print("❌ Missing S2_API_KEY in environment variables")
+    print("Error: Missing S2_API_KEY in environment variables")
     sys.exit(1)
 
 from scholarqa.preprocess.query_preprocessor import decompose_query
@@ -51,16 +51,16 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
     if not query:
         query = input("\nEnter query for evidence extraction testing: ").strip()
     if not query:
-        print("❌ No query provided. Exiting.")
+        print("Error: No query provided. Exiting.")
         return
 
-    print(f"\n🔄 TESTING EVIDENCE EXTRACTION STAGE")
-    print(f"📝 Input Query: '{query}'")
+    print("\nTESTING EVIDENCE EXTRACTION STAGE")
+    print(f"Input Query: '{query}'")
     print("=" * 70)
 
     try:
         # PREREQUISITE: Run stages 1-3 to get the aggregated DataFrame
-        print("\n📋 PREREQUISITE STAGES (1-3): Getting Aggregated DataFrame")
+        print("\nPREREQUISITE STAGES (1-3): Getting Aggregated DataFrame")
 
         # Stage 1: Query Decomposition
         import contextlib
@@ -76,7 +76,7 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
         retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
         paper_finder = PaperFinder(retriever=retriever)
 
-        print(f"   ✓ Query decomposed and retriever configured")
+        print("   Query decomposed and retriever configured")
 
         # Get raw retrieval results
         snippet_results = paper_finder.retrieve_passages(
@@ -106,11 +106,11 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
         )
 
         print(
-            f"   ✓ Retrieved and aggregated: {len(aggregated_df)} papers ready for evidence extraction"
+            f"   Retrieved and aggregated: {len(aggregated_df)} papers ready for evidence extraction"
         )
 
         # STAGE 4: EVIDENCE EXTRACTION (Quote Selection)
-        print(f"\n4️⃣ EVIDENCE EXTRACTION STAGE")
+        print("\nEVIDENCE EXTRACTION STAGE")
         print("=" * 50)
 
         # Initialize ScholarQA for evidence extraction
@@ -123,10 +123,10 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
         )
 
         # Show input DataFrame structure
-        print(f"\n🔍 STEP 4A: INPUT DATAFRAME ANALYSIS")
-        print(f"   📊 Input Papers: {len(aggregated_df)} papers")
-        print(f"   📋 DataFrame Columns: {list(aggregated_df.columns)}")
-        print(f"   🎯 Context Threshold: {paper_finder.context_threshold}")
+        print("\nSTEP 4A: INPUT DATAFRAME ANALYSIS")
+        print(f"   Input Papers: {len(aggregated_df)} papers")
+        print(f"   DataFrame Columns: {list(aggregated_df.columns)}")
+        print(f"   Context Threshold: {paper_finder.context_threshold}")
 
         if not aggregated_df.empty:
             # Show relevance score distribution
@@ -137,7 +137,7 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
             )
             if relevance_scores:
                 print(
-                    f"   📈 Relevance Score Range: {min(relevance_scores):.3f} - {max(relevance_scores):.3f}"
+                    f"   Relevance Score Range: {min(relevance_scores):.3f} - {max(relevance_scores):.3f}"
                 )
 
             # Show papers above threshold
@@ -149,18 +149,18 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
                 if "relevance_judgement" in aggregated_df.columns
                 else aggregated_df
             )
-            print(f"   ✅ Papers Above Threshold: {len(above_threshold)}")
+            print(f"   Papers Above Threshold: {len(above_threshold)}")
 
         # Show evidence extraction parameters
-        print(f"\n🎯 STEP 4B: EVIDENCE EXTRACTION PARAMETERS")
-        print(f"   🤖 LLM Model: {CLAUDE_4_SONNET}")
-        print(f"   📝 System Prompt: Quote Per Paper (SYSTEM_PROMPT_QUOTE_PER_PAPER)")
-        print(f"   🔍 Extraction Query: '{query}'")
-        print(f"   🏭 Batch Processing: Multi-threaded LLM calls")
+        print("\nSTEP 4B: EVIDENCE EXTRACTION PARAMETERS")
+        print(f"   LLM Model: {CLAUDE_4_SONNET}")
+        print("   System Prompt: Quote Per Paper (SYSTEM_PROMPT_QUOTE_PER_PAPER)")
+        print(f"   Extraction Query: '{query}'")
+        print("   Batch Processing: Multi-threaded LLM calls")
 
         # Extract quotes/evidence
-        print(f"\n🔄 STEP 4C: EXECUTING EVIDENCE EXTRACTION")
-        print(f"   ⚙️ Processing {len(aggregated_df)} papers for quote extraction...")
+        print("\nSTEP 4C: EXECUTING EVIDENCE EXTRACTION")
+        print(f"   Processing {len(aggregated_df)} papers for quote extraction...")
 
         # Create cost reporting args for the evidence extraction
         from scholarqa.llms.constants import CostReportingArgs
@@ -173,27 +173,33 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
             model=CLAUDE_4_SONNET,
         )
 
-        per_paper_summaries = scholar_qa.step_select_quotes(
-            query=query,
-            scored_df=aggregated_df,
-            cost_args=cost_args,
-            sys_prompt=SYSTEM_PROMPT_QUOTE_PER_PAPER,
-        )
+        # Suppress asyncio stderr noise during LLM calls
+        import contextlib
+        import io
 
-        print(f"   ✅ Evidence extraction completed")
-        print(f"   💰 Total Cost: ${per_paper_summaries.tot_cost:.4f}")
-        print(f"   🎯 Input Tokens: {per_paper_summaries.tokens.input_tokens}")
-        print(f"   🎯 Output Tokens: {per_paper_summaries.tokens.output_tokens}")
-        print(f"   📊 Papers with Extracted Quotes: {len(per_paper_summaries.result)}")
+        _stderr_buf = io.StringIO()
+        with contextlib.redirect_stderr(_stderr_buf):
+            per_paper_summaries = scholar_qa.step_select_quotes(
+                query=query,
+                scored_df=aggregated_df,
+                cost_args=cost_args,
+                sys_prompt=SYSTEM_PROMPT_QUOTE_PER_PAPER,
+            )
+
+        print("   Evidence extraction completed")
+        print(f"   Total Cost: ${per_paper_summaries.tot_cost:.4f}")
+        print(f"   Input Tokens: {per_paper_summaries.tokens.input}")
+        print(f"   Output Tokens: {per_paper_summaries.tokens.output}")
+        print(f"   Papers with Extracted Quotes: {len(per_paper_summaries.result)}")
 
         # RESULTS: Exhaustive display of evidence extraction stage output
-        print(f"\n📋 EXHAUSTIVE EVIDENCE EXTRACTION RESULTS")
+        print("\nEXHAUSTIVE EVIDENCE EXTRACTION RESULTS")
         print("=" * 70)
 
         # Show extraction statistics
-        print(f"\n📊 EXTRACTION STATISTICS")
+        print("\nEXTRACTION STATISTICS")
         if per_paper_summaries.result:
-            print(f"   📏 Total Papers with Quotes: {len(per_paper_summaries.result)}")
+            print(f"   Total Papers with Quotes: {len(per_paper_summaries.result)}")
 
             # Calculate quote lengths
             quote_lengths = [
@@ -201,14 +207,14 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
             ]
             if quote_lengths:
                 print(
-                    f"   📝 Quote Length Range: {min(quote_lengths)} - {max(quote_lengths)} characters"
+                    f"   Quote Length Range: {min(quote_lengths)} - {max(quote_lengths)} characters"
                 )
                 print(
-                    f"   📊 Average Quote Length: {sum(quote_lengths) / len(quote_lengths):.1f} characters"
+                    f"   Average Quote Length: {sum(quote_lengths) / len(quote_lengths):.1f} characters"
                 )
 
             # Show model usage breakdown
-            print(f"   🤖 Models Used: {len(per_paper_summaries.models)} LLM calls")
+            print(f"   Models Used: {len(per_paper_summaries.models)} LLM calls")
 
             # Analyze reference strings
             ref_strings = list(per_paper_summaries.result.keys())
@@ -221,7 +227,7 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
                 except:
                     pass
 
-            print(f"   📎 Unique Papers Referenced: {len(corpus_ids_in_quotes)}")
+            print(f"   Unique Papers Referenced: {len(corpus_ids_in_quotes)}")
 
             # Show years distribution of papers with quotes
             years_with_quotes = []
@@ -236,18 +242,18 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
                 from collections import Counter
 
                 year_dist = Counter(years_with_quotes).most_common(5)
-                print(f"   📅 Top Years in Extracted Quotes: {dict(year_dist)}")
+                print(f"   Top Years in Extracted Quotes: {dict(year_dist)}")
 
         # Show detailed results for top papers
         print(
-            f"\n📄 TOP EXTRACTED EVIDENCE (Top {min(max_results, len(per_paper_summaries.result))})"
+            f"\nTOP EXTRACTED EVIDENCE (Top {min(max_results, len(per_paper_summaries.result))})"
         )
 
         for i, (ref_string, quote) in enumerate(
             list(per_paper_summaries.result.items())[:max_results]
         ):
-            print(f"\n   📋 Evidence {i+1}")
-            print(f"   📖 Reference String: {ref_string}")
+            print(f"\n   Evidence {i+1}")
+            print(f"   Reference String: {ref_string}")
 
             # Parse reference string for details
             try:
@@ -257,19 +263,19 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
                 year = parts[2]
                 citations = parts[3].split(": ")[1][:-1]  # Remove trailing ']'
 
-                print(f"   📎 Corpus ID: {corpus_id}")
-                print(f"   👥 Authors: {author_info}")
-                print(f"   📊 Year: {year}")
-                print(f"   📈 Citations: {citations}")
+                print(f"   Corpus ID: {corpus_id}")
+                print(f"   Authors: {author_info}")
+                print(f"   Year: {year}")
+                print(f"   Citations: {citations}")
             except:
-                print(f"   ⚠️ Could not parse reference string details")
+                print("   Warning: Could not parse reference string details")
 
             # Show quote details
-            print(f"   📝 Quote Length: {len(quote)} characters")
-            print(f"   🔢 Quote Segments: {quote.count('...') + 1} parts")
+            print(f"   Quote Length: {len(quote)} characters")
+            print(f"   Quote Segments: {quote.count('...') + 1} parts")
 
             # Show quote content with formatting
-            print(f"   💬 EXTRACTED QUOTE:")
+            print("   EXTRACTED QUOTE:")
             quote_lines = quote.split("...")
             for j, segment in enumerate(quote_lines):
                 segment = segment.strip()
@@ -285,10 +291,10 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
                 ]
                 if not matching_paper.empty:
                     paper = matching_paper.iloc[0]
-                    print(f"   📰 Paper Title: {paper.get('title', 'N/A')}")
-                    print(f"   🏛️ Venue: {paper.get('venue', 'N/A')}")
+                    print(f"   Paper Title: {paper.get('title', 'N/A')}")
+                    print(f"   Venue: {paper.get('venue', 'N/A')}")
                     print(
-                        f"   📈 Relevance Score: {paper.get('relevance_judgement', 'N/A'):.4f}"
+                        f"   Relevance Score: {paper.get('relevance_judgement', 'N/A'):.4f}"
                     )
 
                     # Show source sections if available
@@ -298,49 +304,47 @@ def test_evidence_extraction_stage(query: Optional[str] = None, max_results: int
                         for sentence in sentences:
                             section = sentence.get("section_title", "unknown")
                             sections.add(section)
-                        print(f"   📑 Source Sections: {list(sections)}")
+                        print(f"   Source Sections: {list(sections)}")
 
             except Exception as e:
-                print(f"   ⚠️ Could not match with aggregated paper data: {e}")
+                print(f"   Warning: Could not match with aggregated paper data: {e}")
 
         # Show extraction methodology details
-        print(f"\n🔬 EXTRACTION METHODOLOGY DETAILS")
-        print(f"   📋 System Prompt Strategy: Extract exact text from paper content")
-        print(f"   🎯 Target: Direct answers to user query from paper snippets")
-        print(f"   ✂️ Quote Format: Use '...' to indicate gaps between selected text")
+        print("\nEXTRACTION METHODOLOGY DETAILS")
+        print("   System Prompt Strategy: Extract exact text from paper content")
+        print("   Target: Direct answers to user query from paper snippets")
+        print("   Quote Format: Use '...' to indicate gaps between selected text")
         print(
-            f"   📚 Citation Handling: Include all references contiguous with selected text"
+            "   Citation Handling: Include all references contiguous with selected text"
         )
         print(
-            f"   🚫 Filtering: Papers returning 'None' or short quotes (<10 chars) are excluded"
+            "   Filtering: Papers returning 'None' or short quotes (<10 chars) are excluded"
         )
-        print(f"   🔄 Processing: Parallel LLM calls for efficiency")
+        print("   Processing: Parallel LLM calls for efficiency")
 
         # Show cost breakdown
-        print(f"\n💰 COST ANALYSIS")
-        print(f"   💵 Total Cost: ${per_paper_summaries.tot_cost:.4f}")
-        print(f"   🔢 Token Usage:")
-        print(f"      Input Tokens: {per_paper_summaries.tokens.input_tokens:,}")
-        print(f"      Output Tokens: {per_paper_summaries.tokens.output_tokens:,}")
-        print(
-            f"      Total Tokens: {per_paper_summaries.tokens.input_tokens + per_paper_summaries.tokens.output_tokens:,}"
-        )
+        print("\nCOST ANALYSIS")
+        print(f"   Total Cost: ${per_paper_summaries.tot_cost:.4f}")
+        print("   Token Usage:")
+        print(f"      Input Tokens: {per_paper_summaries.tokens.input:,}")
+        print(f"      Output Tokens: {per_paper_summaries.tokens.output:,}")
+        print(f"      Total Tokens: {per_paper_summaries.tokens.total:,}")
 
         if len(per_paper_summaries.result) > 0:
             cost_per_paper = per_paper_summaries.tot_cost / len(
                 per_paper_summaries.result
             )
-            print(f"   📊 Average Cost per Paper with Quote: ${cost_per_paper:.4f}")
+            print(f"   Average Cost per Paper with Quote: ${cost_per_paper:.4f}")
 
-        print(f"\n✅ EVIDENCE EXTRACTION STAGE COMPLETE")
+        print("\nEVIDENCE EXTRACTION STAGE COMPLETE")
         print(
-            f"📊 Final Output: {len(per_paper_summaries.result)} papers with extracted evidence ready for clustering stage"
+            f"Final Output: {len(per_paper_summaries.result)} papers with extracted evidence ready for clustering stage"
         )
 
         return per_paper_summaries, aggregated_df
 
     except Exception as e:
-        print(f"❌ Error during evidence extraction: {e}")
+        print(f"Error during evidence extraction: {e}")
         import traceback
 
         traceback.print_exc()
