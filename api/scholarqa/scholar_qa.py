@@ -69,6 +69,7 @@ class ScholarQA:
         # Required for webapp since a new process is created for each request, for library task_id can be None initially and assigned for each request as below
         paper_finder: PaperFinder,
         task_id: str = None,
+        # TODO: make this configurable via run_configs possibly
         llm_model: str = CLAUDE_4_SONNET,
         multi_step_pipeline: MultiStepQAPipeline = None,
         state_mgr: AbsStateMgrClient = None,
