@@ -1,4 +1,4 @@
-"""Utility functions for managing virtual environments in test scripts."""
+"""Utility functions for managing virtual environments in run_pipeline_* scripts."""
 
 import os
 import shutil

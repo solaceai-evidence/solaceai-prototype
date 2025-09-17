@@ -15,41 +15,45 @@ Test scripts for each stage of the ScholarQA pipeline. Each script creates its o
 
 Each script automatically sets up a virtual environment with required dependencies and cleans up after execution.
 
-- `test_query_decomposition.py`
+- `run_pipeline_stage1.py`
 
   ```bash
-  python test_scripts/test_query_decomposition.py --query "your query"
+  python test_scripts/run_pipeline_stage1.py --query "your query"
   ```
 
-- `test_retrieval.py`
+- `run_pipeline_stage2.py`
+
+  Parameters:
+  - `query`: Research query to process
+  - `max-results`: Maximum number of papers to use (default: 2)
 
   ```bash
-  python test_scripts/test_retrieval.py --query "your query" [--max-results N]
+  python test_scripts/run_pipeline_stage2.py --query "your query" [--max-results N]
   ```
 
-- `test_reranking.py`
+- `run_pipeline_stage3.py`
 
   ```bash
-  python test_scripts/test_reranking.py --query "your query" [--max-results N]
+  python test_scripts/run_pipeline_stage3.py --query "your query" [--max-results N]
   ```
 
-- `test_evidence_extraction.py`
+- `run_pipeline_stage4.py`
 
   ```bash
-  python test_scripts/test_evidence_extraction.py --query "your query" [--max-results N]
+  python test_scripts/run_pipeline_stage4.py --query "your query" [--max-results N]
   ```
 
-- `test_section_generation.py`
+- `run_pipeline_stage5.py`
 
   ```bash
-  python test_scripts/test_section_generation.py --query "your query" [--max-results N]
+  python test_scripts/run_pipeline_stage5.py --query "your query" [--max-results N]
   ```
-
-- `test_table_generation.py`
+- `run_pipeline_stage6.py`
 
   ```bash
-  python test_scripts/test_table_generation.py --query "your query"
+  python test_scripts/run_pipeline_stage6.py --query "your query"
   ```
+
 
 ## Requirements
 

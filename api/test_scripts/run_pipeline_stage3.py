@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Exhaustive test for ScholarQA Pipeline Stage 3: Reranking and Aggregation
+Test for ScholarQA Pipeline Stage 3: Reranking and Aggregation
 Shows all data and metadata returned by the reranking stage for transparency
 """
 import os
