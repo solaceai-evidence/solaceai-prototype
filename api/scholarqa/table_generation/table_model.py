@@ -1,6 +1,8 @@
 # Data structure to represent a table
-from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
+
 
 class TableWidget(BaseModel):
     id: str = Field(description="Unique identifier for the table widget")
@@ -21,7 +23,7 @@ class TableWidget(BaseModel):
 
     def add_columns(self, new_columns: List["TableColumn"]) -> None:
         self.columns.extend(new_columns)
-    
+
     def to_dict(self) -> dict:
         table = {}
         table["id"] = self.id

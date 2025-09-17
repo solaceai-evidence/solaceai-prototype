@@ -1,49 +1,43 @@
 {
-    // Python formatting settings
-    "python.formatting.provider": "none",
-    "python.formatting.blackPath": "black",
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter",
-        "editor.formatOnSave": true,
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-        }
-    },
-    "black-formatter.args": [
-        "--line-length=88",
-        "--target-version=py311"
-    ],
-    
-    // isort settings (Python import sorting)
-    "isort.args": [
-        "--profile=black",
-        "--line-length=88"
-    ],
+  // Python formatting settings
+  "python.formatting.provider": "none",
+  "python.formatting.blackPath": "black",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "black-formatter.args": ["--line-length=88", "--target-version=py311"],
 
-    // Ruff settings
-    "ruff.enable": true,
-    "ruff.lineLength": 88,
+  // isort settings (Python import sorting)
+  "isort.args": ["--profile=black", "--line-length=88"],
 
-    // JavaScript/TypeScript/JSON/YAML formatting settings
-    "[javascript]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "editor.formatOnSave": true
-    },
-    "[typescript]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "editor.formatOnSave": true
-    },
-    "[json]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "editor.formatOnSave": true
-    },
-    "[yaml]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "editor.formatOnSave": true
-    },
-    "prettier.semi": true,
-    "prettier.singleQuote": true,
-    "prettier.printWidth": 100,
-    "prettier.tabWidth": 2,
-    "prettier.trailingComma": "es5"
+  // Ruff settings
+  "ruff.enable": true,
+  "ruff.lineLength": 88,
+
+  // JavaScript/TypeScript/JSON/YAML formatting settings
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "prettier.semi": true,
+  "prettier.singleQuote": true,
+  "prettier.printWidth": 100,
+  "prettier.tabWidth": 2,
+  "prettier.trailingComma": "es5"
 }

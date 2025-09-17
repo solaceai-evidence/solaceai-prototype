@@ -1,10 +1,10 @@
-from typing import Dict, Any, Optional, Tuple, Union, List
+import logging
+import os
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import modal
-import os
 
-from scholarqa.rag.reranker.reranker_base import AbstractReranker, RERANKER_MAPPING
-import logging
+from scholarqa.rag.reranker.reranker_base import RERANKER_MAPPING, AbstractReranker
 
 logger = logging.getLogger(__name__)
 

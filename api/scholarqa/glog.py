@@ -1,6 +1,6 @@
-from pythonjsonlogger import jsonlogger
-
 import logging
+
+from pythonjsonlogger import jsonlogger
 
 
 class Formatter(jsonlogger.JsonFormatter):
@@ -9,7 +9,7 @@ class Formatter(jsonlogger.JsonFormatter):
     which Google Cloud uses to differentiate message levels.
     """
 
-    def __init__(self, task_id_aware_formatter = None):
+    def __init__(self, task_id_aware_formatter=None):
         super().__init__()
         self.task_id_aware_formatter = task_id_aware_formatter
 
@@ -18,9 +18,12 @@ class Formatter(jsonlogger.JsonFormatter):
         log_record["severity"] = record.levelname
 
     def format(self, record: logging.LogRecord) -> str:
-        record.msg = {"message": self.task_id_aware_formatter.format(record)} if self.task_id_aware_formatter else record.msg
+        record.msg = (
+            {"message": self.task_id_aware_formatter.format(record)}
+            if self.task_id_aware_formatter
+            else record.msg
+        )
         return super().format(record)
-
 
 
 class Handler(logging.StreamHandler):

@@ -3,12 +3,12 @@
 Exhaustive test for ScholarQA Pipeline Stage 4: Evidence Extraction (Quote Selection)
 Shows all data and metadata returned by the evidence extraction stage for transparency
 """
+import logging
 import os
 import sys
 import warnings
-import logging
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 # Suppress noisy runtime warnings (functional logs controlled by --quiet)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -30,14 +30,14 @@ if not os.getenv("S2_API_KEY"):
     print("Error: Missing S2_API_KEY in environment variables")
     sys.exit(1)
 
-from scholarqa.preprocess.query_preprocessor import decompose_query
-from scholarqa.rag.retriever_base import FullTextRetriever
-from scholarqa.rag.retrieval import PaperFinder
-from scholarqa.utils import get_paper_metadata
 from scholarqa.llms.constants import CLAUDE_4_SONNET
-from scholarqa.scholar_qa import ScholarQA
 from scholarqa.llms.prompts import SYSTEM_PROMPT_QUOTE_PER_PAPER
+from scholarqa.preprocess.query_preprocessor import decompose_query
+from scholarqa.rag.retrieval import PaperFinder
+from scholarqa.rag.retriever_base import FullTextRetriever
+from scholarqa.scholar_qa import ScholarQA
 from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
+from scholarqa.utils import get_paper_metadata
 
 
 def test_evidence_extraction_stage(

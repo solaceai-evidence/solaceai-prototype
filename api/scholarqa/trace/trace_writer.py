@@ -1,8 +1,9 @@
-from abc import ABC, abstractmethod
-from google.cloud import storage
-import logging
 import json
+import logging
 import os
+from abc import ABC, abstractmethod
+
+from google.cloud import storage
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,8 @@ class LocalWriter(TraceWriter):
         try:
             with open(f"{self.local_dir}/{file_name}.json", "w") as f:
                 json.dump(trace_json.__dict__, f, indent=4)
-            logger.info(f"Pushed event trace to local path: {self.local_dir}/{file_name}.json")
+            logger.info(
+                f"Pushed event trace to local path: {self.local_dir}/{file_name}.json"
+            )
         except Exception as e:
             logger.info(f"Error pushing {file_name} to local directory: {e}")

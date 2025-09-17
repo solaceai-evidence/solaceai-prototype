@@ -1,24 +1,23 @@
-import os
-import json
-import requests
-import time
-import logging
-
-from typing import List, Dict
-from pydantic import BaseModel
 import itertools
+import json
+import logging
+import os
+import time
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
+from typing import Dict, List
 
-from scholarqa.table_generation.prompts import *
-from scholarqa.utils import get_paper_metadata
+import requests
+from pydantic import BaseModel
 from scholarqa.llms.constants import *
-from scholarqa.rag.retrieval import PaperFinder
 from scholarqa.llms.litellm_helper import (
     CostAwareLLMCaller,
     CostReportingArgs,
     llm_completion,
 )
+from scholarqa.rag.retrieval import PaperFinder
+from scholarqa.table_generation.prompts import *
+from scholarqa.utils import get_paper_metadata
 
 logger = logging.getLogger(__name__)
 

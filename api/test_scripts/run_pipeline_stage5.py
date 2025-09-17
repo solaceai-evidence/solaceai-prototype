@@ -5,27 +5,27 @@ Shows all parameters and decision points in section generation for transparency.
 Displays details of Stage 1 (query decomposition) and Stage 4 (evidence extraction),
 then provides comprehensive visibility into Stage 5 (section generation).
 """
+import contextlib
+import io
 import os
 import sys
 import warnings
-import contextlib
-import io
 from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-from scholarqa.postprocess.json_output_utils import get_json_summary
-from scholarqa.llms.prompts import (
-    SYSTEM_PROMPT_QUOTE_PER_PAPER,
-    SYSTEM_PROMPT_QUOTE_CLUSTER,
-    PROMPT_ASSEMBLE_SUMMARY,
-)
 from scholarqa.llms.constants import CLAUDE_4_SONNET, CostReportingArgs
-from scholarqa.scholar_qa import ScholarQA
-from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
+from scholarqa.llms.prompts import (
+    PROMPT_ASSEMBLE_SUMMARY,
+    SYSTEM_PROMPT_QUOTE_CLUSTER,
+    SYSTEM_PROMPT_QUOTE_PER_PAPER,
+)
+from scholarqa.postprocess.json_output_utils import get_json_summary
+from scholarqa.preprocess.query_preprocessor import decompose_query
 from scholarqa.rag.retrieval import PaperFinder
 from scholarqa.rag.retriever_base import FullTextRetriever
-from scholarqa.preprocess.query_preprocessor import decompose_query
+from scholarqa.scholar_qa import ScholarQA
+from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
 
 # Suppress noisy runtime warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -49,17 +49,17 @@ if not os.getenv("S2_API_KEY"):
     sys.exit("Error: Missing S2_API_KEY in environment variables")
 
 from scholarqa.llms.constants import CLAUDE_4_SONNET, CostReportingArgs
-from scholarqa.scholar_qa import ScholarQA
 from scholarqa.llms.prompts import (
-    SYSTEM_PROMPT_QUOTE_PER_PAPER,
-    SYSTEM_PROMPT_QUOTE_CLUSTER,
-    PROMPT_ASSEMBLE_SUMMARY,
     PROMPT_ASSEMBLE_NO_QUOTES_SUMMARY,
+    PROMPT_ASSEMBLE_SUMMARY,
+    SYSTEM_PROMPT_QUOTE_CLUSTER,
+    SYSTEM_PROMPT_QUOTE_PER_PAPER,
 )
-from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
+from scholarqa.preprocess.query_preprocessor import decompose_query
 from scholarqa.rag.retrieval import PaperFinder
 from scholarqa.rag.retriever_base import FullTextRetriever
-from scholarqa.preprocess.query_preprocessor import decompose_query
+from scholarqa.scholar_qa import ScholarQA
+from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
 
 
 def test_section_generation_stage(query: Optional[str] = None, max_results: int = 2):

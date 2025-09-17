@@ -87,10 +87,7 @@
           "title": "Edited By Uuid"
         }
       },
-      "required": [
-        "id",
-        "display_value"
-      ],
+      "required": ["id", "display_value"],
       "title": "TableCell",
       "type": "object"
     },
@@ -133,12 +130,7 @@
           "type": "array"
         }
       },
-      "required": [
-        "id",
-        "name",
-        "description",
-        "tools"
-      ],
+      "required": ["id", "name", "description", "tools"],
       "title": "TableColumn",
       "type": "object"
     },
@@ -175,10 +167,7 @@
           "title": "Paper Corpus Id"
         }
       },
-      "required": [
-        "id",
-        "paper_corpus_id"
-      ],
+      "required": ["id", "paper_corpus_id"],
       "title": "TableRow",
       "type": "object"
     }
@@ -227,9 +216,7 @@
       "title": "Title"
     }
   },
-  "required": [
-    "id"
-  ],
+  "required": ["id"],
   "title": "TableWidget",
   "type": "object"
 }

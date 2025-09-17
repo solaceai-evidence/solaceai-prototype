@@ -3,7 +3,7 @@ import os
 import re
 from threading import Thread
 from time import time
-from typing import List, Any, Dict, Tuple, Generator
+from typing import Any, Dict, Generator, List, Tuple
 from uuid import uuid4
 
 import pandas as pd
@@ -12,41 +12,37 @@ from langsmith import traceable
 
 from scholarqa.config.config_setup import LogsConfig
 from scholarqa.llms.constants import (
-    CostAwareLLMResult,
     CLAUDE_4_SONNET,
     CLAUDE_37_SONNET,
     GPT_4_1,
+    CostAwareLLMResult,
 )
-
-from scholarqa.llms.litellm_helper import (
-    CostAwareLLMCaller,
-    CostReportingArgs,
-)
+from scholarqa.llms.litellm_helper import CostAwareLLMCaller, CostReportingArgs
 from scholarqa.llms.prompts import (
-    SYSTEM_PROMPT_QUOTE_PER_PAPER,
-    SYSTEM_PROMPT_QUOTE_CLUSTER,
     PROMPT_ASSEMBLE_SUMMARY,
+    SYSTEM_PROMPT_QUOTE_CLUSTER,
+    SYSTEM_PROMPT_QUOTE_PER_PAPER,
 )
-from scholarqa.models import GeneratedSection, TaskResult, ToolRequest, CitationSrc
+from scholarqa.models import CitationSrc, GeneratedSection, TaskResult, ToolRequest
 from scholarqa.postprocess.json_output_utils import get_json_summary
 from scholarqa.preprocess.query_preprocessor import (
-    validate,
-    decompose_query,
     LLMProcessedQuery,
+    decompose_query,
+    validate,
 )
 from scholarqa.rag.multi_step_qa_pipeline import MultiStepQAPipeline
 from scholarqa.rag.retrieval import PaperFinder
 from scholarqa.state_mgmt.local_state_mgr import AbsStateMgrClient, LocalStateMgrClient
+from scholarqa.table_generation.table_generator import TableGenerator
+from scholarqa.table_generation.table_model import TableWidget
 from scholarqa.trace.event_traces import EventTrace
 from scholarqa.utils import (
-    get_paper_metadata,
-    NUMERIC_META_FIELDS,
     CATEGORICAL_META_FIELDS,
+    NUMERIC_META_FIELDS,
+    get_paper_metadata,
     get_ref_author_str,
     make_int,
 )
-from scholarqa.table_generation.table_model import TableWidget
-from scholarqa.table_generation.table_generator import TableGenerator
 
 logger = logging.getLogger(__name__)
 

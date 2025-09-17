@@ -22,21 +22,21 @@ import { App } from './App';
 import { ScrollToTopOnPageChange } from './components/shared';
 
 const VarnishedApp = () => {
-    const theme = getTheme(getRouterOverriddenTheme(HashLink));
+  const theme = getTheme(getRouterOverriddenTheme(HashLink));
 
-    return (
-        <BrowserRouter>
-            <ScrollToTopOnPageChange />
-            <VarnishApp theme={theme}>
-                <App />
-            </VarnishApp>
-        </BrowserRouter>
-    );
+  return (
+    <BrowserRouter>
+      <ScrollToTopOnPageChange />
+      <VarnishApp theme={theme}>
+        <App />
+      </VarnishApp>
+    </BrowserRouter>
+  );
 };
 
 const container = document.getElementById('root');
 if (!container) {
-    throw new Error("No element with an id of 'root' was found.");
+  throw new Error("No element with an id of 'root' was found.");
 }
 const root = createRoot(container);
 root.render(<VarnishedApp />);

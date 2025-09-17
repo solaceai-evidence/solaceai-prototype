@@ -3,42 +3,45 @@
 Standalone Reranker Service Server
 Designed to work alongside containerized main API
 """
-import logging
-import uvicorn
 import asyncio
+import gc
+import logging
+import os
 import time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from threading import Lock
+from typing import Any, Dict, List, Optional
+
+import psutil
+import torch
+import uvicorn
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
-import os
-import torch
-from threading import Lock
-import psutil
-import gc
 
 # keep both pydantic validator styles for backwards compatibility
 try:
-    from pydantic import field_validator # version 2.x
+    from pydantic import field_validator  # version 2.x
+
     PYDANTIC_V2 = True
 except ImportError:
-    from pydantic import validator # version 1.x
+    from pydantic import validator  # version 1.x
+
     PYDANTIC_V2 = False
 
 
-# Get host and port 
+# Get host and port
 host = os.getenv("RERANKER_HOST", "0.0.0.0")
 port = int(os.getenv("RERANKER_PORT", "10001"))
 log_level = os.getenv("LOG_LEVEL", "INFO")
 
-# Use existing reranker infrastructure 
+# Use existing reranker infrastructure
 from api.scholarqa.rag.reranker.reranker_base import RERANKER_MAPPING
 
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, log_level.upper()),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -52,12 +55,15 @@ _start_time = time.time()
 MAX_CONCURRENCY = int(os.getenv("MAX_CONCURRENCY", "1"))
 REQUEST_TIMEOUT_MS = int(os.getenv("RERANKER_TIMEOUT_MS", "120000"))
 QUEUE_TIMEOUT_MS = int(os.getenv("RERANKER_QUEUE_TIMEOUT_MS", "10000"))
-PRELOAD_MODEL = os.getenv("RERANKER_PRELOAD_MODEL", "mixedbread-ai/mxbai-rerank-large-v1")
+PRELOAD_MODEL = os.getenv(
+    "RERANKER_PRELOAD_MODEL", "mixedbread-ai/mxbai-rerank-large-v1"
+)
 PRELOAD_TYPE = os.getenv("RERANKER_PRELOAD_TYPE", "crossencoder")
 
 # Concurrency / shutdown controls
 _semaphore: asyncio.Semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
 _shutdown_event: asyncio.Event = asyncio.Event()
+
 
 class RerankRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=10000)
@@ -66,20 +72,24 @@ class RerankRequest(BaseModel):
     reranker_type: str = Field(default="crossencoder")
     batch_size: int = Field(default=32, ge=16, le=128)
     top_k: Optional[int] = Field(default=None, ge=1)
-    
-    if PYDANTIC_V2: 
-        @field_validator('passages')
+
+    if PYDANTIC_V2:
+
+        @field_validator("passages")
         @classmethod
         def validate_passages(cls, v):
             if any(len(passage.strip()) == 0 for passage in v):
                 raise ValueError("All passages must be non-empty")
             return v
+
     else:
-        @validator('passages')
+
+        @validator("passages")
         def validate_passages(cls, v):
             if any(len(passage.strip()) == 0 for passage in v):
                 raise ValueError("All passages must be non-empty")
             return v
+
 
 class RerankResponse(BaseModel):
     scores: List[float]
@@ -88,6 +98,7 @@ class RerankResponse(BaseModel):
     device: str
     processing_time_ms: float
     top_k_applied: Optional[int] = None
+
 
 class HealthResponse(BaseModel):
     status: str
@@ -100,6 +111,7 @@ class HealthResponse(BaseModel):
     memory_usage: Dict[str, float]
     cached_models: List[str]
 
+
 class ModelInfo(BaseModel):
     model_name: str
     reranker_type: str
@@ -107,13 +119,14 @@ class ModelInfo(BaseModel):
     memory_usage_mb: Optional[float] = None
     last_used: float
 
+
 def get_device_info() -> Dict[str, Any]:
     """Get device information"""
     info = {
         "cpu_count": psutil.cpu_count(),
         "cpu_percent": psutil.cpu_percent(),
     }
-    
+
     # Check for MPS (Apple Silicon)
     if torch.backends.mps.is_available():
         info["mps_available"] = True
@@ -124,8 +137,9 @@ def get_device_info() -> Dict[str, Any]:
         info["primary_device"] = "cuda"
     else:
         info["primary_device"] = "cpu"
-    
+
     return info
+
 
 def get_memory_usage() -> Dict[str, float]:
     """Get current memory usage"""
@@ -134,67 +148,76 @@ def get_memory_usage() -> Dict[str, float]:
         "total_gb": memory.total / (1024**3),
         "available_gb": memory.available / (1024**3),
         "used_gb": memory.used / (1024**3),
-        "percent": memory.percent
+        "percent": memory.percent,
     }
+
 
 def get_reranker(reranker_type: str, model_name_or_path: str, batch_size: int = 64):
     """Get or create reranker instance with thread-safe caching"""
     cache_key = f"{reranker_type}:{model_name_or_path}:{batch_size}"
-    
+
     with _cache_lock:
         if cache_key not in _reranker_cache:
             if reranker_type not in RERANKER_MAPPING:
                 raise ValueError(f"Unknown reranker type: {reranker_type}")
-            
-            logger.info(f"Initializing {reranker_type} with {model_name_or_path}, batch_size: {batch_size}")
+
+            logger.info(
+                f"Initializing {reranker_type} with {model_name_or_path}, batch_size: {batch_size}"
+            )
             reranker_class = RERANKER_MAPPING[reranker_type]
-            
+
             try:
                 # Try with batch_size parameter
-                reranker = reranker_class(model_name_or_path=model_name_or_path, batch_size=batch_size)
+                reranker = reranker_class(
+                    model_name_or_path=model_name_or_path, batch_size=batch_size
+                )
             except TypeError:
                 # Fallback for rerankers that don't support batch_size parameter
-                logger.warning(f"Reranker {reranker_type} doesn't support batch_size parameter, using default")
+                logger.warning(
+                    f"Reranker {reranker_type} doesn't support batch_size parameter, using default"
+                )
                 reranker = reranker_class(model_name_or_path=model_name_or_path)
-            
+
             # Force to MPS if available (for Apple Silicon)
-            if hasattr(reranker, 'model') and torch.backends.mps.is_available():
+            if hasattr(reranker, "model") and torch.backends.mps.is_available():
                 try:
-                    if hasattr(reranker.model, 'to'):
-                        reranker.model = reranker.model.to('mps')
-                        reranker.device = 'mps'
+                    if hasattr(reranker.model, "to"):
+                        reranker.model = reranker.model.to("mps")
+                        reranker.device = "mps"
                         logger.info(f"Moved model to MPS device")
                 except Exception as e:
                     logger.warning(f"Could not move model to MPS: {e}")
-            
+
             _reranker_cache[cache_key] = {
-                'model': reranker,
-                'last_used': time.time(),
-                'usage_count': 0
+                "model": reranker,
+                "last_used": time.time(),
+                "usage_count": 0,
             }
             logger.info(f"Cached reranker: {cache_key}")
-        
+
         # Update usage statistics
-        _reranker_cache[cache_key]['last_used'] = time.time()
-        _reranker_cache[cache_key]['usage_count'] += 1
-        
-    return _reranker_cache[cache_key]['model']
+        _reranker_cache[cache_key]["last_used"] = time.time()
+        _reranker_cache[cache_key]["usage_count"] += 1
+
+    return _reranker_cache[cache_key]["model"]
+
 
 async def cleanup_unused_models():
     """Background task to cleanup unused models"""
     current_time = time.time()
     cleanup_threshold = 30 * 60  # 30 minutes
-    
+
     with _cache_lock:
         keys_to_remove = []
         for key, cache_info in _reranker_cache.items():
-            if current_time - cache_info['last_used'] > cleanup_threshold:
+            if current_time - cache_info["last_used"] > cleanup_threshold:
                 keys_to_remove.append(key)
-        
+
         for key in keys_to_remove:
             logger.info(f"Cleaning up unused model: {key}")
             del _reranker_cache[key]
             gc.collect()  # Force garbage collection
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -233,6 +256,7 @@ async def lifespan(app: FastAPI):
             _reranker_cache.clear()
         gc.collect()
 
+
 async def periodic_cleanup():
     """Periodic cleanup task"""
     while True:
@@ -244,12 +268,13 @@ async def periodic_cleanup():
         except Exception as e:
             logger.error(f"Error in periodic cleanup: {e}")
 
+
 # FastAPI app with lifespan management
 app = FastAPI(
-    title="Solace-AI CrossEncoder Reranker Service", 
+    title="Solace-AI CrossEncoder Reranker Service",
     version="1.1.0",
     description="High-performance reranking service with GPU acceleration",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Add CORS middleware
@@ -261,16 +286,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Comprehensive health check endpoint"""
     global _request_count, _start_time
-    
+
     uptime = time.time() - _start_time
-    
+
     with _cache_lock:
         cached_models = list(_reranker_cache.keys())
-    
+
     return HealthResponse(
         status="healthy",
         service="reranker",
@@ -280,8 +306,9 @@ async def health_check():
         available_rerankers=list(RERANKER_MAPPING.keys()),
         device_info=get_device_info(),
         memory_usage=get_memory_usage(),
-        cached_models=cached_models
+        cached_models=cached_models,
     )
+
 
 @app.get("/ready", status_code=204)
 async def readiness():
@@ -289,6 +316,7 @@ async def readiness():
     if _shutdown_event.is_set():
         raise HTTPException(status_code=503, detail="Shutting down")
     return "OK"
+
 
 @app.post("/rerank", response_model=RerankResponse)
 async def rerank_documents(request: RerankRequest, background_tasks: BackgroundTasks):
@@ -305,10 +333,14 @@ async def rerank_documents(request: RerankRequest, background_tasks: BackgroundT
     try:
         await asyncio.wait_for(_semaphore.acquire(), timeout=QUEUE_TIMEOUT_MS / 1000)
     except asyncio.TimeoutError:
-        raise HTTPException(status_code=503, detail="Reranker overloaded, try again later")
+        raise HTTPException(
+            status_code=503, detail="Reranker overloaded, try again later"
+        )
 
     try:
-        reranker = get_reranker(request.reranker_type, request.model_name_or_path, request.batch_size)
+        reranker = get_reranker(
+            request.reranker_type, request.model_name_or_path, request.batch_size
+        )
 
         loop = asyncio.get_running_loop()
 
@@ -336,7 +368,9 @@ async def rerank_documents(request: RerankRequest, background_tasks: BackgroundT
             raise HTTPException(status_code=500, detail=str(e))
 
         # Create ranked indices (descending order)
-        ranked_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
+        ranked_indices = sorted(
+            range(len(scores)), key=lambda i: scores[i], reverse=True
+        )
 
         # Apply top_k if specified
         top_k_applied = None
@@ -348,9 +382,9 @@ async def rerank_documents(request: RerankRequest, background_tasks: BackgroundT
 
         # Get device info
         device = "unknown"
-        if hasattr(reranker, 'device'):
+        if hasattr(reranker, "device"):
             device = str(reranker.device)
-        elif hasattr(reranker, 'model') and hasattr(reranker.model, 'device'):
+        elif hasattr(reranker, "model") and hasattr(reranker.model, "device"):
             device = str(reranker.model.device)
 
         processing_time = (time.time() - start_time) * 1000  # Convert to ms
@@ -374,6 +408,7 @@ async def rerank_documents(request: RerankRequest, background_tasks: BackgroundT
         except Exception:
             pass
 
+
 @app.get("/models")
 async def list_cached_models():
     """List currently cached models with usage statistics"""
@@ -383,22 +418,25 @@ async def list_cached_models():
             parts = key.split(":")
             reranker_type, model_name = parts[0], parts[1]
             batch_size = parts[2] if len(parts) > 2 else "default"
-            
+
             device = "unknown"
-            if hasattr(cache_info['model'], 'device'):
-                device = str(cache_info['model'].device)
-            
-            models.append({
-                "cache_key": key,
-                "reranker_type": reranker_type,
-                "model_name": model_name,
-                "batch_size": batch_size,
-                "device": device,
-                "last_used": cache_info['last_used'],
-                "usage_count": cache_info['usage_count']
-            })
-    
+            if hasattr(cache_info["model"], "device"):
+                device = str(cache_info["model"].device)
+
+            models.append(
+                {
+                    "cache_key": key,
+                    "reranker_type": reranker_type,
+                    "model_name": model_name,
+                    "batch_size": batch_size,
+                    "device": device,
+                    "last_used": cache_info["last_used"],
+                    "usage_count": cache_info["usage_count"],
+                }
+            )
+
     return {"cached_models": models, "total_count": len(models)}
+
 
 @app.delete("/models/{cache_key}")
 async def remove_cached_model(cache_key: str):
@@ -412,11 +450,13 @@ async def remove_cached_model(cache_key: str):
         else:
             raise HTTPException(status_code=404, detail="Model not found in cache")
 
+
 @app.post("/models/cleanup")
 async def manual_cleanup():
     """Manually trigger cleanup of unused models"""
     await cleanup_unused_models()
     return {"message": "Cleanup completed"}
+
 
 @app.get("/")
 async def root():
@@ -425,12 +465,13 @@ async def root():
         "message": "Solace-AI Remote Reranker Service",
         "version": "1.1.0",
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
     }
+
 
 if __name__ == "__main__":
     logger.info(f"Starting Solace-AI Remote Reranker Service on {host}:{port}...")
-    
+
     uvicorn.run(
         app,
         host=host,

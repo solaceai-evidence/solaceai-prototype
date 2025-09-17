@@ -24,7 +24,7 @@ export type Idx = number;
 /**
  * The text of the section
  */
-export type SectionFeedbackType = "text" | "table";
+export type SectionFeedbackType = 'text' | 'table';
 /**
  * The feedback provided by the user
  */

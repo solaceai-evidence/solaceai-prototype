@@ -4,7 +4,7 @@ import sys
 import time
 from collections import namedtuple
 from logging import Formatter
-from typing import Any, Dict, Optional, Set, List
+from typing import Any, Dict, List, Optional, Set
 
 import requests
 from fastapi import HTTPException

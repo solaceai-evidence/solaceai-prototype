@@ -3,13 +3,13 @@ import logging
 import re
 from collections import namedtuple
 from multiprocessing import Queue
-from typing import Tuple, List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 from litellm import moderation
 from pydantic import BaseModel, Field
 
-from scholarqa.llms.litellm_helper import llm_completion_with_rate_limiting
 from scholarqa.llms.constants import CompletionResult
+from scholarqa.llms.litellm_helper import llm_completion_with_rate_limiting
 from scholarqa.llms.prompts import QUERY_DECOMPOSER_PROMPT
 
 logger = logging.getLogger(__name__)

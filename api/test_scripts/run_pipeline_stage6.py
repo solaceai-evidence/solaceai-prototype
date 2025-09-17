@@ -212,18 +212,18 @@ if __name__ == "__main__":
         from scholarqa.llms.constants import CLAUDE_4_SONNET, CostReportingArgs
         from scholarqa.llms.litellm_helper import CostAwareLLMCaller
         from scholarqa.models import GeneratedSection, TaskResult
-        from scholarqa.scholar_qa import ScholarQA
-        from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
         from scholarqa.rag.retrieval import PaperFinder
         from scholarqa.rag.retriever_base import FullTextRetriever
+        from scholarqa.scholar_qa import ScholarQA
+        from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
         from scholarqa.table_generation.column_suggestion import (
             generate_attribute_suggestions,
         )
         from scholarqa.table_generation.table_generator import TableGenerator
         from scholarqa.utils import (
-            get_paper_metadata,
-            NUMERIC_META_FIELDS,
             CATEGORICAL_META_FIELDS,
+            NUMERIC_META_FIELDS,
+            get_paper_metadata,
             get_ref_author_str,
             make_int,
         )

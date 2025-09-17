@@ -14,7 +14,7 @@ import { useLocation } from 'react-router-dom';
 import { useCookies } from 'react-cookie';
 import { COOKIES_SET_OPTIONS } from '../api/utils';
 
-export type historyType = { [key: string]: { query: string, taskId: string, timestamp: number } };
+export type historyType = { [key: string]: { query: string; taskId: string; timestamp: number } };
 
 export const useQueryHistory = () => {
   const [cookies, setCookie] = useCookies(['history_v2']);
@@ -23,35 +23,38 @@ export const useQueryHistory = () => {
     setInnerHistory({});
     setCookie('history_v2', {}, COOKIES_SET_OPTIONS);
   }
-  const setHistory = useCallback((history: historyType) => {
-    setInnerHistory(history);
-    setCookie('history_v2', history, COOKIES_SET_OPTIONS);
-  },[setCookie, setInnerHistory]);
-  return {history: innerHistory, setHistory};
-}
+  const setHistory = useCallback(
+    (history: historyType) => {
+      setInnerHistory(history);
+      setCookie('history_v2', history, COOKIES_SET_OPTIONS);
+    },
+    [setCookie, setInnerHistory]
+  );
+  return { history: innerHistory, setHistory };
+};
 
 export const Error = ({ message }: { message: string }) => (
-    <ErrorGrid>
-        <WarningOutlined />
-        {message}
-    </ErrorGrid>
+  <ErrorGrid>
+    <WarningOutlined />
+    {message}
+  </ErrorGrid>
 );
 
 const TwoColumnGrid = styled('div')`
-    display: grid;
-    grid-template-columns: auto max-content;
-    grid-gap: ${({ theme }) => theme.spacing(1)};
-    align-items: center;
+  display: grid;
+  grid-template-columns: auto max-content;
+  grid-gap: ${({ theme }) => theme.spacing(1)};
+  align-items: center;
 `;
 
 const ErrorGrid = styled(TwoColumnGrid)`
-    color: ${({ theme }) => theme.palette.error.main};
+  color: ${({ theme }) => theme.palette.error.main};
 `;
 
 export const ScrollToTopOnPageChange = () => {
-    const location = useLocation();
-    useEffect(() => {
-        window.scrollTo(0, 0);
-    }, [location]);
-    return null;
+  const location = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
+  return null;
 };

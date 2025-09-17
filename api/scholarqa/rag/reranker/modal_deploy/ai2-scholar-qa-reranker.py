@@ -1,9 +1,9 @@
 # ## Setup
 
 import os
-
 import time
 from typing import List
+
 import modal
 
 MODEL_NAME = "mixedbread-ai/mxbai-rerank-large-v1"
@@ -75,10 +75,11 @@ reranker_image = (
 )
 
 with reranker_image.imports():
-    import torch
-    from sentence_transformers import CrossEncoder
-    from custom_cross_encoder import PaddedCrossEncoder
     from typing import List
+
+    import torch
+    from custom_cross_encoder import PaddedCrossEncoder
+    from sentence_transformers import CrossEncoder
 
 app = modal.App(APP_NAME)
 

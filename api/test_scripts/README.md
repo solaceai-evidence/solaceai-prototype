@@ -48,12 +48,12 @@ Each script automatically sets up a virtual environment with required dependenci
   ```bash
   python test_scripts/run_pipeline_stage5.py --query "your query" [--max-results N]
   ```
+
 - `run_pipeline_stage6.py`
 
   ```bash
   python test_scripts/run_pipeline_stage6.py --query "your query"
   ```
-
 
 ## Requirements
 

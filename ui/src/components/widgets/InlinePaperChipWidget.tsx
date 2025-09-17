@@ -2,14 +2,9 @@ import ArticleIcon from '@mui/icons-material/Article';
 
 import { styled } from '@mui/material';
 
-
 import React from 'react';
 
-import {
-  InlineChipWidget,
-  TYPE,
-  SIZE,
-} from './InlineChipWidget';
+import { InlineChipWidget, TYPE, SIZE } from './InlineChipWidget';
 
 export interface InlinePaperChipWidgetProps {
   corpusId: number;
@@ -21,13 +16,11 @@ export interface InlinePaperChipWidgetProps {
   isDarkMode?: boolean;
   fullTitle: string;
   id: string;
-  size?: SIZE
+  size?: SIZE;
   children?: React.ReactNode;
 }
 
-export const InlinePaperChipWidget: React.FC<InlinePaperChipWidgetProps> = (
-  props,
-) => {
+export const InlinePaperChipWidget: React.FC<InlinePaperChipWidgetProps> = (props) => {
   const {
     paperTitle,
     isMultiLine,
@@ -68,5 +61,5 @@ const TitleChipContainer = styled('span')(
     display: isMultiLine || isShortName ? 'inline-block' : 'block',
     width: isMultiLine && !isFullWidth ? '260px' : 'unset',
     marginLeft: '5px',
-  }),
+  })
 );

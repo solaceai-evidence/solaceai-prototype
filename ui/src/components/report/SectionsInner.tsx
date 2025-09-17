@@ -1,4 +1,3 @@
-
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
@@ -12,9 +11,12 @@ import { PaperMetadataString } from '../PaperMetadataString';
 import { CitationSrc, GeneratedSection, Sections } from '../../@types/AsyncTaskState';
 import { Section } from './Section';
 
-
 export function hasTable(section: GeneratedSection): boolean {
-  return Boolean((section.table && (section.table?.rows?.length ?? 0) > 0 && (section.table?.columns?.length ?? 0) > 0))
+  return Boolean(
+    section.table &&
+      (section.table?.rows?.length ?? 0) > 0 &&
+      (section.table?.columns?.length ?? 0) > 0
+  );
 }
 
 export const baseMarkdownOptions: MarkdownToJSX.Options = {
@@ -27,54 +29,69 @@ export const baseMarkdownOptions: MarkdownToJSX.Options = {
       component: (props) => <Link {...props} />,
       props: {
         target: '_blank',
-        paragraph: true, variant: 'body1', style: {
-          color: 'rgba(10, 142, 98, 1)'
-        }
+        paragraph: true,
+        variant: 'body1',
+        style: {
+          color: 'rgba(10, 142, 98, 1)',
+        },
       },
     },
-  }
-}
+  },
+};
 
-export const SectionsInner = (props: { sections: Sections, taskId: string, cookieUserId: string }): React.ReactNode => {
+export const SectionsInner = (props: {
+  sections: Sections;
+  taskId: string;
+  cookieUserId: string;
+}): React.ReactNode => {
   const { sections, taskId, cookieUserId } = props;
   const [expanded, setExpanded] = React.useState<Set<number>>(new Set<number>([0]));
 
-  const handleOnChange = useCallback((idx: number, isExpanded: boolean) => {
-    if (isExpanded) {
-      setExpanded(old => {
-        return new Set<number>([...old, idx])
-      })
-    } else {
-      setExpanded(old => {
-        const newExpanded = new Set<number>([...old])
-        if (newExpanded.has(idx)) {
-          newExpanded.delete(idx)
-        }
-        return newExpanded
-      })
-    }
-  }, [setExpanded]);
+  const handleOnChange = useCallback(
+    (idx: number, isExpanded: boolean) => {
+      if (isExpanded) {
+        setExpanded((old) => {
+          return new Set<number>([...old, idx]);
+        });
+      } else {
+        setExpanded((old) => {
+          const newExpanded = new Set<number>([...old]);
+          if (newExpanded.has(idx)) {
+            newExpanded.delete(idx);
+          }
+          return newExpanded;
+        });
+      }
+    },
+    [setExpanded]
+  );
 
   const seen = new Set<number>();
-  const citations = sections.filter(section => section.text && section.citations).map(section => section.citations).flat().filter(citation => citation && citation?.paper && citation?.id);
+  const citations = sections
+    .filter((section) => section.text && section.citations)
+    .map((section) => section.citations)
+    .flat()
+    .filter((citation) => citation && citation?.paper && citation?.id);
 
-  const referencesMarkdown = citations.map((citation) => {
-    if (!citation || !citation?.id) {
-      return ''
-    }
-    if (seen.has(citation.paper.corpus_id)) {
-      return '';
-    }
-    seen.add(citation.paper.corpus_id);
-    return `1. ${PaperMetadataString({
-      authors: citation.paper.authors,
-      title: citation.paper.title,
-      venue: citation.paper.venue,
-      year: citation.paper.year,
-      corpusId: citation.paper.corpus_id,
-      citationCount: citation.paper.n_citations ?? 0
-    }).trim()}`
-  }).filter(m => m.length > 0);
+  const referencesMarkdown = citations
+    .map((citation) => {
+      if (!citation || !citation?.id) {
+        return '';
+      }
+      if (seen.has(citation.paper.corpus_id)) {
+        return '';
+      }
+      seen.add(citation.paper.corpus_id);
+      return `1. ${PaperMetadataString({
+        authors: citation.paper.authors,
+        title: citation.paper.title,
+        venue: citation.paper.venue,
+        year: citation.paper.year,
+        corpusId: citation.paper.corpus_id,
+        citationCount: citation.paper.n_citations ?? 0,
+      }).trim()}`;
+    })
+    .filter((m) => m.length > 0);
 
   return (
     <>
@@ -91,7 +108,7 @@ export const SectionsInner = (props: { sections: Sections, taskId: string, cooki
             }
           });
           return (
-            <AccordionContainer key={`${ section.title } -${ idx } `}>
+            <AccordionContainer key={`${section.title} -${idx} `}>
               <StyledAccordion
                 expanded={expanded.has(idx)}
                 onChange={(_event, isExpanded) => {
@@ -102,34 +119,45 @@ export const SectionsInner = (props: { sections: Sections, taskId: string, cooki
                     height: 'auto !important',
                     minHeight: '0 !important',
                     display: 'flex',
-                    alignItems: 'center'
-                  }
-                }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{
-                  padding: '0 16px',
-                  alignItems: 'flex-start',
-                  position: 'sticky',
-                  zIndex: 100,
-                  top: 0,
-                  background: '#f6f0e9',
-                  borderRadius: '8px',
-                  '& .MuiAccordionSummary-content': {
-                    margin: '16px 0'
+                    alignItems: 'center',
                   },
-                  '& .MuiAccordionSummary-expandIconWrapper svg': {
-                    margin: '12px 0'
-                  }
-                }}>
+                }}
+              >
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon />}
+                  sx={{
+                    padding: '0 16px',
+                    alignItems: 'flex-start',
+                    position: 'sticky',
+                    zIndex: 100,
+                    top: 0,
+                    background: '#f6f0e9',
+                    borderRadius: '8px',
+                    '& .MuiAccordionSummary-content': {
+                      margin: '16px 0',
+                    },
+                    '& .MuiAccordionSummary-expandIconWrapper svg': {
+                      margin: '12px 0',
+                    },
+                  }}
+                >
                   <Box>
-                    <Typography variant="h5" component="h5" color="primary" sx={{
-                      padding: '0', display: 'flex', alignItems: 'center'
-                    }}>
+                    <Typography
+                      variant="h5"
+                      component="h5"
+                      color="primary"
+                      sx={{
+                        padding: '0',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
                       {`${section.title}`}
                       {/* {hasTable(section) ? <ViewListOutlinedIcon fontSize='small' sx={{ marginLeft: '6px' }} /> : null} */}
                     </Typography>
                     {section.tldr && !expanded.has(idx) && (
                       <Typography variant="body1" component="p" sx={{ marginTop: '4px' }}>
-                        {`${ section.tldr }`}
+                        {`${section.tldr}`}
                       </Typography>
                     )}
                   </Box>
@@ -150,28 +178,37 @@ export const SectionsInner = (props: { sections: Sections, taskId: string, cooki
                 height: 'auto !important',
                 minHeight: '0 !important',
                 display: 'flex',
-                alignItems: 'center'
-              }
-            }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{
-              padding: '0 16px',
-              alignItems: 'flex-start',
-              position: 'sticky',
-              zIndex: 100,
-              top: 0,
-              borderRadius: '8px',
-              background: '#f6f0e9',
-              '& .MuiAccordionSummary-content': {
-                margin: '16px 0'
+                alignItems: 'center',
               },
-              '& .MuiAccordionSummary-expandIconWrapper svg': {
-                margin: '12px 0'
-              }
-            }}>
+            }}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              sx={{
+                padding: '0 16px',
+                alignItems: 'flex-start',
+                position: 'sticky',
+                zIndex: 100,
+                top: 0,
+                borderRadius: '8px',
+                background: '#f6f0e9',
+                '& .MuiAccordionSummary-content': {
+                  margin: '16px 0',
+                },
+                '& .MuiAccordionSummary-expandIconWrapper svg': {
+                  margin: '12px 0',
+                },
+              }}
+            >
               <Box>
-                <Typography variant="h5" component="h5" color="primary" sx={{
-                  padding: '0'
-                }}>
+                <Typography
+                  variant="h5"
+                  component="h5"
+                  color="primary"
+                  sx={{
+                    padding: '0',
+                  }}
+                >
                   References
                 </Typography>
                 {!expanded.has(sections.length) && (
@@ -182,14 +219,20 @@ export const SectionsInner = (props: { sections: Sections, taskId: string, cooki
               </Box>
             </AccordionSummary>
 
-            <AccordionDetails sx={{
-              padding: '0 16px 8px 16px'
-            }}>
-
-              <Box sx={{ background: 'white', borderRadius: '4px', padding: '16px 16px 1px 16px', marginBottom: '8px' }}>
-                <Markdown options={baseMarkdownOptions}>
-                  {referencesMarkdown.join('\n')}
-                </Markdown>
+            <AccordionDetails
+              sx={{
+                padding: '0 16px 8px 16px',
+              }}
+            >
+              <Box
+                sx={{
+                  background: 'white',
+                  borderRadius: '4px',
+                  padding: '16px 16px 1px 16px',
+                  marginBottom: '8px',
+                }}
+              >
+                <Markdown options={baseMarkdownOptions}>{referencesMarkdown.join('\n')}</Markdown>
               </Box>
             </AccordionDetails>
           </StyledAccordion>

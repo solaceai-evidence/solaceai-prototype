@@ -20,10 +20,7 @@
           "title": "Authorid"
         }
       },
-      "required": [
-        "name",
-        "authorId"
-      ],
+      "required": ["name", "authorId"],
       "title": "Author",
       "type": "object"
     },
@@ -61,10 +58,7 @@
           "type": "number"
         }
       },
-      "required": [
-        "paper",
-        "score"
-      ],
+      "required": ["paper", "score"],
       "title": "CitationSrc",
       "type": "object"
     },
@@ -153,13 +147,7 @@
           "title": "N Citations"
         }
       },
-      "required": [
-        "corpus_id",
-        "title",
-        "year",
-        "venue",
-        "authors"
-      ],
+      "required": ["corpus_id", "title", "year", "venue", "authors"],
       "title": "PaperDetails",
       "type": "object"
     },
@@ -175,9 +163,7 @@
           "type": "array"
         }
       },
-      "required": [
-        "sections"
-      ],
+      "required": ["sections"],
       "title": "TaskResult",
       "type": "object"
     }
@@ -220,13 +206,7 @@
       "type": "string"
     }
   },
-  "required": [
-    "estimated_time",
-    "task_status",
-    "task_result",
-    "extra_state",
-    "query"
-  ],
+  "required": ["estimated_time", "task_status", "task_result", "extra_state", "query"],
   "title": "AsyncTaskState",
   "type": "object"
 }

@@ -1,8 +1,8 @@
 from typing import Type
 
+from filelock import FileLock
 from nora_lib.tasks.models import AsyncTaskState, R
 from nora_lib.tasks.state import StateManager
-from filelock import FileLock
 
 
 class LockedStateManager(StateManager):

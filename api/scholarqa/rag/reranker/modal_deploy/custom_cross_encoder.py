@@ -9,8 +9,13 @@ class PaddedCrossEncoder(CrossEncoder):
             for idx, text in enumerate(example):
                 texts[idx].append(text.strip())
 
-        tokenized = self.tokenizer(*texts, padding="max_length", truncation='longest_first', return_tensors="pt",
-                                   max_length=self.max_length)
+        tokenized = self.tokenizer(
+            *texts,
+            padding="max_length",
+            truncation="longest_first",
+            return_tensors="pt",
+            max_length=self.max_length
+        )
 
         for name in tokenized:
             tokenized[name] = tokenized[name].to(self._target_device)

@@ -28,13 +28,12 @@ This repo houses the code for the [live demo](https://scholarqa.allen.ai/) and c
 ** NEW: HTTP Microservice Architecture** - We now provide a production-ready HTTP microservice architecture for scalable deployment with independent reranking services. See the [HTTP Microservice Architecture](#http-microservice-architecture-performance-optimized) section for details.
 
 - [solaceai-prototype](#solaceai-prototype)
-
   - [Overview](#overview)
     - [Retrieval:](#retrieval)
     - [Multi-step Generation:](#multi-step-generation)
   - [Setup](#common-setup)
     - [Environment Variables](#environment-variables)
-  - [Webapp](#web-app) 
+  - [Webapp](#web-app)
     - [Application Configuration](#application-configuration)
     - [docker-compose.yaml](#docker-composeyaml)
     - [Running the Webapp](#running-the-webapp)
@@ -406,7 +405,7 @@ api-4:
     - ./api:/app
     - ./api/logs:/app/logs
   expose:
-    - "8000"
+    - '8000'
 ```
 
 Then update the load balancer configuration in `proxy/load-balancer.conf` to include the new instance.
@@ -563,7 +562,6 @@ answer = list(scholar_qa.step_gen_iterative_summary(query, per_paper_summaries_e
 
   The components of the pipeline are individually extensible.
   We have the following abstract classes that can be extended to achieve desired customization for retrieval:
-
   - [AbstractRetriever](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/retriever_base.py#L10)
   - [AbstractReranker](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/reranker/reranker_base.py#L15)
   - [AbsPaperFinder](https://github.com/allenai/ai2-scholarqa-lib/blob/41eb8374a88b5edfda7306519a8d61f6c225493f/api/scholarqa/rag/retrieval.py#L14)

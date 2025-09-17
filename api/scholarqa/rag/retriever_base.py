@@ -1,8 +1,8 @@
-from abc import ABC, abstractmethod
-from typing import List, Any, Dict
 import logging
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List
 
-from scholarqa.utils import query_s2_api, METADATA_FIELDS, make_int, NUMERIC_META_FIELDS
+from scholarqa.utils import METADATA_FIELDS, NUMERIC_META_FIELDS, make_int, query_s2_api
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,9 @@ class AbstractRetriever(ABC):
         pass
 
     @abstractmethod
-    def retrieve_additional_papers(self, query: str, **filter_kwargs) -> List[Dict[str, Any]]:
+    def retrieve_additional_papers(
+        self, query: str, **filter_kwargs
+    ) -> List[Dict[str, Any]]:
         pass
 
 
@@ -61,26 +63,39 @@ class FullTextRetriever(AbstractRetriever):
                     res_map["char_start_offset"] = snippet["snippetOffset"]["start"]
                 else:
                     res_map["char_start_offset"] = 0
-                if "annotations" in snippet and "sentences" in snippet["annotations"] and snippet["annotations"][
-                    "sentences"]:
+                if (
+                    "annotations" in snippet
+                    and "sentences" in snippet["annotations"]
+                    and snippet["annotations"]["sentences"]
+                ):
                     res_map["sentence_offsets"] = snippet["annotations"]["sentences"]
                 else:
                     res_map["sentence_offsets"] = []
 
-                if snippet.get("annotations") and snippet["annotations"].get("refMentions"):
-                    res_map["ref_mentions"] = [rmen for rmen in
-                                               snippet["annotations"]["refMentions"] if rmen.get("matchedPaperCorpusId")
-                                               and rmen.get("start") and rmen.get("end")]
+                if snippet.get("annotations") and snippet["annotations"].get(
+                    "refMentions"
+                ):
+                    res_map["ref_mentions"] = [
+                        rmen
+                        for rmen in snippet["annotations"]["refMentions"]
+                        if rmen.get("matchedPaperCorpusId")
+                        and rmen.get("start")
+                        and rmen.get("end")
+                    ]
                 else:
                     res_map["ref_mentions"] = []
-                res_map["pdf_hash"] = snippet.get("extractionPdfHash","")
+                res_map["pdf_hash"] = snippet.get("extractionPdfHash", "")
                 res_map["stype"] = "vespa"
                 if res_map:
                     snippets_list.append(res_map)
         return snippets_list
 
-    def retrieve_additional_papers(self, query: str, **filter_kwargs) -> List[Dict[str, Any]]:
-        return self.keyword_search(query, **filter_kwargs) if self.n_keyword_srch else []
+    def retrieve_additional_papers(
+        self, query: str, **filter_kwargs
+    ) -> List[Dict[str, Any]]:
+        return (
+            self.keyword_search(query, **filter_kwargs) if self.n_keyword_srch else []
+        )
 
     def keyword_search(self, kquery: str, **filter_kwargs) -> List[Dict[str, Any]]:
         """Query the Semantic Scholar API keyword search end point and return top n papers.
@@ -90,7 +105,9 @@ class FullTextRetriever(AbstractRetriever):
 
         paper_data = []
         query_params = {fkey: fval for fkey, fval in filter_kwargs.items() if fval}
-        query_params.update({"query": kquery, "limit": self.n_keyword_srch, "fields": METADATA_FIELDS})
+        query_params.update(
+            {"query": kquery, "limit": self.n_keyword_srch, "fields": METADATA_FIELDS}
+        )
         res = query_s2_api(
             end_pt="paper/search",
             params=query_params,
@@ -98,9 +115,18 @@ class FullTextRetriever(AbstractRetriever):
         )
         if "data" in res:
             paper_data = res["data"]
-            paper_data = [pd for pd in paper_data if pd.get("corpusId") and pd.get("title") and pd.get("abstract")]
-            paper_data = [{k: make_int(v) if k in NUMERIC_META_FIELDS else pd.get(k) for k, v in pd.items()}
-                          for pd in paper_data]
+            paper_data = [
+                pd
+                for pd in paper_data
+                if pd.get("corpusId") and pd.get("title") and pd.get("abstract")
+            ]
+            paper_data = [
+                {
+                    k: make_int(v) if k in NUMERIC_META_FIELDS else pd.get(k)
+                    for k, v in pd.items()
+                }
+                for pd in paper_data
+            ]
             for pd in paper_data:
                 pd["corpus_id"] = str(pd["corpusId"])
                 pd["text"] = pd["abstract"]

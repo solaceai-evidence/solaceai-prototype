@@ -1,20 +1,20 @@
-import { CookieSetOptions } from "universal-cookie";
-import { AsyncTaskState, GeneratedSection } from "../@types/AsyncTaskState";
-import { Feedback, SectionFeedbackMetadata } from "../@types/Feedback";
+import { CookieSetOptions } from 'universal-cookie';
+import { AsyncTaskState, GeneratedSection } from '../@types/AsyncTaskState';
+import { Feedback, SectionFeedbackMetadata } from '../@types/Feedback';
 // import mockTableData2 from "./MockTableData";
 
-export const BACKEND_ENDPOINT = '/api/query_corpusqa'
+export const BACKEND_ENDPOINT = '/api/query_corpusqa';
 export const BACKEND_DEFAULT_INIT = {
   headers: {
-    'accept': 'application/json',
+    accept: 'application/json',
     'Content-Type': 'application/json',
   },
-  method: 'POST'
-}
+  method: 'POST',
+};
 export const FEEDBACK_ENDPOINTS = {
   feedback: '/api/feedback',
   reaction: '/api/reaction',
-}
+};
 export interface UpdateType {
   update: AsyncTaskState;
   httpStatus: number;
@@ -26,17 +26,17 @@ const formatSection = (section: GeneratedSection): GeneratedSection => {
     if (!citation.id) {
       return;
     }
-    const tag = `<Paper id="${citation.id}" corpusId="${citation.paper.corpus_id}" paperTitle="${citation.id}" fullTitle="${citation.paper.title}" />`
-    taggedText = taggedText?.replaceAll(citation.id, tag)
-    taggedText = taggedText?.replaceAll(" <Paper id=", "<Paper id=")
-  })
+    const tag = `<Paper id="${citation.id}" corpusId="${citation.paper.corpus_id}" paperTitle="${citation.id}" fullTitle="${citation.paper.title}" />`;
+    taggedText = taggedText?.replaceAll(citation.id, tag);
+    taggedText = taggedText?.replaceAll(' <Paper id=', '<Paper id=');
+  });
 
   return {
     ...section,
     text: taggedText,
     // table: Math.random() > 0.5 ? mockTableData2 : undefined
-  }
-}
+  };
+};
 
 export const formatStatus = (status: AsyncTaskState): AsyncTaskState => {
   if (!status.task_result) {
@@ -46,21 +46,21 @@ export const formatStatus = (status: AsyncTaskState): AsyncTaskState => {
     ...status,
     task_result: {
       ...status.task_result,
-      sections: status.task_result.sections.map(formatSection)
-    }
-  }
-}
+      sections: status.task_result.sections.map(formatSection),
+    },
+  };
+};
 
 export const updateStatus = async (taskId: string): Promise<UpdateType> => {
   const response = await fetch(BACKEND_ENDPOINT, {
     ...BACKEND_DEFAULT_INIT,
     body: JSON.stringify({
       task_id: taskId,
-    })
+    }),
   });
-  const output = await response.json() as unknown as AsyncTaskState;
+  const output = (await response.json()) as unknown as AsyncTaskState;
   return { update: formatStatus(output), httpStatus: response.status };
-}
+};
 
 export const sendReaction = async (
   taskId: string,
@@ -72,8 +72,8 @@ export const sendReaction = async (
     msg_id: taskId,
     user_id: userId,
     feedback: reaction,
-    section
-  }
+    section,
+  };
   if (!reaction) {
     delete feedback.feedback;
   }
@@ -82,46 +82,41 @@ export const sendReaction = async (
   }
   const response = await fetch(FEEDBACK_ENDPOINTS.reaction, {
     ...BACKEND_DEFAULT_INIT,
-    body: JSON.stringify(
-      feedback
-    )
+    body: JSON.stringify(feedback),
   });
-  if(!response.ok) {
-    throw new Error("Not implemented");
+  if (!response.ok) {
+    throw new Error('Not implemented');
   }
   const output = await response.json();
   return output;
-}
+};
 
-export const sendFeedback= async (
+export const sendFeedback = async (
   taskId: string,
   userId: string,
-  text: string, 
+  text: string,
   section: SectionFeedbackMetadata | null
 ): Promise<any> => {
   const feedback: Feedback = {
     msg_id: taskId,
     user_id: userId,
     feedback: text,
-    section
-  }
+    section,
+  };
   if (!section) {
     delete feedback.section;
   }
   const response = await fetch(FEEDBACK_ENDPOINTS.feedback, {
     ...BACKEND_DEFAULT_INIT,
-    body: JSON.stringify(
-      feedback
-    )
+    body: JSON.stringify(feedback),
   });
-  if(!response.ok) {
-    throw new Error("Not implemented");
+  if (!response.ok) {
+    throw new Error('Not implemented');
   }
 
   const output = await response.json();
   return output;
-
-}
+};
 
 export const createTask = async (query: string, optin: boolean, userId: string) => {
   const response = await fetch(BACKEND_ENDPOINT, {
@@ -130,14 +125,14 @@ export const createTask = async (query: string, optin: boolean, userId: string) 
       query,
       opt_in: optin,
       user_id: userId,
-      feedback_toggle: true
-    })
-  })
+      feedback_toggle: true,
+    }),
+  });
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
-  return await response.json() as unknown as AsyncTaskState;
-}
+  return (await response.json()) as unknown as AsyncTaskState;
+};
 
 export interface Evidence {
   // bboxs?: BoundingBox[];
@@ -151,8 +146,11 @@ export function getEvidence(evidenceId: number) {
       response.json() as unknown as {
         supports: Evidence[];
         corpusId: number;
-      },
+      }
   );
 }
 
-export const COOKIES_SET_OPTIONS: CookieSetOptions  = { path: '/', expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30 * 1200) }
+export const COOKIES_SET_OPTIONS: CookieSetOptions = {
+  path: '/',
+  expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30 * 1200),
+};

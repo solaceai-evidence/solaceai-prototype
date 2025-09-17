@@ -72,7 +72,6 @@ The hybrid architecture combines containerized API services with a native rerank
    ```
 
    **Configuration Notes:**
-
    - The default settings are optimized for laptop development with Claude 4 Sonnet
    - Rate limits are conservative to ensure stable performance on local hardware
    - Timeout values accommodate complex queries including table generation

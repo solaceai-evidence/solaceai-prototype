@@ -1,9 +1,11 @@
-import re
-from typing import Optional, Dict, Any, List
-from scholarqa.utils import make_int
-from langsmith import traceable
 import logging
+import re
+from typing import Any, Dict, List, Optional
+
 from anyascii import anyascii
+from langsmith import traceable
+
+from scholarqa.utils import make_int
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +17,9 @@ def find_tldr_super_token(text: str) -> Optional[str]:
     if tldr_token:
         tldr_token = tldr_token.group(0)
         # Now find the word or token that the tldr_token is a subtoken in. This includes punctuation and markdown symbols
-        tldr_super_token_pattern = re.compile(rf"[^\s]*{re.escape(tldr_token)}[^\s]*", re.IGNORECASE)
+        tldr_super_token_pattern = re.compile(
+            rf"[^\s]*{re.escape(tldr_token)}[^\s]*", re.IGNORECASE
+        )
         tldr_super_token = re.search(tldr_super_token_pattern, text)
 
         if tldr_super_token:
@@ -40,12 +44,12 @@ def get_section_text(gen_text: str) -> Dict[str, Any]:
             title = parts[0].strip()
             title = re.sub(r"\s*\(list\)", "", title)
             title = re.sub(r"\s*\(synthesis\)", "", title)
-            curr_section["title"] = title.strip('#').strip()
+            curr_section["title"] = title.strip("#").strip()
             if tldr_token is not None:
                 text_parts = parts[1].strip().split("\n", 1)
                 tldr = text_parts[0]  # Assume TLDR is a single line
                 text = text_parts[1]
-                curr_section["tldr"] = tldr.strip('#').strip()
+                curr_section["tldr"] = tldr.strip("#").strip()
             else:
                 text = parts[1].strip()
             curr_section["text"] = text
@@ -78,14 +82,16 @@ def resolve_ref_id(ref_str, ref_corpus_id, citation_ids):
     return ref_str_id
 
 
-def pop_ref_data(ref_str_id, ref_corpus_id, fixed_quote, curr_paper_metadata) -> Dict[str, Any]:
+def pop_ref_data(
+    ref_str_id, ref_corpus_id, fixed_quote, curr_paper_metadata
+) -> Dict[str, Any]:
     curr_ref = dict()
     curr_ref["id"] = ref_str_id
     curr_ref["snippets"] = [fq.strip() for fq in fixed_quote.split("...")]
     curr_ref["paper"] = dict()
     curr_ref["paper"]["corpus_id"] = make_int(ref_corpus_id)
     if curr_paper_metadata:
-        #Commenting out the open access check as we switch to s2 api for the open access logic
+        # Commenting out the open access check as we switch to s2 api for the open access logic
 
         # if not (curr_paper_metadata.get("isOpenAccess") and curr_paper_metadata.get("openAccessPdf")):
         #     if curr_paper_metadata.get("abstract"):
@@ -104,16 +110,28 @@ def pop_ref_data(ref_str_id, ref_corpus_id, fixed_quote, curr_paper_metadata) ->
 
 
 @traceable(name="Postprocessing: Converted LLM generated output to json summary")
-def get_json_summary(llm_model: str, summary_sections: List[str], summary_quotes: Dict[str, Any],
-                     paper_metadata: Dict[str, Any], citation_ids: Dict[str, Dict[int, str]],
-                     inline_tags=False) -> List[Dict[str, Any]]:
-    text_ref_format = '<Paper corpusId="{corpus_id}" paperTitle="{ref_str}" isShortName></Paper>'
+def get_json_summary(
+    llm_model: str,
+    summary_sections: List[str],
+    summary_quotes: Dict[str, Any],
+    paper_metadata: Dict[str, Any],
+    citation_ids: Dict[str, Dict[int, str]],
+    inline_tags=False,
+) -> List[Dict[str, Any]]:
+    text_ref_format = (
+        '<Paper corpusId="{corpus_id}" paperTitle="{ref_str}" isShortName></Paper>'
+    )
     sections = []
     llm_name_parts = llm_model.split("/", maxsplit=1)
-    llm_ref_format = f'<Model name="{llm_name_parts[0].capitalize()}" version="{llm_name_parts[1]}">'
+    llm_ref_format = (
+        f'<Model name="{llm_name_parts[0].capitalize()}" version="{llm_name_parts[1]}">'
+    )
     summary_quotes = {anyascii(k): v for k, v in summary_quotes.items()}
-    inline_citation_quotes = {anyascii(k): v for incite in summary_quotes.values() for k, v in
-                              incite["inline_citations"].items()}
+    inline_citation_quotes = {
+        anyascii(k): v
+        for incite in summary_quotes.values()
+        for k, v in incite["inline_citations"].items()
+    }
     for sec in summary_sections:
         curr_section = get_section_text(sec)
         text = curr_section["text"]
@@ -132,29 +150,47 @@ def get_json_summary(llm_model: str, summary_sections: List[str], summary_quotes
                 ref = anyascii(ref)
                 if ref in summary_quotes or ref in inline_citation_quotes:
                     ref_parts = ref[1:-1].split(" | ")
-                    ref_corpus_id, ref_str = ref_parts[0], f"({ref_parts[1]}, {make_int(ref_parts[2])})".replace(
-                        "NULL, ", "")
+                    ref_corpus_id, ref_str = ref_parts[
+                        0
+                    ], f"({ref_parts[1]}, {make_int(ref_parts[2])})".replace(
+                        "NULL, ", ""
+                    )
                     if ref_corpus_id not in refs_done:
                         if ref in summary_quotes:
                             fixed_quote = summary_quotes[ref]["quote"]
                         else:
                             # abstract for inline citation
                             fixed_quote = inline_citation_quotes[ref]
-                        fixed_quote = fixed_quote.strip().replace("“", '"').replace("”", '"')
+                        fixed_quote = (
+                            fixed_quote.strip().replace("“", '"').replace("”", '"')
+                        )
                         if fixed_quote.startswith("..."):
                             fixed_quote = fixed_quote[3:]
                         if fixed_quote.endswith("..."):
                             fixed_quote = fixed_quote[:-3]
                         # dict to save reference strings as there is a possibility of having multiple papers in the same year from the same author
                         refs_done.add(ref_corpus_id)
-                        ref_str_id = resolve_ref_id(ref_str, ref_corpus_id, citation_ids)
-                        ref_data = pop_ref_data(ref_str_id, ref_corpus_id, fixed_quote,
-                                                paper_metadata.get(ref_corpus_id))
+                        ref_str_id = resolve_ref_id(
+                            ref_str, ref_corpus_id, citation_ids
+                        )
+                        ref_data = pop_ref_data(
+                            ref_str_id,
+                            ref_corpus_id,
+                            fixed_quote,
+                            paper_metadata.get(ref_corpus_id),
+                        )
                         if inline_tags:
-                            curr_section["text"] = curr_section["text"].replace(ref, text_ref_format.format(
-                                corpus_id=ref_data["paper"]["corpus_id"], ref_str=ref_data["id"]))
+                            curr_section["text"] = curr_section["text"].replace(
+                                ref,
+                                text_ref_format.format(
+                                    corpus_id=ref_data["paper"]["corpus_id"],
+                                    ref_str=ref_data["id"],
+                                ),
+                            )
                         else:
-                            curr_section["text"] = curr_section["text"].replace(ref, ref_data["id"])
+                            curr_section["text"] = curr_section["text"].replace(
+                                ref, ref_data["id"]
+                            )
                         refs_list.append(ref_data)
                 else:
                     curr_section["text"] = curr_section["text"].replace(ref, "")
@@ -166,7 +202,10 @@ def get_json_summary(llm_model: str, summary_sections: List[str], summary_quotes
             if curr_section["tldr"]:
                 if refs_list:
                     curr_section["tldr"] += (
-                        f" ({len(refs_list)} sources)" if len(refs_list) > 1 else " (1 source)")
+                        f" ({len(refs_list)} sources)"
+                        if len(refs_list) > 1
+                        else " (1 source)"
+                    )
                 else:
                     curr_section["tldr"] += " (LLM Memory)"
             sections.append(curr_section)

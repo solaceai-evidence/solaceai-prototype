@@ -1,17 +1,18 @@
-import {
-  Box,
-  FormControl,
-  IconButton,
-  styled,
-  TextareaAutosize,
-} from '@mui/material';
-import React, { HtmlHTMLAttributes, KeyboardEvent, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { Box, FormControl, IconButton, styled, TextareaAutosize } from '@mui/material';
+import React, {
+  HtmlHTMLAttributes,
+  KeyboardEvent,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import PendingIcon from '@mui/icons-material/Pending';
 import SendIcon from '@mui/icons-material/Send';
 import { OptOut } from './OptOut';
 import { useCookies } from 'react-cookie';
 import { COOKIES_SET_OPTIONS } from '../../api/utils';
-
 
 type MessageBarProps = {
   onSend: (text: string, userId: string, optin: boolean) => Promise<any> | void;
@@ -28,7 +29,7 @@ const MessageBar = ({
   onSend,
   isPending = false,
   placeholder = 'Enter a literature review question...',
-  cookieUserId
+  cookieUserId,
 }: MessageBarProps) => {
   const formRef = useRef<HTMLFormElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -41,35 +42,38 @@ const MessageBar = ({
   if (!cookiesConsent.consented) {
     setCookieConsent('consented', { status: 'unset' }, COOKIES_SET_OPTIONS);
   }
-  const cookieConsent: ConsentType = cookiesConsent?.consented?.status ?? 'unset'
+  const cookieConsent: ConsentType = cookiesConsent?.consented?.status ?? 'unset';
   const [consent, setConsent] = useState(cookieConsent);
   useEffect(() => {
     setCookieConsent('consented', { status: consent }, COOKIES_SET_OPTIONS);
-  }, [consent])
+  }, [consent]);
 
   const handleOnSend = useCallback(
-      (event?: React.FormEvent<HTMLFormElement> | React.KeyboardEvent<HTMLTextAreaElement>) => {
+    (event?: React.FormEvent<HTMLFormElement> | React.KeyboardEvent<HTMLTextAreaElement>) => {
       event?.preventDefault();
-      console.log('handle on sent')
+      console.log('handle on sent');
       if (isEmpty) {
         return;
       }
-      if (consent  === 'unset') {
+      if (consent === 'unset') {
         console.log('Opening consent modal???');
         setConsentModalOpen(true);
       } else {
         onSend(text, cookieUserId, consent === 'yes');
-        setText('')
+        setText('');
       }
     },
-    [onSend, setText, text, isEmpty, consent, setConsentModalOpen],
+    [onSend, setText, text, isEmpty, consent, setConsentModalOpen]
   );
 
-  const handleConsentModalClose = useCallback((value: ConsentType) => {
-    console.log('Set consent value:', value);
-    setConsent(value);
-    setConsentModalOpen(false);
-  }, [setConsentModalOpen])
+  const handleConsentModalClose = useCallback(
+    (value: ConsentType) => {
+      console.log('Set consent value:', value);
+      setConsent(value);
+      setConsentModalOpen(false);
+    },
+    [setConsentModalOpen]
+  );
 
   const handleEnterKeyPress = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -77,17 +81,17 @@ const MessageBar = ({
       // if shift + enter is pressed, a new line should be created
       if (event.key === ENTER_KEY && !event.shiftKey && formRef.current) {
         event.preventDefault();
-        handleOnSend(event as React.KeyboardEvent<HTMLTextAreaElement>)
+        handleOnSend(event as React.KeyboardEvent<HTMLTextAreaElement>);
       }
     },
-    [formRef, handleOnSend],
+    [formRef, handleOnSend]
   );
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
       setText(event.target.value);
     },
-    [setText],
+    [setText]
   );
 
   return (

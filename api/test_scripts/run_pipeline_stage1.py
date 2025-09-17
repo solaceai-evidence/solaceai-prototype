@@ -2,10 +2,10 @@
 """
 Simple test to demonstrate query decomposition step of the pipeline
 """
+import logging
 import os
 import sys
 from pathlib import Path
-import logging
 from typing import Optional
 
 from venv_utils import managed_venv
@@ -26,8 +26,8 @@ if not os.getenv("S2_API_KEY"):
     logger.error("Missing S2_API_KEY in environment variables")
     sys.exit(1)
 
-from scholarqa.preprocess.query_preprocessor import decompose_query
 from scholarqa.llms.constants import CLAUDE_4_SONNET
+from scholarqa.preprocess.query_preprocessor import decompose_query
 
 
 def test_pipeline_stage_1(query: Optional[str] = None):
@@ -87,8 +87,8 @@ if __name__ == "__main__":
     # Use managed virtual environment
     with managed_venv(__file__, ["requirements.txt"]):
         from dotenv import load_dotenv
-        from scholarqa.preprocess.query_preprocessor import decompose_query
         from scholarqa.llms.constants import CLAUDE_4_SONNET
+        from scholarqa.preprocess.query_preprocessor import decompose_query
 
         # Load environment variables from .env file
         load_dotenv(Path(project_root) / ".env")

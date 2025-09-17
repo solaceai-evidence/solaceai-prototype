@@ -18,18 +18,12 @@
           "description": "The text of the section"
         }
       },
-      "required": [
-        "name",
-        "idx"
-      ],
+      "required": ["name", "idx"],
       "title": "SectionFeedbackMetadata",
       "type": "object"
     },
     "SectionFeedbackType": {
-      "enum": [
-        "text",
-        "table"
-      ],
+      "enum": ["text", "table"],
       "title": "SectionFeedbackType",
       "type": "string"
     }
@@ -70,11 +64,7 @@
       "title": "Feedback"
     }
   },
-  "required": [
-    "msg_id",
-    "user_id",
-    "feedback"
-  ],
+  "required": ["msg_id", "user_id", "feedback"],
   "title": "Feedback",
   "type": "object"
 }

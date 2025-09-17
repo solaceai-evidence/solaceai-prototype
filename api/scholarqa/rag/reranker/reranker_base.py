@@ -1,7 +1,6 @@
-from abc import ABC, abstractmethod
-from typing import List, Dict, Any
-
 import logging
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -21,18 +20,25 @@ class AbstractReranker(ABC):
 class SentenceTransformerEncoder:
     def __init__(self, model_name_or_path: str):
         from sentence_transformers import SentenceTransformer
+
         if torch.cuda.is_available():
             device = "cuda"
-        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
             device = "mps"
         else:
             device = "cpu"
-        logger.info(f"Initializing SentenceTransformerEncoder model: {model_name_or_path} on device: {device}")
-        self.model = SentenceTransformer(model_name_or_path, revision=None, device=device)
+        logger.info(
+            f"Initializing SentenceTransformerEncoder model: {model_name_or_path} on device: {device}"
+        )
+        self.model = SentenceTransformer(
+            model_name_or_path, revision=None, device=device
+        )
         self.device = device
 
     def encode(self, sentences: List[str]):
-        return self.model.encode(sentences, show_progress_bar=True, convert_to_tensor=True)
+        return self.model.encode(
+            sentences, show_progress_bar=True, convert_to_tensor=True
+        )
 
     def get_tokenizer(self):
         return self.model.tokenizer
@@ -49,7 +55,11 @@ class BiEncoderScores(AbstractReranker):
     def get_scores(self, query: str, passages: List[str]) -> List[float]:
         query_embedding = self.model.encode([query])[0]
         passage_embeddings = self.model.encode(passages)
-        scores = F.cosine_similarity(query_embedding.unsqueeze(0), passage_embeddings).cpu().numpy()
+        scores = (
+            F.cosine_similarity(query_embedding.unsqueeze(0), passage_embeddings)
+            .cpu()
+            .numpy()
+        )
         return [float(s) for s in scores]
 
 
@@ -58,13 +68,16 @@ class BiEncoderScores(AbstractReranker):
 class CrossEncoderScores(AbstractReranker):
     def __init__(self, model_name_or_path: str, batch_size: int = 128):
         from sentence_transformers import CrossEncoder
+
         if torch.cuda.is_available():
             device = "cuda"
-        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
             device = "mps"
         else:
             device = "cpu"
-        logger.info(f"Initializing CrossEncoder model: {model_name_or_path} on device: {device}")
+        logger.info(
+            f"Initializing CrossEncoder model: {model_name_or_path} on device: {device}"
+        )
         self.model = CrossEncoder(
             model_name_or_path,
             automodel_args={"torch_dtype": "float16"} if device != "mps" else {},
@@ -80,8 +93,12 @@ class CrossEncoderScores(AbstractReranker):
 
     def get_scores(self, query: str, passages: List[str]) -> List[float]:
         sentence_pairs = [[query, passage] for passage in passages]
-        scores = self.model.predict(sentence_pairs, convert_to_tensor=True, show_progress_bar=True,
-                                    batch_size=self.batch_size).tolist()
+        scores = self.model.predict(
+            sentence_pairs,
+            convert_to_tensor=True,
+            show_progress_bar=True,
+            batch_size=self.batch_size,
+        ).tolist()
         return [float(s) for s in scores]
 
 
@@ -89,25 +106,33 @@ class CrossEncoderScores(AbstractReranker):
 class FlagEmbeddingScores:
     def __init__(self, model_name_or_path: str):
         from FlagEmbedding import FlagReranker
+
         self.model = FlagReranker(model_name_or_path, use_fp16=True)
 
     def get_tokenizer(self):
         return self.model.tokenizer
 
-    def get_scores(self, query: str, passages: List[str], separator: str) -> List[float]:
-        sentence_pairs = [(query, passage.replace(separator, self.get_tokenizer().eos_token)) for passage in passages]
+    def get_scores(
+        self, query: str, passages: List[str], separator: str
+    ) -> List[float]:
+        sentence_pairs = [
+            (query, passage.replace(separator, self.get_tokenizer().eos_token))
+            for passage in passages
+        ]
         scores = self.model.compute_score(sentence_pairs, normalize=True, batch_size=32)
         return [float(s) for s in scores]
+
 
 RERANKER_MAPPING = {
     "crossencoder": CrossEncoderScores,
     "biencoder": BiEncoderScores,
-    "flag_embedding": FlagEmbeddingScores
+    "flag_embedding": FlagEmbeddingScores,
 }
 
 # Import and add remote reranker - conditional import to avoid dependency issues in Docker
 try:
     from .remote_reranker import RemoteRerankerClient
+
     RERANKER_MAPPING["remote"] = RemoteRerankerClient
 except ImportError as e:
     logger.warning(f"Remote reranker client not available: {e}")

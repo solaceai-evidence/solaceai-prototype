@@ -3,10 +3,10 @@
 Exhaustive test for ScholarQA Pipeline Stage 2: Retrieval Process
 Shows every argument, parameter, and result from the retrieval stage before reranking
 """
+import logging
 import os
 import sys
 import warnings
-import logging
 from pathlib import Path
 from typing import Optional
 
@@ -33,11 +33,11 @@ if not os.getenv("S2_API_KEY"):
     print("Error: Missing S2_API_KEY in environment variables")
     sys.exit(1)
 
-from scholarqa.preprocess.query_preprocessor import decompose_query
-from scholarqa.rag.retriever_base import FullTextRetriever
-from scholarqa.rag.retrieval import PaperFinder
-from scholarqa.utils import get_paper_metadata
 from scholarqa.llms.constants import CLAUDE_4_SONNET
+from scholarqa.preprocess.query_preprocessor import decompose_query
+from scholarqa.rag.retrieval import PaperFinder
+from scholarqa.rag.retriever_base import FullTextRetriever
+from scholarqa.utils import get_paper_metadata
 
 
 def test_retrieval_stage(query: Optional[str] = None, max_results: int = 3):

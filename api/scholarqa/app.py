@@ -4,33 +4,31 @@ import os
 import threading
 from json import JSONDecodeError
 from time import time
-from typing import Union
+from typing import Type, TypeVar, Union
 from uuid import uuid4
 
 # Add these imports for rate limiting
 from dotenv import load_dotenv
-from scholarqa.llms.rate_limiter import RateLimiter
-from scholarqa.llms import litellm_helper
-
 from fastapi import FastAPI, HTTPException, Request
 from nora_lib.tasks.models import TASK_STATUSES, AsyncTaskState
 from nora_lib.tasks.state import NoSuchTaskException
 
 from scholarqa.config.config_setup import read_json_config
+from scholarqa.llms import litellm_helper
+from scholarqa.llms.rate_limiter import RateLimiter
 from scholarqa.models import (
     AsyncToolResponse,
     TaskResult,
+    TaskStep,
     ToolRequest,
     ToolResponse,
-    TaskStep,
 )
 from scholarqa.rag.reranker.modal_engine import ModalReranker
 from scholarqa.rag.reranker.reranker_base import RERANKER_MAPPING
-from scholarqa.rag.retrieval import PaperFinderWithReranker, PaperFinder
+from scholarqa.rag.retrieval import PaperFinder, PaperFinderWithReranker
 from scholarqa.rag.retriever_base import FullTextRetriever
 from scholarqa.scholar_qa import ScholarQA
 from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
-from typing import Type, TypeVar
 
 # Load environment variables from .env file
 load_dotenv()

@@ -18,7 +18,7 @@ export interface EvidenceCardProps {
   children?: React.ReactNode;
   fullTitle: string;
   id: string;
-  paperDetails?: PaperDetails
+  paperDetails?: PaperDetails;
   onOpenOrClose?: (isOpen: boolean) => void;
 }
 
@@ -27,9 +27,7 @@ export interface EvidenceCardProps {
 
 export const EvidenceCard = (props: EvidenceCardProps): React.ReactNode => {
   const { children, paperDetails, onOpenOrClose, ...rest } = props;
-  const [anchorEl, setAnchorEl] = React.useState<HTMLAnchorElement | null>(
-    null,
-  );
+  const [anchorEl, setAnchorEl] = React.useState<HTMLAnchorElement | null>(null);
 
   const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (event.type !== 'contextmenu') {
@@ -71,19 +69,40 @@ export const EvidenceCard = (props: EvidenceCardProps): React.ReactNode => {
           horizontal: 'left',
         }}
       >
-        <Box sx={{ maxWidth: '600px', maxHeight: '300px', overflow: 'auto', padding: { xs: '12px 16px 8px 16px', md: '16px 24px 8px 24px' }, backgroundColor: '#08232b', color: '#FAF2E9' }}>
+        <Box
+          sx={{
+            maxWidth: '600px',
+            maxHeight: '300px',
+            overflow: 'auto',
+            padding: { xs: '12px 16px 8px 16px', md: '16px 24px 8px 24px' },
+            backgroundColor: '#08232b',
+            color: '#FAF2E9',
+          }}
+        >
           {(rest?.fullTitle?.length ?? 0) > 0 ? (
             <>
               <Typography sx={{ mb: 0, mt: 0.5, fontWeight: 'bold' }} variant="h6">
                 {props.corpusId > 0 ? (
-                  <Link href={`https://semanticscholar.org/p/${props.corpusId}`} target='_blank' rel="noreferrer">
+                  <Link
+                    href={`https://semanticscholar.org/p/${props.corpusId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     {rest.fullTitle}
                   </Link>
-                ) : rest.fullTitle}
+                ) : (
+                  rest.fullTitle
+                )}
               </Typography>
               {paperDetails && (
                 <Typography sx={{ mb: 1.5, mt: 0 }} variant="body2">
-                  <PaperMetadata title={paperDetails.title} authors={paperDetails.authors} venue={paperDetails.venue} year={paperDetails.year} citationCount={paperDetails.n_citations ?? 0} />
+                  <PaperMetadata
+                    title={paperDetails.title}
+                    authors={paperDetails.authors}
+                    venue={paperDetails.venue}
+                    year={paperDetails.year}
+                    citationCount={paperDetails.n_citations ?? 0}
+                  />
                 </Typography>
               )}
             </>

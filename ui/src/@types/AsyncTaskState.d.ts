@@ -5,7 +5,7 @@
  * and run json-schema-to-typescript to regenerate this file.
  */
 
-import { TableWidget } from "./TableWidget";
+import { TableWidget } from './TableWidget';
 
 export type TaskId = string;
 /**
@@ -16,9 +16,9 @@ export type EstimatedTime = string;
  * Current human-readable status of the task.
  */
 export interface TaskStep {
-    description: string;
-    start_timestamp: number;
-    estimated_timestamp: number;
+  description: string;
+  start_timestamp: number;
+  estimated_timestamp: number;
 }
 export type TaskStatus = string;
 /**
@@ -123,7 +123,7 @@ export interface GeneratedSection {
   tldr?: Tldr;
   text?: Text;
   citations?: Citations;
-  table?: TableWidget
+  table?: TableWidget;
   [k: string]: unknown;
 }
 export interface CitationSrc {

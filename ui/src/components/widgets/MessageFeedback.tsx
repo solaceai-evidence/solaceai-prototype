@@ -30,14 +30,13 @@ interface Props {
   taskId: string;
   userId: string;
   section: SectionFeedbackMetadata | null;
-  darkMode?: boolean
+  darkMode?: boolean;
 }
 
 export const MessageFeedbackComp: React.FC<Props> = (props) => {
   const { taskId, userId, section = null, darkMode = false } = props;
   const [isFeedbackFormOpen, setIsFeedbackFormOpen] = React.useState(false);
-  const [feedbackFormAnchorEl, setFeedbackFormAnchorEl] =
-    React.useState<Element | null>(null);
+  const [feedbackFormAnchorEl, setFeedbackFormAnchorEl] = React.useState<Element | null>(null);
   const [feedbackFormState, setFeedbackFormState] = React.useState({
     text: '',
     isSaving: false,
@@ -48,7 +47,7 @@ export const MessageFeedbackComp: React.FC<Props> = (props) => {
   const [openThanks, setOpenThanks] = React.useState(false);
   const handleCloseThanks = React.useCallback(() => {
     setOpenThanks(false);
-  },[setOpenThanks])
+  }, [setOpenThanks]);
   const [snackMessage, setSnackMessage] = React.useState<string>('Thanks for your feedback!');
 
   const onClickThumbsUp: React.MouseEventHandler = (event) => {
@@ -87,9 +86,7 @@ export const MessageFeedbackComp: React.FC<Props> = (props) => {
     setIsFeedbackFormOpen(false);
   };
 
-  const onChangeFeedbackText: React.ChangeEventHandler<HTMLInputElement> = (
-    event,
-  ) => {
+  const onChangeFeedbackText: React.ChangeEventHandler<HTMLInputElement> = (event) => {
     setFeedbackFormState({
       ...feedbackFormState,
       text: event.target.value,
@@ -137,10 +134,7 @@ export const MessageFeedbackComp: React.FC<Props> = (props) => {
         sx={{ color: darkMode ? 'white' : 'black' }}
         onClick={onClickThumbsDown}
       />
-      <FeedbackBtn
-        sx={{ color: darkMode ? 'white' : 'black' }}
-        onClick={onClickFeedback}
-      />
+      <FeedbackBtn sx={{ color: darkMode ? 'white' : 'black' }} onClick={onClickFeedback} />
       <Popper
         sx={{ zIndex: 100000 }}
         open={isFeedbackFormOpen}
@@ -177,10 +171,17 @@ export const MessageFeedbackComp: React.FC<Props> = (props) => {
               maxWidth: '480px',
               padding: '16px',
               backgroundColor: '#08232b',
-              color: '#FAF2E9'
+              color: '#FAF2E9',
             }}
           >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '12px',
+              }}
+            >
               <Typography variant="h6">{feedbackTitle}</Typography>
               <CloseBtn onClick={onCloseFeedbackForm} />
             </Box>
@@ -198,33 +199,27 @@ export const MessageFeedbackComp: React.FC<Props> = (props) => {
                 border: '1px solid rgba(255, 240, 243, 0.6)',
                 marginBottom: `12px`,
                 borderRadius: '4px',
-                '& .MuiInputBase-input':{
+                '& .MuiInputBase-input': {
                   color: '#FAF2E9 !important',
-                }
+                },
               }}
             />
 
-              {feedbackFormState.errorMessage && (
-                <Typography
-                  align="left"
-                  color="error"
-                  data-testid="message-error"
-                  variant="body2"
-                >
-                  Error submitting feedback, please try again.
-                </Typography>
-              )}
-              <Button
-                variant="contained"
-                size="small"
-                data-testid="message-feedback-submit-button"
-                color="secondary"
-                disabled={feedbackFormState.isSaving}
-                onClick={onClickSubmitFeedback}
-              >
-                Submit
-              </Button>
-
+            {feedbackFormState.errorMessage && (
+              <Typography align="left" color="error" data-testid="message-error" variant="body2">
+                Error submitting feedback, please try again.
+              </Typography>
+            )}
+            <Button
+              variant="contained"
+              size="small"
+              data-testid="message-feedback-submit-button"
+              color="secondary"
+              disabled={feedbackFormState.isSaving}
+              onClick={onClickSubmitFeedback}
+            >
+              Submit
+            </Button>
           </Paper>
         </ClickAwayListener>
       </Popper>
@@ -276,11 +271,7 @@ type ReactionBtnProps = React.ComponentProps<typeof ReactionBtn> & {
 export const ThumbsUpBtn = ({ isSelected, ...props }: ReactionBtnProps) => {
   return (
     <ReactionBtn {...props} data-testid="message-reaction-thumbs-up">
-      {isSelected ? (
-        <ThumbUpIcon fontSize="small" />
-      ) : (
-        <ThumbUpOutlinedIcon fontSize="small" />
-      )}
+      {isSelected ? <ThumbUpIcon fontSize="small" /> : <ThumbUpOutlinedIcon fontSize="small" />}
     </ReactionBtn>
   );
 };
@@ -288,11 +279,7 @@ export const ThumbsUpBtn = ({ isSelected, ...props }: ReactionBtnProps) => {
 export const ThumbsDownBtn = ({ isSelected, ...props }: ReactionBtnProps) => {
   return (
     <ReactionBtn {...props} data-testid="message-reaction-thumbs-down">
-      {isSelected ? (
-        <ThumbDownIcon fontSize="small" />
-      ) : (
-        <ThumbDownOutlinedIcon fontSize="small" />
-      )}
+      {isSelected ? <ThumbDownIcon fontSize="small" /> : <ThumbDownOutlinedIcon fontSize="small" />}
     </ReactionBtn>
   );
 };
@@ -304,7 +291,6 @@ export const FeedbackBtn = ({ ...props }: ReactionBtnProps) => {
     </ReactionBtn>
   );
 };
-
 
 export const CloseBtn = (props: React.ComponentProps<typeof ReactionBtn>) => {
   return (

@@ -89,10 +89,13 @@ Here is the user's query:
     </user_query>
 """
 
-USER_PROMPT_QUOTE_LIST_FORMAT = USER_PROMPT_QUERY_FORMAT + """And here are the quotes from the papers that may have salient content for the query:
+USER_PROMPT_QUOTE_LIST_FORMAT = (
+    USER_PROMPT_QUERY_FORMAT
+    + """And here are the quotes from the papers that may have salient content for the query:
     <quotes>
     {}
     </quotes>"""
+)
 
 # step 3 prompt
 PROMPT_ASSEMBLE_SUMMARY = """
