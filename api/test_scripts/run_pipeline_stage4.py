@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Exhaustive test for ScholarQA Pipeline Stage 4: Evidence Extraction (Quote Selection)
+Script to demonstrate pipeline Stage 4: Evidence Extraction (Quote Selection)
 Shows all data and metadata returned by the evidence extraction stage for transparency
 """
 import logging
@@ -40,7 +40,7 @@ from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
 from scholarqa.utils import get_paper_metadata
 
 
-def test_evidence_extraction_stage(
+def test_evidence_extraction_stage4(
     query: Optional[str] = None,
     max_results: int = 3,
     quiet: Optional[bool] = True,
@@ -178,10 +178,10 @@ def test_evidence_extraction_stage(
         from scholarqa.llms.constants import CostReportingArgs
 
         cost_args = CostReportingArgs(
-            task_id="test_evidence_extraction",
+            task_id="run_evidence_extraction",
             user_id="test_user",
             msg_id="test_message",
-            description="Test Evidence Extraction",
+            description="Run Evidence Extraction",
             model=CLAUDE_4_SONNET,
         )
 
@@ -397,4 +397,4 @@ if __name__ == "__main__":
     parser.set_defaults(quiet=True)
 
     args = parser.parse_args()
-    test_evidence_extraction_stage(args.query, args.max_results, args.quiet)
+    run_evidence_extraction_stage(args.query, args.max_results, args.quiet)

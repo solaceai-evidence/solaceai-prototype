@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Exhaustive test for ScholarQA Pipeline Stage 5: Section Generation
+Script to demonstrate pipeline Stage 5: Section Generation
 Shows all parameters and decision points in section generation for transparency.
 Displays details of Stage 1 (query decomposition) and Stage 4 (evidence extraction),
 then provides comprehensive visibility into Stage 5 (section generation).
@@ -62,7 +62,7 @@ from scholarqa.scholar_qa import ScholarQA
 from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
 
 
-def test_section_generation_stage(query: Optional[str] = None, max_results: int = 2):
+def test_section_generation_stage5(query: Optional[str] = None, max_results: int = 2):
     """Exhaustive test of section generation stage - shows ALL data and parameters"""
 
     # Input handling
@@ -189,7 +189,7 @@ def test_section_generation_stage(query: Optional[str] = None, max_results: int 
 
         # Set up cost tracking for evidence extraction
         cost_args_extraction = CostReportingArgs(
-            task_id="test_extraction",
+            task_id="run_extraction",
             user_id="test_user",
             msg_id="test_message",
             description="Test Evidence Extraction",
@@ -243,7 +243,7 @@ def test_section_generation_stage(query: Optional[str] = None, max_results: int 
             task_id="test_section_generation",
             user_id="test_user",
             msg_id="test_message",
-            description="Test Section Generation",
+            description="Run Section Generation",
             model=CLAUDE_4_SONNET,
         )
 
@@ -423,4 +423,4 @@ if __name__ == "__main__":
         "--max-results", type=int, default=2, help="Maximum number of papers to use"
     )
 
-    test_section_generation_stage(**vars(parser.parse_args()))
+    run_section_generation_stage5(**vars(parser.parse_args()))

@@ -40,7 +40,7 @@ from scholarqa.rag.retriever_base import FullTextRetriever
 from scholarqa.utils import get_paper_metadata
 
 
-def test_reranking_stage(query: Optional[str] = None, max_results: int = 3):
+def run_reranking_stage3(query: Optional[str] = None, max_results: int = 3):
     """Exhaustive test of reranking stage - shows ALL data and metadata returned"""
 
     # Input handling
@@ -277,4 +277,4 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    test_reranking_stage(args.query, args.max_results)
+    run_reranking_stage3(args.query, args.max_results)

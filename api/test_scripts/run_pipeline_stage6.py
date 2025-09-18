@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test for ScholarQA Pipeline Stage 6: Table Generation
+Script to demonstrate Pipeline Stage 6: Table Generation
 
 Shows key steps in table generation process using semantic search and LLM
 """
@@ -18,7 +18,7 @@ if api_dir not in sys.path:
     sys.path.append(api_dir)
 
 
-def test_table_generation(query: Optional[str] = None) -> None:
+def test_table_generation6(query: Optional[str] = None) -> None:
     """
     Test the table generation stage of the ScholarQA pipeline.
     Shows column generation and table cell population using LLM.
@@ -53,7 +53,7 @@ def test_table_generation(query: Optional[str] = None) -> None:
 
         # Step 0: Query preprocessing
         cost_args = CostReportingArgs(
-            task_id="test_table_generation",
+            task_id="run_table_generation",
             user_id="test_user",
             description="Step 0: Query decomposition",
             model=CLAUDE_4_SONNET,
@@ -235,4 +235,4 @@ if __name__ == "__main__":
         if not os.getenv("S2_API_KEY"):
             sys.exit("Error: Missing S2_API_KEY in environment variables")
 
-        test_table_generation(args.query)
+        run_table_generation6(args.query)
