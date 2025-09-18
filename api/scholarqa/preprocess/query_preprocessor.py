@@ -88,6 +88,12 @@ def decompose_query(
             search_filters["venue"] = decomposed_query.venues
         if decomposed_query.field_of_study:
             search_filters["fieldsOfStudy"] = decomposed_query.field_of_study
+        if decomposed_query.authors:
+            # Handle both list and string formats for authors
+            if isinstance(decomposed_query.authors, list):
+                search_filters["authors"] = ",".join(decomposed_query.authors)
+            else:
+                search_filters["authors"] = decomposed_query.authors
     except Exception as e:
         logger.error(f"Error while decomposing query: {e}")
         rewritten_query = query

@@ -4,7 +4,7 @@ Test scripts for each stage of the ScholarQA pipeline. Each script creates its o
 
 ## Pipeline Stages
 
-1. Query Decomposition: Process raw queries
+1. **Query Decomposition**: Process raw queries and extract search filters
 2. Retrieval: Fetch relevant papers
 3. Reranking: Score and aggregate results
 4. Evidence Extraction: Extract relevant quotes
@@ -13,13 +13,39 @@ Test scripts for each stage of the ScholarQA pipeline. Each script creates its o
 
 ## Scripts
 
-Each script automatically sets up a virtual environment with required dependencies and cleans up after execution.
+### Stage 1: Query Decomposition
 
-- `run_pipeline_stage1.py`
+The `run_pipeline_stage1.py` script demonstrates query processing with automatic environment setup and comprehensive parameter display.
 
-  ```bash
-  python test_scripts/run_pipeline_stage1.py --query "your query"
-  ```
+**Features:**
+
+- Automatic conda environment creation and management
+- Complete parameter visibility (year ranges, venues, authors, fields of study)
+- Environment variable loading from `.env` file
+- Clean output with cost tracking
+
+**Usage:**
+
+```bash
+# Interactive mode
+python run_pipeline_stage1.py
+
+# With specific query
+python run_pipeline_stage1.py --query "your research question"
+
+# Skip environment setup (for repeated runs)
+python run_pipeline_stage1.py --query "your query" --skip-setup
+```
+
+**Example:**
+
+```bash
+python run_pipeline_stage1.py --query "What are recent developments in transformer architectures by Attention Is All You Need authors?"
+```
+
+### Other Pipeline Stages
+
+- `run_pipeline_stage2.py`
 
 - `run_pipeline_stage2.py`
 
@@ -57,29 +83,20 @@ Each script automatically sets up a virtual environment with required dependenci
 
 ## Requirements
 
-- Python 3.11+ environment with project dependencies.
-- Semantic Scholar API key via `S2_API_KEY`.
-- LLM access configured via LiteLLM (e.g., `CLAUDE_4_SONNET`).
+- Conda or Miniconda installed
+- Semantic Scholar API key
+- Anthropic API key (for Claude models)
 
-## Installation
+## Setup
 
-From the `api` directory:
-
-```bash
-pip install -e .
-# or
-pip install -r requirements.txt
-```
-
-## Environment
-
-Set your Semantic Scholar API key:
+Create a `.env` file in the project root directory with your API keys:
 
 ```bash
-export S2_API_KEY="your_api_key_here"
+S2_API_KEY=your_semantic_scholar_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
 ```
 
-Recommended: place credentials in a `.env` file at the repository root (loaded by the scripts if `python-dotenv` is available).
+The scripts automatically handle environment setup and dependency installation.
 
 ## Notes
 
