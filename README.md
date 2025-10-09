@@ -34,7 +34,7 @@ The hybrid architecture combines containerized API services with a native rerank
    # Edit .env with your API keys and configuration
    ```
 
-   **Required Environment Variables:**
+   **Required Environment Variables (with examples for laptop development):**
 
    ```bash
    # API key for Semantic Scholar - used to retrieve paper passages, search results, and metadata
@@ -45,6 +45,10 @@ The hybrid architecture combines containerized API services with a native rerank
 
    # API key for OpenAI models - used as fallback LLM and for content moderation/validation
    OPENAI_API_KEY=your_openai_api_key
+
+   # LLM models used as primary and fallback with the latter holding a (possibly singleton) list
+   PRIMARY_LLM=anthropic/claude-sonnet-4-20250514
+   FALLBACK_LLM_CHAIN=anthropic/claude-3-7-sonnet-20250219,openai/gpt-4.1
 
    # Modal cloud platform credentials - required when using Modal for remote model deployment
    MODAL_TOKEN=your_modal_token
@@ -60,14 +64,14 @@ The hybrid architecture combines containerized API services with a native rerank
    RATE_LIMIT_ITPM=100000
    RATE_LIMIT_OTPM=25000
 
-   # Query processing timeout (7 minutes for complex queries with table generation)
-   QUERY_TIMEOUT_SECONDS=420
+   # Query processing timeout (>=10 minutes for complex queries with table generation when used on laptop)
+   QUERY_TIMEOUT_SECONDS=900
 
    # Reranker service timeout and concurrency settings
-   RERANKER_CLIENT_TIMEOUT=180
+   RERANKER_CLIENT_TIMEOUT=270
    MAX_CONCURRENCY=1
-   RERANKER_TIMEOUT_MS=180000
-   RERANKER_QUEUE_TIMEOUT_MS=10000
+   RERANKER_TIMEOUT_MS=270000
+   RERANKER_QUEUE_TIMEOUT_MS=15000
 
    # Query refinement step configuration
    ENABLE_QUERY_REFINEMENT=true
