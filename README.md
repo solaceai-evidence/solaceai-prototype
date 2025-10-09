@@ -4,6 +4,8 @@
 
 The Solace-AI System provides intelligent question-answering capabilities over a large corpus of online scientific literature, aiming to create real-time evidence synthesis to support policy and humanitarian responses to climate-change health emergencies. The system supports multiple deployment architectures to accommodate different performance requirements and infrastructure constraints.
 
+The Solace-AI system is built on top of the open-source Ai2 Scholar QA architecture kindly shared at <https://github.com/allenai/ai2-scholarqa-lib>
+
 ## Supported Architectures
 
 ### 1. Hybrid Architecture (Local Development with GPU Optimization)
