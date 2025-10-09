@@ -46,10 +46,6 @@ The hybrid architecture combines containerized API services with a native rerank
    # API key for OpenAI models - used as fallback LLM and for content moderation/validation
    OPENAI_API_KEY=your_openai_api_key
 
-   # LLM models used as primary and fallback with the latter holding a (possibly singleton) list
-   PRIMARY_LLM=anthropic/claude-sonnet-4-20250514
-   FALLBACK_LLM_CHAIN=anthropic/claude-3-7-sonnet-20250219,openai/gpt-4.1
-
    # Modal cloud platform credentials - required when using Modal for remote model deployment
    MODAL_TOKEN=your_modal_token
    MODAL_TOKEN_SECRET=your_modal_secret
@@ -205,7 +201,7 @@ The system supports multiple reranker backends through configuration:
 
 **Reranker Options:**
 
-- `remote`: Native service with GPU acceleration (hybrid architecture)
+- `remote`: Native service with GPU acceleration (hybrid architecture). Currently used as native during laptop development.
 - `modal`: Modal cloud deployment
 - `http`: Containerized microservice
 - `crossencoder`: Local in-process reranker
