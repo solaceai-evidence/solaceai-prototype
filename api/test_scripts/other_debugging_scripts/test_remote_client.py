@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(__file__))
 
 import logging
 
-from scholarqa.rag.reranker.remote_reranker import RemoteRerankerClient
+from solaceai.rag.reranker.remote_reranker import RemoteRerankerClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -1,6 +1,6 @@
-# ScholarQA Pipeline Test Scripts
+# Solace-ai Pipeline Test Scripts
 
-Test scripts for each stage of the ScholarQA pipeline. Each script automatically sets up its own environment and handles all dependencies.
+Test scripts for each stage of the Solace-ai pipeline. Each script automatically sets up its own environment and handles all dependencies.
 
 ## Pipeline Stages
 
@@ -40,8 +40,20 @@ python run_pipeline_stage1.py --query "your research question" --skip-setup
 **Example:**
 
 ```bash
-python run_pipeline_stage1.py --query "What are recent developments in health interventions for mental health issues?"
-```
+python run_pipeline_stage1.py --query "What are recent developments in health interventions for addressing mental health issues in displaced communities?"
+# Solace-ai Pipeline Test Scripts
+
+Test scripts for each stage of the Solace-ai pipeline. Each script automatically sets up its own environment and handles all dependencies.
+
+## Pipeline Stages
+
+1. Query Decomposition: Process raw queries and extract search filters
+2. Retrieval: Fetch relevant passages from semantic scholar database
+3. Reranking: Score and aggregate results
+4. Evidence Extraction: Extract relevant quotes
+5. Section Generation: Generate structured sections
+6. Table Generation: Create comparison tables
+
 
 ### Stage 2: Document Retrieval
 
@@ -70,7 +82,9 @@ python run_pipeline_stage2.py --query "your research question" --skip-setup
 **Example:**
 
 ```bash
-python run_pipeline_stage2.py --query "Papers by Elyas Abdulahi on environmental science" --max-results 3
+python run_pipeline_stage2.py --query "Papers by Elyas Abdulahi on Environmental Science" --max-results 3
+
+python run_pipeline_stage2.py --query "What are recent developments in health interventions for addressing mental health issues in displaced communities?" --max-results 5
 ```
 
 ### Other Pipeline Stages

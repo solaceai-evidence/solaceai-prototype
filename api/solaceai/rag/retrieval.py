@@ -5,9 +5,9 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 from anyascii import anyascii
 
-from scholarqa.rag.reranker.reranker_base import AbstractReranker
-from scholarqa.rag.retriever_base import AbstractRetriever
-from scholarqa.utils import get_ref_author_str, make_int
+from solaceai.rag.reranker.reranker_base import AbstractReranker
+from solaceai.rag.retriever_base import AbstractRetriever
+from solaceai.utils import get_ref_author_str, make_int
 
 logger = logging.getLogger(__name__)
 

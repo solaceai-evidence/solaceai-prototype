@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
-from scholarqa.utils import METADATA_FIELDS, NUMERIC_META_FIELDS, make_int, query_s2_api
+from solaceai.utils import METADATA_FIELDS, NUMERIC_META_FIELDS, make_int, query_s2_api
 
 logger = logging.getLogger(__name__)
 

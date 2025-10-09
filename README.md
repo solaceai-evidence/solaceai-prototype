@@ -1,4 +1,4 @@
-# Solace-AI (ScholarQA) System
+# Solace-AI System
 
 ## Overview
 
@@ -135,7 +135,7 @@ Deploy the system using Modal's serverless GPU infrastructure for production-sca
 pip install modal-client
 
 # Deploy reranker service
-modal deploy api/scholarqa/rag/reranker/modal_deploy/ai2-scholar-qa-reranker.py
+modal deploy api/solaceai/rag/reranker/modal_deploy/ai2-scholar-qa-reranker.py
 
 # Configure for Modal
 cp api/run_configs/modal.json api/run_configs/default.json

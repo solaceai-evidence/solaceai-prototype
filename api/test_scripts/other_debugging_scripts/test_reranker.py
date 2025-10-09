@@ -7,7 +7,7 @@ import sys
 
 sys.path.append(os.getcwd())
 
-from scholarqa.rag.reranker.reranker_base import CrossEncoderScores
+from solaceai.rag.reranker.reranker_base import CrossEncoderScores
 
 
 def test_reranker():

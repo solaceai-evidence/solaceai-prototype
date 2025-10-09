@@ -154,7 +154,7 @@ def discover_search_filter_parameters():
     """Dynamically discover available search filter parameters from the codebase"""
     try:
         # Import within the function to avoid issues if modules aren't available yet
-        from scholarqa.preprocess.query_preprocessor import DecomposedQuery, decompose_query
+        from solaceai.preprocess.query_preprocessor import DecomposedQuery, decompose_query
         import inspect
         
         discovered_params = {}
@@ -269,8 +269,8 @@ def run_pipeline_stage_1(query: Optional[str] = None, python_exe: str = None, en
             print("Warning: python-dotenv not available, skipping .env file loading")
 
         # Import required modules
-        from scholarqa.llms.constants import CLAUDE_4_SONNET
-        from scholarqa.preprocess.query_preprocessor import decompose_query
+        from solaceai.llms.constants import CLAUDE_4_SONNET
+        from solaceai.preprocess.query_preprocessor import decompose_query
 
         print(f"\n{'='*70}")
         print("PIPELINE STAGE 1: QUERY DECOMPOSITION")

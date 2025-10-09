@@ -1,7 +1,7 @@
-from scholarqa import ScholarQA
-from scholarqa.rag.reranker.modal_engine import ModalReranker
-from scholarqa.rag.retrieval import PaperFinderWithReranker
-from scholarqa.rag.retriever_base import FullTextRetriever
+from solaceai import SolaceAI
+from solaceai.rag.reranker.modal_engine import ModalReranker
+from solaceai.rag.retrieval import PaperFinderWithReranker
+from solaceai.rag.retriever_base import FullTextRetriever
 
 retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
 reranker = ModalReranker(
@@ -13,6 +13,6 @@ reranker = ModalReranker(
 paper_finder = PaperFinderWithReranker(
     retriever, reranker, n_rerank=50, context_threshold=0.5
 )
-scholar_qa = ScholarQA(paper_finder=paper_finder)
+solace_ai = SolaceAI(paper_finder=paper_finder)
 
-print(scholar_qa.answer_query("Which is the 9th planet in our solar system?"))
+print(solace_ai.answer_query("Which is the 9th planet in our solar system?"))

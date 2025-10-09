@@ -36,7 +36,7 @@ port = int(os.getenv("RERANKER_PORT", "10001"))
 log_level = os.getenv("LOG_LEVEL", "INFO")
 
 # Use existing reranker infrastructure
-from api.scholarqa.rag.reranker.reranker_base import RERANKER_MAPPING
+from api.solaceai.rag.reranker.reranker_base import RERANKER_MAPPING
 
 # Configure logging
 logging.basicConfig(

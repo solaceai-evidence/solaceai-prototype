@@ -9,15 +9,15 @@ from typing import Dict, List
 
 import requests
 from pydantic import BaseModel
-from scholarqa.llms.constants import *
-from scholarqa.llms.litellm_helper import (
+from solaceai.llms.constants import *
+from solaceai.llms.litellm_helper import (
     CostAwareLLMCaller,
     CostReportingArgs,
     llm_completion,
 )
-from scholarqa.rag.retrieval import PaperFinder
-from scholarqa.table_generation.prompts import *
-from scholarqa.utils import get_paper_metadata
+from solaceai.rag.retrieval import PaperFinder
+from solaceai.table_generation.prompts import *
+from solaceai.utils import get_paper_metadata
 
 logger = logging.getLogger(__name__)
 

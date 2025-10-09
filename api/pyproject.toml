@@ -72,7 +72,7 @@ Repository = "https://github.com/allenai/ai2-scholarqa-lib"
 
 [tool.setuptools.packages.find]
 exclude = ["internal"]
-include = ["scholarqa*"]
+include = ["solaceai*"]
 
 [tool.black]
 preview = true

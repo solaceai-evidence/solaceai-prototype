@@ -81,7 +81,7 @@ install_dependencies() {
         }
     fi
     
-    # Install API package (needed for reranker imports: from api.scholarqa.rag.reranker...)
+    # Install API package (needed for reranker imports: from api.solaceai.rag.reranker...)
     if [ -f "api/pyproject.toml" ]; then
         echo "   Installing API package..."
         $PIP_CMD install -e api/ > /dev/null 2>&1 || {

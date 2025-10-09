@@ -1,12 +1,12 @@
 import logging
 import uuid
 
-from scholarqa.config.config_setup import LogsConfig
-from scholarqa.llms.litellm_helper import CostAwareLLMCaller
-from scholarqa.rag.retrieval import PaperFinder
-from scholarqa.rag.retriever_base import FullTextRetriever
-from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
-from scholarqa.table_generation.table_generator import TableGenerator
+from solaceai.config.config_setup import LogsConfig
+from solaceai.llms.litellm_helper import CostAwareLLMCaller
+from solaceai.rag.retrieval import PaperFinder
+from solaceai.rag.retriever_base import FullTextRetriever
+from solaceai.state_mgmt.local_state_mgr import LocalStateMgrClient
+from solaceai.table_generation.table_generator import TableGenerator
 
 retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
 logger = logging.getLogger(__name__)

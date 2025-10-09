@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from anyascii import anyascii
 from langsmith import traceable
 
-from scholarqa.utils import make_int
+from solaceai.utils import make_int
 
 logger = logging.getLogger(__name__)
 

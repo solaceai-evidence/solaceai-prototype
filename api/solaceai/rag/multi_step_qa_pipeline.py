@@ -9,12 +9,12 @@ import pandas as pd
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
-from scholarqa.llms.constants import CompletionResult, GPT_4o
-from scholarqa.llms.litellm_helper import (
+from solaceai.llms.constants import CompletionResult, GPT_4o
+from solaceai.llms.litellm_helper import (
     batch_llm_completion_with_rate_limiting,
     llm_completion_with_rate_limiting,
 )
-from scholarqa.llms.prompts import (
+from solaceai.llms.prompts import (
     PROMPT_ASSEMBLE_NO_QUOTES_SUMMARY,
     USER_PROMPT_PAPER_LIST_FORMAT,
     USER_PROMPT_QUOTE_LIST_FORMAT,

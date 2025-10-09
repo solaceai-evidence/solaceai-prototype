@@ -5,18 +5,18 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 
-from scholarqa.llms.constants import GPT_4o
-from scholarqa.llms.litellm_helper import CostAwareLLMCaller, CostReportingArgs
-from scholarqa.rag.retrieval import PaperFinder
-from scholarqa.table_generation.column_suggestion import generate_attribute_suggestions
-from scholarqa.table_generation.table_model import (
+from solaceai.llms.constants import GPT_4o
+from solaceai.llms.litellm_helper import CostAwareLLMCaller, CostReportingArgs
+from solaceai.rag.retrieval import PaperFinder
+from solaceai.table_generation.column_suggestion import generate_attribute_suggestions
+from solaceai.table_generation.table_model import (
     TableCell,
     TableColumn,
     TableRow,
     TableWidget,
 )
-from scholarqa.table_generation.value_generation import generate_value_suggestions
-from scholarqa.utils import get_paper_metadata
+from solaceai.table_generation.value_generation import generate_value_suggestions
+from solaceai.utils import get_paper_metadata
 
 logger = logging.getLogger(__name__)
 

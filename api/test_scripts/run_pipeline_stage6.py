@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Script to demonstrate Pipeline Stage 6: Table Generation
-
 Shows key steps in table generation process using semantic search and LLM
 """
 import os
@@ -39,7 +38,7 @@ def test_table_generation6(query: Optional[str] = None) -> None:
         # Initialize ScholarQA with full pipeline setup
         retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
         paper_finder = PaperFinder(retriever=retriever)
-        scholar_qa = ScholarQA(
+        scholar_qa = SolaceAI(
             paper_finder=paper_finder,
             llm_model=CLAUDE_4_SONNET,
             state_mgr_client=LocalStateMgrClient("logs"),
@@ -209,18 +208,18 @@ if __name__ == "__main__":
 
     with managed_venv(__file__, [str(api_requirements), str(reranker_requirements)]):
         from dotenv import load_dotenv
-        from scholarqa.llms.constants import CLAUDE_4_SONNET, CostReportingArgs
-        from scholarqa.llms.litellm_helper import CostAwareLLMCaller
-        from scholarqa.models import GeneratedSection, TaskResult
-        from scholarqa.rag.retrieval import PaperFinder
-        from scholarqa.rag.retriever_base import FullTextRetriever
-        from scholarqa.scholar_qa import ScholarQA
-        from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
-        from scholarqa.table_generation.column_suggestion import (
+        from solaceai.llms.constants import CLAUDE_4_SONNET, CostReportingArgs
+        from solaceai.llms.litellm_helper import CostAwareLLMCaller
+        from solaceai.models import GeneratedSection, TaskResult
+        from solaceai.rag.retrieval import PaperFinder
+        from solaceai.rag.retriever_base import FullTextRetriever
+        from api.solaceai.solace_ai import SolaceAI
+        from solaceai.state_mgmt.local_state_mgr import LocalStateMgrClient
+        from solaceai.table_generation.column_suggestion import (
             generate_attribute_suggestions,
         )
-        from scholarqa.table_generation.table_generator import TableGenerator
-        from scholarqa.utils import (
+        from solaceai.table_generation.table_generator import TableGenerator
+        from solaceai.utils import (
             CATEGORICAL_META_FIELDS,
             NUMERIC_META_FIELDS,
             get_paper_metadata,

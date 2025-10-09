@@ -2,10 +2,10 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List
 
-from scholarqa.config.config_setup import LogsConfig
-from scholarqa.llms.constants import CostAwareLLMResult
-from scholarqa.models import ToolRequest
-from scholarqa.trace.trace_writer import GCSWriter, LocalWriter
+from solaceai.config.config_setup import LogsConfig
+from solaceai.llms.constants import CostAwareLLMResult
+from solaceai.models import ToolRequest
+from solaceai.trace.trace_writer import GCSWriter, LocalWriter
 
 logger = logging.getLogger(__name__)
 

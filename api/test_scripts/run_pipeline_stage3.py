@@ -33,11 +33,11 @@ if not os.getenv("S2_API_KEY"):
     print("Error: Missing S2_API_KEY in environment variables")
     sys.exit(1)
 
-from scholarqa.llms.constants import CLAUDE_4_SONNET
-from scholarqa.preprocess.query_preprocessor import decompose_query
-from scholarqa.rag.retrieval import PaperFinder
-from scholarqa.rag.retriever_base import FullTextRetriever
-from scholarqa.utils import get_paper_metadata
+from solaceai.llms.constants import CLAUDE_4_SONNET
+from solaceai.preprocess.query_preprocessor import decompose_query
+from solaceai.rag.retrieval import PaperFinder
+from solaceai.rag.retriever_base import FullTextRetriever
+from solaceai.utils import get_paper_metadata
 
 
 def run_reranking_stage3(query: Optional[str] = None, max_results: int = 3):

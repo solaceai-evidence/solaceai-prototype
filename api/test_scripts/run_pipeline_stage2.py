@@ -2,16 +2,10 @@
 """
 Pipeline Stage 2: Paper Retrieval Process
 
-This script demonstrates the complete retrieval workflow:
+This script demonstrates the retrieval workflow:
 1. Query Decomposition - Parses user query and extracts search filters  
 2. Paper Retrieval - Finds relevant papers using semantic and keyword search
 3. Results Processing - Deduplicates and presents top results
-
-Features:
-- Automatic Python virtual environment setup
-- Dynamic parameter extraction and display
-- Comprehensive retrieval results with relevance scores
-- Clean, user-friendly output formatting
 """
 import logging
 import os
@@ -55,7 +49,7 @@ def discover_search_filter_parameters():
         print("-" * 35)
         
         try:
-            from scholarqa.preprocess.query_preprocessor import LLMProcessedQuery
+            from solaceai.preprocess.query_preprocessor import LLMProcessedQuery
             # LLMProcessedQuery is a namedtuple, show its fields
             print("  LLMProcessedQuery fields:")
             for field in LLMProcessedQuery._fields:
@@ -195,11 +189,11 @@ warnings.filterwarnings("ignore")
 
 sys.path.insert(0, "{api_dir}")
 
-from scholarqa.scholar_qa import ScholarQA
-from scholarqa.preprocess.query_preprocessor import decompose_query
-from scholarqa.llms.constants import CLAUDE_4_SONNET
-from scholarqa.rag.retrieval import PaperFinder
-from scholarqa.rag.retriever_base import FullTextRetriever
+from solaceai.solace_ai import SolaceAI
+from solaceai.preprocess.query_preprocessor import decompose_query
+from solaceai.llms.constants import CLAUDE_4_SONNET
+from solaceai.rag.retrieval import PaperFinder
+from solaceai.rag.retriever_base import FullTextRetriever
 
 def main():
     query = "{query}"
@@ -285,11 +279,11 @@ def main():
     # Initialize retrieval components
     retriever = FullTextRetriever()
     paper_finder = PaperFinder(retriever=retriever)
-    qa_system = ScholarQA(paper_finder=paper_finder)
+    qa_system = SolaceAI(paper_finder=paper_finder)
     
     print(f"Running retrieval with limit={max_results}...")
     
-    # Retrieve papers using the ScholarQA system
+    # Retrieve papers using the SolaceAI system
     snippet_results, search_api_results = qa_system.find_relevant_papers(
         decomposed_query, 
         limit=max_results

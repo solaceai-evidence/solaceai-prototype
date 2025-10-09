@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from nora_lib.tasks.models import AsyncTaskState as BaseAsyncTaskState
 from pydantic import BaseModel, Field
 
-from scholarqa.table_generation.table_model import TableWidget
+from solaceai.table_generation.table_model import TableWidget
 
 
 class Author(BaseModel):

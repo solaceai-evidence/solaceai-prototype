@@ -6,4 +6,4 @@ exec uvicorn \
     --port 8000 \
     --reload \
     --factory \
-    'scholarqa.app:create_app'
+    'solaceai.app:create_app'

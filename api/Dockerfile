@@ -24,5 +24,8 @@ ENV PYTHONPATH /api
 # Copy over the source code
 COPY . .
 
+# Install the package in editable mode so solaceai module is available
+RUN pip install -e .
+
 # Kick things off
 ENTRYPOINT [ "/api/dev.sh" ]

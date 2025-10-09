@@ -7,9 +7,9 @@ from langsmith import traceable
 from litellm.caching import Cache
 from litellm.utils import trim_messages
 
-from scholarqa.llms.constants import *
-from scholarqa.llms.rate_limiter import RateLimiter
-from scholarqa.state_mgmt.local_state_mgr import AbsStateMgrClient
+from solaceai.llms.constants import *
+from solaceai.llms.rate_limiter import RateLimiter
+from solaceai.state_mgmt.local_state_mgr import AbsStateMgrClient
 
 logger = logging.getLogger(__name__)
 

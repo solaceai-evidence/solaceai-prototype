@@ -10,8 +10,8 @@ import requests
 from fastapi import HTTPException
 from google.cloud import storage
 
-from scholarqa import glog
-from scholarqa.llms.litellm_helper import setup_llm_cache
+from solaceai import glog
+from solaceai.llms.litellm_helper import setup_llm_cache
 
 logger = logging.getLogger(__name__)
 

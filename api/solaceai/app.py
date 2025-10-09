@@ -13,22 +13,22 @@ from fastapi import FastAPI, HTTPException, Request
 from nora_lib.tasks.models import TASK_STATUSES, AsyncTaskState
 from nora_lib.tasks.state import NoSuchTaskException
 
-from scholarqa.config.config_setup import read_json_config
-from scholarqa.llms import litellm_helper
-from scholarqa.llms.rate_limiter import RateLimiter
-from scholarqa.models import (
+from solaceai.config.config_setup import read_json_config
+from solaceai.llms import litellm_helper
+from solaceai.llms.rate_limiter import RateLimiter
+from solaceai.models import (
     AsyncToolResponse,
     TaskResult,
     TaskStep,
     ToolRequest,
     ToolResponse,
 )
-from scholarqa.rag.reranker.modal_engine import ModalReranker
-from scholarqa.rag.reranker.reranker_base import RERANKER_MAPPING
-from scholarqa.rag.retrieval import PaperFinder, PaperFinderWithReranker
-from scholarqa.rag.retriever_base import FullTextRetriever
-from scholarqa.scholar_qa import ScholarQA
-from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
+from solaceai.rag.reranker.modal_engine import ModalReranker
+from solaceai.rag.reranker.reranker_base import RERANKER_MAPPING
+from solaceai.rag.retrieval import PaperFinder, PaperFinderWithReranker
+from solaceai.rag.retriever_base import FullTextRetriever
+from solaceai.solace_ai import SolaceAI
+from solaceai.state_mgmt.local_state_mgr import LocalStateMgrClient
 
 # Load environment variables from .env file
 load_dotenv()
@@ -87,14 +87,14 @@ else:
 
 started_task_step = None
 
-T = TypeVar("T", bound=ScholarQA)
+T = TypeVar("T", bound=SolaceAI)
 
 
 def lazy_load_state_mgr_client():
     return LocalStateMgrClient(logs_config.log_dir, "async_state")
 
 
-def lazy_load_scholarqa(task_id: str, sqa_class: Type[T] = ScholarQA, **sqa_args) -> T:
+def lazy_load_scholarqa(task_id: str, sqa_class: Type[T] = SolaceAI, **sqa_args) -> T:
     retriever = FullTextRetriever(**run_config.retriever_args)
     if run_config.reranker_args:
         reranker = RERANKER_MAPPING[run_config.reranker_service](
@@ -153,15 +153,15 @@ def _do_task(tool_request: ToolRequest, task_id: str) -> TaskResult:
         )
         with query_semaphore:
             logger.info(f"[{task_id}] - Query semaphore acquired, starting execution")
-            scholar_qa = app_config.load_scholarqa(task_id)
-            result = scholar_qa.run_qa_pipeline(tool_request)
+            solace_ai = app_config.load_scholarqa(task_id)
+            result = solace_ai.run_qa_pipeline(tool_request)
             logger.info(f"[{task_id}] - Query execution complete, releasing semaphore")
             return result
     else:
         # Unlimited concurrency mode for high-performance deployments
         logger.info(f"[{task_id}] - Starting execution (unlimited concurrency mode)")
-        scholar_qa = app_config.load_scholarqa(task_id)
-        result = scholar_qa.run_qa_pipeline(tool_request)
+        solace_ai = app_config.load_scholarqa(task_id)
+        result = solace_ai.run_qa_pipeline(tool_request)
         logger.info(f"[{task_id}] - Query execution complete")
         return result
 

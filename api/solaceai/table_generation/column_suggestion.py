@@ -3,14 +3,14 @@ import logging
 from typing import Dict, List
 
 from pydantic import BaseModel
-from scholarqa.llms.constants import GPT_4o
-from scholarqa.llms.litellm_helper import (
+from solaceai.llms.constants import GPT_4o
+from solaceai.llms.litellm_helper import (
     CostAwareLLMCaller,
     CostReportingArgs,
     llm_completion,
 )
-from scholarqa.table_generation.prompts import ATTRIBUTE_PROMPT, SYSTEM_PROMPT
-from scholarqa.utils import get_paper_metadata
+from solaceai.table_generation.prompts import ATTRIBUTE_PROMPT, SYSTEM_PROMPT
+from solaceai.utils import get_paper_metadata
 
 logger = logging.getLogger(__name__)
 

@@ -7,8 +7,8 @@ from uuid import UUID, uuid5
 
 from nora_lib.tasks.state import IStateManager, StateManager
 
-from scholarqa.llms.constants import CompletionResult, CostReportingArgs, TokenUsage
-from scholarqa.models import AsyncTaskState, TaskResult, TaskStep, ToolRequest
+from solaceai.llms.constants import CompletionResult, CostReportingArgs, TokenUsage
+from solaceai.models import AsyncTaskState, TaskResult, TaskStep, ToolRequest
 
 logger = logging.getLogger(__name__)
 

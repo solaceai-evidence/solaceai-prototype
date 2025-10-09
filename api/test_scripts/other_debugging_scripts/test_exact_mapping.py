@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(__file__))
 
 import logging
 
-from scholarqa.rag.reranker.reranker_base import RERANKER_MAPPING
+from solaceai.rag.reranker.reranker_base import RERANKER_MAPPING
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

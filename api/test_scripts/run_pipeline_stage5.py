@@ -14,18 +14,18 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-from scholarqa.llms.constants import CLAUDE_4_SONNET, CostReportingArgs
-from scholarqa.llms.prompts import (
+from solaceai.llms.constants import CLAUDE_4_SONNET, CostReportingArgs
+from solaceai.llms.prompts import (
     PROMPT_ASSEMBLE_SUMMARY,
     SYSTEM_PROMPT_QUOTE_CLUSTER,
     SYSTEM_PROMPT_QUOTE_PER_PAPER,
 )
-from scholarqa.postprocess.json_output_utils import get_json_summary
-from scholarqa.preprocess.query_preprocessor import decompose_query
-from scholarqa.rag.retrieval import PaperFinder
-from scholarqa.rag.retriever_base import FullTextRetriever
-from scholarqa.scholar_qa import ScholarQA
-from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
+from solaceai.postprocess.json_output_utils import get_json_summary
+from solaceai.preprocess.query_preprocessor import decompose_query
+from solaceai.rag.retrieval import PaperFinder
+from solaceai.rag.retriever_base import FullTextRetriever
+from api.solaceai.solace_ai import SolaceAI
+from solaceai.state_mgmt.local_state_mgr import LocalStateMgrClient
 
 # Suppress noisy runtime warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -48,18 +48,18 @@ if env_file.exists():
 if not os.getenv("S2_API_KEY"):
     sys.exit("Error: Missing S2_API_KEY in environment variables")
 
-from scholarqa.llms.constants import CLAUDE_4_SONNET, CostReportingArgs
-from scholarqa.llms.prompts import (
+from solaceai.llms.constants import CLAUDE_4_SONNET, CostReportingArgs
+from solaceai.llms.prompts import (
     PROMPT_ASSEMBLE_NO_QUOTES_SUMMARY,
     PROMPT_ASSEMBLE_SUMMARY,
     SYSTEM_PROMPT_QUOTE_CLUSTER,
     SYSTEM_PROMPT_QUOTE_PER_PAPER,
 )
-from scholarqa.preprocess.query_preprocessor import decompose_query
-from scholarqa.rag.retrieval import PaperFinder
-from scholarqa.rag.retriever_base import FullTextRetriever
-from scholarqa.scholar_qa import ScholarQA
-from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
+from solaceai.preprocess.query_preprocessor import decompose_query
+from solaceai.rag.retrieval import PaperFinder
+from solaceai.rag.retriever_base import FullTextRetriever
+from api.solaceai.solace_ai import SolaceAI
+from solaceai.state_mgmt.local_state_mgr import LocalStateMgrClient
 
 
 def test_section_generation_stage5(query: Optional[str] = None, max_results: int = 2):
@@ -81,7 +81,7 @@ def test_section_generation_stage5(query: Optional[str] = None, max_results: int
         logs_dir = "logs"
         retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
         paper_finder = PaperFinder(retriever=retriever)
-        scholar_qa = ScholarQA(
+        scholar_qa = SolaceAI(
             paper_finder=paper_finder,
             llm_model=CLAUDE_4_SONNET,
             state_mgr_client=LocalStateMgrClient(logs_dir),

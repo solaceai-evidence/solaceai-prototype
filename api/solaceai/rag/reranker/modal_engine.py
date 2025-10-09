@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import modal
 
-from scholarqa.rag.reranker.reranker_base import RERANKER_MAPPING, AbstractReranker
+from solaceai.rag.reranker.reranker_base import RERANKER_MAPPING, AbstractReranker
 
 logger = logging.getLogger(__name__)
 

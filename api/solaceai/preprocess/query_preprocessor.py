@@ -8,9 +8,9 @@ from typing import List, Optional, Tuple, Union
 from litellm import moderation
 from pydantic import BaseModel, Field
 
-from scholarqa.llms.constants import CompletionResult
-from scholarqa.llms.litellm_helper import llm_completion_with_rate_limiting
-from scholarqa.llms.prompts import QUERY_DECOMPOSER_PROMPT
+from solaceai.llms.constants import CompletionResult
+from solaceai.llms.litellm_helper import llm_completion_with_rate_limiting
+from solaceai.llms.prompts import QUERY_DECOMPOSER_PROMPT
 
 logger = logging.getLogger(__name__)
 

@@ -30,14 +30,14 @@ if not os.getenv("S2_API_KEY"):
     print("Error: Missing S2_API_KEY in environment variables")
     sys.exit(1)
 
-from scholarqa.llms.constants import CLAUDE_4_SONNET
-from scholarqa.llms.prompts import SYSTEM_PROMPT_QUOTE_PER_PAPER
-from scholarqa.preprocess.query_preprocessor import decompose_query
-from scholarqa.rag.retrieval import PaperFinder
-from scholarqa.rag.retriever_base import FullTextRetriever
-from scholarqa.scholar_qa import ScholarQA
-from scholarqa.state_mgmt.local_state_mgr import LocalStateMgrClient
-from scholarqa.utils import get_paper_metadata
+from solaceai.llms.constants import CLAUDE_4_SONNET
+from solaceai.llms.prompts import SYSTEM_PROMPT_QUOTE_PER_PAPER
+from solaceai.preprocess.query_preprocessor import decompose_query
+from solaceai.rag.retrieval import PaperFinder
+from solaceai.rag.retriever_base import FullTextRetriever
+from api.solaceai.solace_ai import SolaceAI
+from solaceai.state_mgmt.local_state_mgr import LocalStateMgrClient
+from solaceai.utils import get_paper_metadata
 
 
 def test_evidence_extraction_stage4(
@@ -128,7 +128,7 @@ def test_evidence_extraction_stage4(
         # Initialize ScholarQA for evidence extraction
         logs_dir = "logs"  # Default logs directory
         state_mgr = LocalStateMgrClient(logs_dir)
-        scholar_qa = ScholarQA(
+        scholar_qa = SolaceAI(
             paper_finder=paper_finder,
             llm_model=CLAUDE_4_SONNET,
             state_mgr_client=state_mgr,
@@ -175,7 +175,7 @@ def test_evidence_extraction_stage4(
         print(f"   Processing {len(aggregated_df)} papers for quote extraction...")
 
         # Create cost reporting args for the evidence extraction
-        from scholarqa.llms.constants import CostReportingArgs
+        from solaceai.llms.constants import CostReportingArgs
 
         cost_args = CostReportingArgs(
             task_id="run_evidence_extraction",
