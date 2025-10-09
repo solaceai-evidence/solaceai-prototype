@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class EventTrace:
+    """Captures complete pipeline execution trace including costs, tokens, and intermediate results."""
     def __init__(
         self,
         task_id: str,
@@ -19,6 +20,7 @@ class EventTrace:
         req: ToolRequest,
         user_id: str = None,
     ):
+        """Initialize trace with task metadata and empty result containers."""
         self.query = req.query
         if not user_id:
             try:
@@ -46,6 +48,7 @@ class EventTrace:
         self.tokens = {"input": 0, "output": 0, "total": 0, "reasoning": 0}
 
     def trace_decomposition_event(self, decomposed_query: CostAwareLLMResult):
+        """Stage 1: Record query decomposition results, cost, and token usage."""
         self.decomposed_query = decomposed_query.result._asdict()
         self.decomposed_query["cost"] = decomposed_query.tot_cost
         self.decomposed_query["model"] = decomposed_query.models[0]
@@ -55,14 +58,17 @@ class EventTrace:
             self.tokens[k] += self.decomposed_query["tokens"][k]
 
     def trace_retrieval_event(self, retrieved: List[Dict[str, Any]]):
+        """Stage 2a: Record retrieved passages from semantic search."""
         self.n_retrieved = len(retrieved)
         self.retrieved = retrieved
 
     def trace_rerank_event(self, candidates: List[Dict[str, Any]]):
+        """Stage 2b: Record reranked and aggregated paper candidates."""
         self.n_candidates = len(candidates)
         self.candidates = candidates
 
     def trace_quote_event(self, paper_summaries: CostAwareLLMResult):
+        """Stage 3: Record extracted quotes from papers with associated costs and tokens."""
         topk = [
             {"idx": i, "key": k, "snippets": v}
             for i, (k, v) in enumerate(paper_summaries.result.items())
@@ -81,6 +87,7 @@ class EventTrace:
     def trace_clustering_event(
         self, cluster_json: CostAwareLLMResult, plan_str: Dict[str, Any]
     ):
+        """Stage 4: Record quote clustering plan with reasoning and dimension assignments."""
         self.cluster["cost"] = cluster_json.tot_cost
         self.cluster["tokens"] = cluster_json.tokens._asdict()
         self.cluster["cot"] = cluster_json.result["cot"]
@@ -95,6 +102,7 @@ class EventTrace:
         paper_summaries_extd: Dict[str, Any],
         quotes_metadata: Dict[str, List[Dict[str, Any]]],
     ):
+        """Enrich quotes with inline citations and reference metadata for traceability."""
         for quote_obj in self.quotes["quotes"]:
             quote_obj["snippets"] = paper_summaries_extd[quote_obj["key"]].get(
                 "quote", quote_obj["snippets"]
@@ -110,6 +118,7 @@ class EventTrace:
         cost_result: CostAwareLLMResult,
         tab_costs: List[Dict] = None,
     ):
+        """Stage 5: Record final generated sections with costs, including optional table generation costs."""
         logger.info(
             f"trace_summary_event called with cost_result.tokens: {cost_result.tokens}"
         )
@@ -184,6 +193,7 @@ class EventTrace:
             logger.info("No table costs to process")
 
     def persist_trace(self, logs_config: LogsConfig):
+        """Write complete execution trace to configured storage (GCS or local filesystem)."""
         trace_writer = (
             GCSWriter(bucket_name=logs_config.event_trace_loc)
             if logs_config.tracing_mode == "gcs"

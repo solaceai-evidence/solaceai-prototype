@@ -25,8 +25,8 @@ class FullTextRetriever(AbstractRetriever):
         self.n_keyword_srch = n_keyword_srch
 
     def retrieve_passages(self, query: str, **filter_kwargs) -> List[Dict[str, Any]]:
-        """Query the Semantic Scholar API full text search end point to retrieve papers based on the query.
-        The full text search end point does not return the required metadata fields, so we will fetch metadata for
+        """Query the Semantic Scholar API full text search endpoint to retrieve papers based on the query.
+        The full text search endpoint does not return the required metadata fields, so we will fetch metadata for
         these later."""
         snippets_list = self.snippet_search(query, **filter_kwargs)
         snippets_list = [
@@ -35,6 +35,7 @@ class FullTextRetriever(AbstractRetriever):
         return snippets_list
 
     def snippet_search(self, query: str, **filter_kwargs) -> List[Dict[str, Any]]:
+        """Query the Semantic Scholar API snippet search endpoint and return top n snippets."""
         if not self.n_retrieval:
             return []
         query_params = {fkey: fval for fkey, fval in filter_kwargs.items() if fval}
@@ -93,14 +94,15 @@ class FullTextRetriever(AbstractRetriever):
     def retrieve_additional_papers(
         self, query: str, **filter_kwargs
     ) -> List[Dict[str, Any]]:
+        """Perform a keyword search to retrieve additional papers based on the query."""
         return (
             self.keyword_search(query, **filter_kwargs) if self.n_keyword_srch else []
         )
 
     def keyword_search(self, kquery: str, **filter_kwargs) -> List[Dict[str, Any]]:
-        """Query the Semantic Scholar API keyword search end point and return top n papers.
+        """Query the Semantic Scholar API keyword search endpoint and return top n papers.
         The keyword search api also accepts filters for fields like year, venue, etc. which we obtain after decomposing
-        the initial user query. This end point returns the required metadata fields as well, so we will skip fetching
+        the initial user query. This endpoint returns the required metadata fields as well, so we will skip fetching
         metadata for these later."""
 
         paper_data = []

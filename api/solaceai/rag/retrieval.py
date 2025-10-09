@@ -56,6 +56,7 @@ class PaperFinder(AbsPaperFinder):
     def retrieve_additional_papers(
         self, query: str, **filter_kwargs
     ) -> List[Dict[str, Any]]:
+        """Retrieve additional papers (without snippets) for the given query"""
         if self.max_date:
             # S2 API doesnt have insertedBefore for this endpoint, so use publicationDateOrYear:
             if year_filter := filter_kwargs.pop("year", None):
@@ -85,7 +86,7 @@ class PaperFinder(AbsPaperFinder):
     def aggregate_into_dataframe(
         self, snippets_list: List[Dict[str, Any]], paper_metadata: Dict[str, Any]
     ) -> pd.DataFrame:
-        """The reranked snippets is passage level. This function aggregates the passages to the paper level,
+        """The reranked snippets are passage level. This function aggregates the passages to the paper level,
         The Dataframe also consists of aggregated passages stitched together with the paper title and abstract in the markdown format.
         """
         snippets_list = [
@@ -108,6 +109,7 @@ class PaperFinder(AbsPaperFinder):
     def aggregate_snippets_to_papers(
         snippets_list: List[Dict[str, Any]], paper_metadata: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
+        """Aggregate the reranked snippets to paper level, and keep the highest relevance_judgement score as the paper score. Also keep the abstract if available."""
         logging.info(
             f"Aggregating {len(snippets_list)} passages at paper level with metadata"
         )
@@ -144,6 +146,7 @@ class PaperFinder(AbsPaperFinder):
     def format_retrieval_response(
         self, agg_reranked_candidates: List[Dict[str, Any]]
     ) -> pd.DataFrame:
+        """Format the aggregated reranked candidates into a DataFrame with relevant fields and markdown formatted text."""
         def format_sections_to_markdown(row: List[Dict[str, Any]]) -> str:
             # convenience function to format the sections of a paper into markdown for function below
             # Convert the list of dictionaries to a DataFrame
@@ -236,6 +239,7 @@ class PaperFinder(AbsPaperFinder):
 
 
 class PaperFinderWithReranker(PaperFinder):
+    """Paper finder with a reranking step using a cross-encoder model."""
     def __init__(
         self,
         retriever: AbstractRetriever,

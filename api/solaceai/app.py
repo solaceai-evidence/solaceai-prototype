@@ -91,10 +91,12 @@ T = TypeVar("T", bound=SolaceAI)
 
 
 def lazy_load_state_mgr_client():
+    """Initialize local filesystem-based state manager for tracking async task progress."""
     return LocalStateMgrClient(logs_config.log_dir, "async_state")
 
 
 def lazy_load_scholarqa(task_id: str, sqa_class: Type[T] = SolaceAI, **sqa_args) -> T:
+    """Factory function to instantiate SolaceAI pipeline with configured retriever and optional reranker."""
     retriever = FullTextRetriever(**run_config.retriever_args)
     if run_config.reranker_args:
         reranker = RERANKER_MAPPING[run_config.reranker_service](
@@ -127,7 +129,7 @@ app_config.load_scholarqa = lazy_load_scholarqa
 
 def _do_task(tool_request: ToolRequest, task_id: str) -> TaskResult:
     """
-    Execute a ScholarQA task with optional concurrency control.
+    Execute a SOLACE-AI task with optional concurrency control.
 
     CONCURRENCY CONTROL IMPLEMENTATION:
     - Uses a semaphore to limit concurrent query execution when enabled
@@ -171,8 +173,8 @@ def _estimate_task_length(
 ) -> str:
     """
     For telling the user how long to wait before asking for a status
-    update on async tasks. This can just be a static guess, but you
-    have access to the request if you want to do something fancier.
+    update on async tasks. This can just be a static guess, but one
+    may have access to the request to do something fancier.
     """
     return "~5 minutes"
 
@@ -180,7 +182,7 @@ def _estimate_task_length(
 # Initialize rate limiter from environment variables
 # then, store reference for monitoring (added rate limiter status endpoint below thru app.state)
 def setup_rate_limiter():
-    """Initialize rate limiter from environment variables"""
+    """Initialize global rate limiter from environment variables to manage API quotas and costs."""
     max_requests_per_minute = int(os.getenv("RATE_LIMIT_RPM", "-1"))
 
     if max_requests_per_minute <= 0:
@@ -218,6 +220,7 @@ def setup_rate_limiter():
 
 # root_path="/api"
 def create_app() -> FastAPI:
+    """Create and configure FastAPI application with endpoints for synchronous and asynchronous query processing."""
     app = FastAPI()
 
     # Store rate limiter
@@ -225,15 +228,18 @@ def create_app() -> FastAPI:
 
     @app.get("/")
     def root(request: Request):
+        """Health check endpoint returning basic service information."""
         return {"message": "Hello World", "root_path": request.scope.get("root_path")}
 
     @app.get("/health", status_code=204)
     def health():
+        """Service health check endpoint for monitoring and load balancers."""
         return "OK"
 
     # Add rate limiter status endpoint
     @app.get("/rate_limiter_status")
     def get_rate_limiter_status(request: Request):
+        """Diagnostic endpoint for monitoring rate limiter usage and quota consumption."""
         rate_limiter = request.app.state.rate_limiter
         if rate_limiter:
             return {"enabled": True, "usage": rate_limiter.get_current_usage()}
@@ -243,6 +249,7 @@ def create_app() -> FastAPI:
     def use_tool(
         tool_request: ToolRequest,
     ) -> Union[AsyncToolResponse, ToolResponse]:
+        """Main endpoint: Submit new query or check status of existing async task."""
         if not app_config.state_mgr_client:
             app_config.state_mgr_client = lazy_load_state_mgr_client()
         # Caller is asking for a status update of long-running request
@@ -270,6 +277,7 @@ def create_app() -> FastAPI:
 
 
 def _start_async_task(task_id: str, tool_request: ToolRequest) -> str:
+    """Initialize async task state and spawn background process for query execution."""
     global started_task_step
     estimated_time = _estimate_task_length(tool_request)
     tool_request.task_id = task_id
@@ -293,6 +301,7 @@ def _start_async_task(task_id: str, tool_request: ToolRequest) -> str:
     task_state_manager.write_state(task_state)
 
     def _do_task_and_write_result():
+        """Execute pipeline and persist final result or error state to disk."""
         extra_state = {}
         try:
             task_result = _do_task(tool_request, task_id)

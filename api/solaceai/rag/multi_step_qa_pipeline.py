@@ -28,11 +28,13 @@ logger = logging.getLogger(__name__)
 
 
 class DimFormat(str, Enum):
+    """Output format for organizing extracted evidence: synthesis (narrative) or list (bullet points)."""
     SYNTHESIS = "synthesis"
     LIST = "list"
 
 
 class Dimension(BaseModel):
+    """Represents a thematic section in the final answer with associated evidence quotes."""
     name: str = Field(default=None, description=("The name of the dimension"))
     format: DimFormat = Field(
         default=None,
@@ -49,6 +51,7 @@ class Dimension(BaseModel):
 
 
 class ClusterPlan(BaseModel):
+    """LLM-generated plan for organizing evidence into thematic sections with reasoning."""
     cot: str = Field(
         default=None,
         description=("The justification for every dimension name and its format"),
@@ -62,6 +65,7 @@ class ClusterPlan(BaseModel):
 
 
 class MultiStepQAPipeline:
+    """Orchestrates the evidence extraction, clustering, and section generation pipeline stages."""
     def __init__(
         self,
         llm_model: str,
@@ -69,6 +73,7 @@ class MultiStepQAPipeline:
         batch_workers: int = int(os.getenv("MAX_LLM_WORKERS", "20")),
         **llm_kwargs,
     ):
+        """Initialize pipeline with LLM configuration and parallelization settings."""
         self.llm_model = llm_model
         self.fallback_llm = fallback_llm
         self.batch_workers = batch_workers
@@ -84,6 +89,7 @@ class MultiStepQAPipeline:
     def step_select_quotes(
         self, query: str, scored_df: pd.DataFrame, sys_prompt: str
     ) -> Tuple[Dict[str, str], List[CompletionResult]]:
+        """Stage 3: Extract relevant evidence quotes from each paper using LLM in parallel."""
 
         logger.info(
             f"Querying {self.llm_model} to extract quotes from these papers with {self.batch_workers} parallel workers"
@@ -129,7 +135,9 @@ class MultiStepQAPipeline:
     def step_clustering(
         self, query: str, per_paper_summaries: Dict[str, str], sys_prompt: str
     ) -> Tuple[Dict[str, Any], CompletionResult]:
+        """Stage 4: Organize extracted quotes into thematic dimensions using LLM reasoning."""
         def make_prompt(query: str, paper_paper_quotes_dict: Dict[str, str]) -> str:
+            """Format quotes with indices for LLM clustering input."""
             # paper_paper_quotes_dict is a dictionary with keys being the paper titles and values being the quotes
             # need to make a single string with all of the quotes
             quotes = ""
@@ -163,6 +171,7 @@ class MultiStepQAPipeline:
         plan: Dict[str, Any],
         sys_prompt: str,
     ) -> Generator[CompletionResult, None, None]:
+        """Stage 5: Generate narrative sections iteratively, building on previous sections with streaming output."""
         # first, we need to make a map from the index to the quotes because the llm is using index only
 
         # now fill in the prompt
