@@ -10,7 +10,8 @@ import React from 'react';
     VarnishApp: main wrapper component from Varnish that applies the theme and global styles.
     Varnish: AllenAI MUI-based design system. 
 */
-import { getTheme, getRouterOverriddenTheme, VarnishApp } from '@allenai/varnish2';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 /* API for rendering app into the DOM (replaces ReactDOM.render) */
 import { createRoot } from 'react-dom/client';
 /* Provides client-side routing for the app, enabling navigation between pages without full reloads. */
@@ -22,14 +23,17 @@ import { App } from './App';
 import { ScrollToTopOnPageChange } from './components/shared';
 
 const VarnishedApp = () => {
-  const theme = getTheme(getRouterOverriddenTheme(HashLink));
+  const theme = createTheme({
+    // Customize your theme here (palette, typography, etc.)
+  });
 
   return (
     <BrowserRouter>
       <ScrollToTopOnPageChange />
-      <VarnishApp theme={theme}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
         <App />
-      </VarnishApp>
+      </ThemeProvider>
     </BrowserRouter>
   );
 };

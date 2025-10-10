@@ -20,8 +20,8 @@ enum RoutesEnum {
 }
 
 const DarkBackground = styled('div')`
-  color: ${({ theme }) => theme.palette.text.reversed};
-  background-color: ${({ theme }) => theme.palette.background.reversed};
+  color: ${({ theme }) => theme.palette.text.primary};
+  background-color: ${({ theme }) => theme.palette.background.default};
   min-height: 100vh;
   display: flex;
   flex-direction: column;

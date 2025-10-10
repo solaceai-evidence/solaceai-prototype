@@ -64,7 +64,8 @@ export const Sidebar: React.FC<PropType> = (props) => {
         display: 'flex',
         flexDirection: 'column',
         height: { xs: '100vh', sm: '100%' },
-        backgroundColor: 'rgba(250,242,233,0.04)',
+        backgroundColor: (theme) => theme.palette.background.default,
+        color: (theme) => theme.palette.text.primary,
       }}
     >
       <Box sx={{ borderBottom: '1px solid rgba(250, 242, 233, 0.1)' }}>
@@ -271,8 +272,8 @@ export const Sidebar: React.FC<PropType> = (props) => {
           display: { xs: 'block', sm: 'none' },
           '& .MuiDrawer-paper': {
             boxSizing: 'border-box',
-            backgroundColor: { xs: '#08232B', sm: 'rgba(250, 242, 233, 0.04)' },
-            color: '#F8F0E7',
+            backgroundColor: (theme) => theme.palette.background.default,
+            color: (theme) => theme.palette.text.primary,
             width: { xs: '80vw', sm: '240px' },
           },
         }}
@@ -286,8 +287,8 @@ export const Sidebar: React.FC<PropType> = (props) => {
           flexShrink: 0,
           '& .MuiDrawer-paper': {
             boxSizing: 'border-box',
-            backgroundColor: { xs: '#08232B', sm: 'rgba(250, 242, 233, 0.04)' },
-            color: '#F8F0E7',
+            backgroundColor: (theme) => theme.palette.background.default,
+            color: (theme) => theme.palette.text.primary,
             width: { xs: '80vw', sm: '240px' },
           },
         }}
