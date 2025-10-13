@@ -122,7 +122,7 @@ export const App = () => {
                   href={RoutesEnum.ABOUT}
                   underline="hover"
                   variant="body2"
-                  sx={{ lineHeight: '24px', color: '#26EFAC' }}
+                  sx={{ lineHeight: '24px' }}
                 >
                   About
                 </Link>

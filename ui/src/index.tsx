@@ -24,7 +24,12 @@ import { ScrollToTopOnPageChange } from './components/shared';
 
 const VarnishedApp = () => {
   const theme = createTheme({
-    // Customize your theme here (palette, typography, etc.)
+    typography: {
+      fontFamily: '"Inter", Arial, sans-serif',
+      fontSize: 16, // 1.0rem (16px)
+      htmlFontSize: 16,
+    },
+    // ...other theme options
   });
 
   return (

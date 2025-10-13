@@ -136,7 +136,8 @@ const SuggestedPrompt = styled('button')`
   color: ${({ theme }) => theme.palette.text.primary};
   cursor: pointer;
   display: flex;
-  font-size: ${({ theme }) => theme.typography.fontSize}px;
+  font-size: 1.0rem;
+  font-family: 'Inter', Arial, sans-serif;
   gap: ${({ theme }) => theme.spacing(1)};
   line-height: ${({ theme }) => theme.spacing(3)};
   margin-bottom: ${({ theme }) => theme.spacing(0.5)};
