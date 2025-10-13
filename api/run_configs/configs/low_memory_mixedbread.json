@@ -12,10 +12,11 @@
       "n_retrieval": 256,
       "n_keyword_srch": 20
     },
-    "reranker_service": "remote",
+    "reranker_service": "crossencoder",
     "reranker_args": {
-      "model_name_or_path": "cross-encoder/ms-marco-MiniLM-L-6-v2",
-      "batch_size": 16
+      "model_name_or_path": "mixedbread-ai/mxbai-rerank-base-v1",
+      "batch_size": 8,
+      "device": "cpu"
     },
     "paper_finder_args": {
       "n_rerank": 50,

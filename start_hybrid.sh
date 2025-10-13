@@ -98,6 +98,11 @@ install_dependencies() {
 setup_python_environment
 install_dependencies
 
+# Ensure /usr/local/bin is in PATH (needed for Docker on macOS)
+if [[ ":$PATH:" != *":/usr/local/bin:"* ]]; then
+    export PATH="/usr/local/bin:$PATH"
+fi
+
 # Detect docker compose command
 detect_docker_compose() {
     if command -v docker-compose &> /dev/null; then
@@ -183,6 +188,22 @@ echo "   Waiting for reranker service to initialize..."
 for i in {1..15}; do
     if curl -sf http://$RERANKER_HOST:$RERANKER_PORT/ready > /dev/null 2>&1; then
         echo "   Reranker service ready!"
+        
+        # Display reranker configuration from logs
+        sleep 1  # Give logging a moment to flush
+        echo ""
+        echo "   Reranker Configuration:"
+        # Extract and display the configuration banner from logs
+        if [ -f "api/logs/reranker_service.log" ]; then
+            grep -A 6 "RERANKER CONFIGURATION LOADED" api/logs/reranker_service.log | tail -6 || {
+                # Fallback: try to extract key info from log
+                echo "     Config: $CONFIG_FILE"
+                grep "Configured reranker:" api/logs/reranker_service.log | tail -1 | sed 's/.*INFO - /     /' || true
+                grep "Batch size:" api/logs/reranker_service.log | tail -1 | sed 's/.*INFO - /     /' || true
+            }
+        fi
+        echo ""
+        
         break
     fi
     if [ $i -eq 15 ]; then
@@ -250,6 +271,19 @@ echo "   • Web Application: http://localhost:8080"
 echo "   • Native Reranker: http://$RERANKER_HOST:$RERANKER_PORT/health"
 echo "     - Process ID: $RERANKER_PID"
 echo "     - Logs: api/logs/reranker_service.log"
+
+# Extract and show reranker model info from config
+if [ -f "$CONFIG_FILE" ]; then
+    RERANKER_MODEL=$(grep -A 2 '"reranker_args"' "$CONFIG_FILE" | grep 'model_name_or_path' | sed 's/.*: *"\([^"]*\)".*/\1/' | tr -d ',')
+    RERANKER_BATCH=$(grep -A 3 '"reranker_args"' "$CONFIG_FILE" | grep 'batch_size' | sed 's/.*: *\([0-9]*\).*/\1/' | tr -d ',')
+    RERANKER_DEVICE=$(grep -A 4 '"reranker_args"' "$CONFIG_FILE" | grep 'device' | sed 's/.*: *"\([^"]*\)".*/\1/' | tr -d ',')
+    
+    if [ -n "$RERANKER_MODEL" ]; then
+        echo "     - Model: $RERANKER_MODEL"
+        [ -n "$RERANKER_BATCH" ] && echo "     - Batch size: $RERANKER_BATCH"
+        [ -n "$RERANKER_DEVICE" ] && echo "     - Device: $RERANKER_DEVICE"
+    fi
+fi
 echo ""
 echo "   • Main API: http://localhost:$MAIN_API_PORT"
 echo ""

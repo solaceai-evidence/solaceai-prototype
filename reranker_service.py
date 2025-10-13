@@ -7,8 +7,10 @@ import asyncio
 import gc
 import logging
 import os
+import sys
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, List, Optional
 
@@ -35,7 +37,14 @@ host = os.getenv("RERANKER_HOST", "0.0.0.0")
 port = int(os.getenv("RERANKER_PORT", "10001"))
 log_level = os.getenv("LOG_LEVEL", "INFO")
 
+# Add api directory to path to import modules
+api_dir = str(Path(__file__).parent / "api")
+if api_dir not in sys.path:
+    sys.path.insert(0, api_dir)
+
 # Use existing reranker infrastructure
+from solaceai.config.config_setup import read_json_config
+
 from api.solaceai.rag.reranker.reranker_base import RERANKER_MAPPING
 
 # Configure logging
@@ -51,14 +60,49 @@ _cache_lock = Lock()
 _request_count = 0
 _start_time = time.time()
 
+# Load configuration from JSON file (shared with main API)
+CONFIG_PATH = os.getenv("CONFIG_PATH", "api/run_configs/default.json")
+logger.info(f"Loading reranker configuration from: {CONFIG_PATH}")
+
+try:
+    app_config = read_json_config(CONFIG_PATH)
+    run_config = app_config.run_config
+
+    # Extract reranker configuration
+    PRELOAD_MODEL = run_config.reranker_args.get(
+        "model_name_or_path", "mixedbread-ai/mxbai-rerank-large-v1"
+    )
+    PRELOAD_BATCH_SIZE = run_config.reranker_args.get("batch_size", 32)
+    PRELOAD_TYPE = run_config.reranker_service
+
+    # Get device setting if specified
+    device_setting = run_config.reranker_args.get("device", "auto-detect")
+
+    logger.info("=" * 80)
+    logger.info("RERANKER CONFIGURATION LOADED")
+    logger.info("=" * 80)
+    logger.info(f"  Config file:   {CONFIG_PATH}")
+    logger.info(f"  Reranker type: {PRELOAD_TYPE}")
+    logger.info(f"  Model:         {PRELOAD_MODEL}")
+    logger.info(f"  Batch size:    {PRELOAD_BATCH_SIZE}")
+    logger.info(f"  Device:        {device_setting}")
+    logger.info("=" * 80)
+
+except Exception as e:
+    logger.error(f"Failed to load config from {CONFIG_PATH}: {e}")
+    logger.warning("Falling back to environment variables or defaults")
+
+    # Fallback to environment variables if JSON config fails
+    PRELOAD_MODEL = os.getenv(
+        "RERANKER_PRELOAD_MODEL", "mixedbread-ai/mxbai-rerank-large-v1"
+    )
+    PRELOAD_TYPE = os.getenv("RERANKER_PRELOAD_TYPE", "crossencoder")
+    PRELOAD_BATCH_SIZE = 32
+
 # Service settings (not tunable via env yet)
 MAX_CONCURRENCY = int(os.getenv("MAX_CONCURRENCY", "1"))
 REQUEST_TIMEOUT_MS = int(os.getenv("RERANKER_TIMEOUT_MS", "120000"))
 QUEUE_TIMEOUT_MS = int(os.getenv("RERANKER_QUEUE_TIMEOUT_MS", "10000"))
-PRELOAD_MODEL = os.getenv(
-    "RERANKER_PRELOAD_MODEL", "mixedbread-ai/mxbai-rerank-large-v1"
-)
-PRELOAD_TYPE = os.getenv("RERANKER_PRELOAD_TYPE", "crossencoder")
 
 # Concurrency / shutdown controls
 _semaphore: asyncio.Semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
@@ -184,7 +228,7 @@ def get_reranker(reranker_type: str, model_name_or_path: str, batch_size: int = 
                     if hasattr(reranker.model, "to"):
                         reranker.model = reranker.model.to("mps")
                         reranker.device = "mps"
-                        logger.info(f"Moved model to MPS device")
+                        logger.info("Moved model to MPS device")
                 except Exception as e:
                     logger.warning(f"Could not move model to MPS: {e}")
 
@@ -236,8 +280,10 @@ async def lifespan(app: FastAPI):
     # Optional model warmup
     if PRELOAD_MODEL:
         try:
-            logger.info(f"Preloading reranker model: {PRELOAD_TYPE}:{PRELOAD_MODEL}")
-            _ = get_reranker(PRELOAD_TYPE, PRELOAD_MODEL)
+            logger.info(
+                f"Preloading reranker model: {PRELOAD_TYPE}:{PRELOAD_MODEL} with batch_size={PRELOAD_BATCH_SIZE}"
+            )
+            _ = get_reranker(PRELOAD_TYPE, PRELOAD_MODEL, PRELOAD_BATCH_SIZE)
         except Exception as e:
             logger.warning(f"Warmup failed: {e}")
 
