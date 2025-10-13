@@ -210,10 +210,9 @@ if __name__ == "__main__":
         from dotenv import load_dotenv
         from solaceai.llms.constants import CLAUDE_4_SONNET, CostReportingArgs
         from solaceai.llms.litellm_helper import CostAwareLLMCaller
-        from solaceai.models import GeneratedSection, TaskResult
         from solaceai.rag.retrieval import PaperFinder
         from solaceai.rag.retriever_base import FullTextRetriever
-        from api.solaceai.solace_ai import SolaceAI
+        from solaceai.solace_ai import SolaceAI
         from solaceai.state_mgmt.local_state_mgr import LocalStateMgrClient
         from solaceai.table_generation.column_suggestion import (
             generate_attribute_suggestions,
@@ -222,9 +221,6 @@ if __name__ == "__main__":
         from solaceai.utils import (
             CATEGORICAL_META_FIELDS,
             NUMERIC_META_FIELDS,
-            get_paper_metadata,
-            get_ref_author_str,
-            make_int,
         )
 
         # Load environment variables from .env file
@@ -234,4 +230,4 @@ if __name__ == "__main__":
         if not os.getenv("S2_API_KEY"):
             sys.exit("Error: Missing S2_API_KEY in environment variables")
 
-        run_table_generation6(args.query)
+        test_table_generation6(args.query)

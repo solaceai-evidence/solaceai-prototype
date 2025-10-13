@@ -24,7 +24,7 @@ from solaceai.postprocess.json_output_utils import get_json_summary
 from solaceai.preprocess.query_preprocessor import decompose_query
 from solaceai.rag.retrieval import PaperFinder
 from solaceai.rag.retriever_base import FullTextRetriever
-from api.solaceai.solace_ai import SolaceAI
+from solaceai.solace_ai import SolaceAI
 from solaceai.state_mgmt.local_state_mgr import LocalStateMgrClient
 
 # Suppress noisy runtime warnings
@@ -47,19 +47,6 @@ if env_file.exists():
 # Verify required environment variables
 if not os.getenv("S2_API_KEY"):
     sys.exit("Error: Missing S2_API_KEY in environment variables")
-
-from solaceai.llms.constants import CLAUDE_4_SONNET, CostReportingArgs
-from solaceai.llms.prompts import (
-    PROMPT_ASSEMBLE_NO_QUOTES_SUMMARY,
-    PROMPT_ASSEMBLE_SUMMARY,
-    SYSTEM_PROMPT_QUOTE_CLUSTER,
-    SYSTEM_PROMPT_QUOTE_PER_PAPER,
-)
-from solaceai.preprocess.query_preprocessor import decompose_query
-from solaceai.rag.retrieval import PaperFinder
-from solaceai.rag.retriever_base import FullTextRetriever
-from api.solaceai.solace_ai import SolaceAI
-from solaceai.state_mgmt.local_state_mgr import LocalStateMgrClient
 
 
 def test_section_generation_stage5(query: Optional[str] = None, max_results: int = 2):
@@ -423,4 +410,4 @@ if __name__ == "__main__":
         "--max-results", type=int, default=2, help="Maximum number of papers to use"
     )
 
-    run_section_generation_stage5(**vars(parser.parse_args()))
+    test_section_generation_stage5(**vars(parser.parse_args()))

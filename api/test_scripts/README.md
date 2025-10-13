@@ -24,6 +24,14 @@ The `run_pipeline_stage1.py` script processes your research question and shows w
 - Displays which filters were found in your question
 - Handles environment setup automatically
 
+**Output**
+Each script shows detailed information about what it's doing, including:
+
+- Which search parameters were found in your question
+- How many papers were retrieved
+- What information is available in the results
+- Processing time and costs (prototype)
+
 **Usage:**
 
 ```bash
@@ -152,12 +160,3 @@ Run all scripts from the `api/test_scripts` directory. The scripts will automati
 
 - Use `--skip-setup` flag for repeat runs to skip environment setup
 - Reduce `--max-results` number for faster processing
-
-## Getting Help
-
-Each script shows detailed information about what it's doing, including:
-
-- Which search parameters were found in your question
-- How many papers were retrieved
-- What information is available in the results
-- Processing time and costs

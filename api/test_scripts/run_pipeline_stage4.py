@@ -8,7 +8,7 @@ import os
 import sys
 import warnings
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 # Suppress noisy runtime warnings (functional logs controlled by --quiet)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -35,7 +35,7 @@ from solaceai.llms.prompts import SYSTEM_PROMPT_QUOTE_PER_PAPER
 from solaceai.preprocess.query_preprocessor import decompose_query
 from solaceai.rag.retrieval import PaperFinder
 from solaceai.rag.retriever_base import FullTextRetriever
-from api.solaceai.solace_ai import SolaceAI
+from solaceai.solace_ai import SolaceAI
 from solaceai.state_mgmt.local_state_mgr import LocalStateMgrClient
 from solaceai.utils import get_paper_metadata
 
@@ -397,4 +397,4 @@ if __name__ == "__main__":
     parser.set_defaults(quiet=True)
 
     args = parser.parse_args()
-    run_evidence_extraction_stage(args.query, args.max_results, args.quiet)
+    test_evidence_extraction_stage4(args.query, args.max_results, args.quiet)
