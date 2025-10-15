@@ -34,7 +34,6 @@ from solaceai.rag.multi_step_qa_pipeline import MultiStepQAPipeline
 from solaceai.rag.retrieval import PaperFinder
 from solaceai.state_mgmt.local_state_mgr import AbsStateMgrClient, LocalStateMgrClient
 from solaceai.table_generation.table_generator import TableGenerator
-from solaceai.table_generation.table_model import TableWidget
 from solaceai.trace.event_traces import EventTrace
 from solaceai.utils import (
     CATEGORICAL_META_FIELDS,
@@ -175,7 +174,7 @@ class SolaceAI:
             step_estimated_time=1,
         )
         self.update_task_state(
-            f"Retrieving relevant passages from Sematic Scholar Open Research Corpus",
+            "Retrieving relevant passages from the Semantic Scholar Open Research Corpus",
             step_estimated_time=5,
         )
         # Get relevant paper passages from the Semantic Scholar index for the llm rewritten query
@@ -448,7 +447,7 @@ class SolaceAI:
                     for quote in curr_reqd_quotes
                 ]
                 for idx, (quote, quote_reg) in enumerate(
-                    zip(curr_reqd_quotes, curr_reqd_quotes_reg)
+                    zip(curr_reqd_quotes, curr_reqd_quotes_reg, strict=False)
                 ):
                     new_quote = quote.strip()
                     curr_quote_map = (
@@ -976,7 +975,7 @@ class SolaceAI:
             all_sections = e.value
 
         self.update_task_state(
-            f"Generating comparison tables",
+            "Generating comparison tables",
             curr_response=generated_sections,
             step_estimated_time=20,
         )
