@@ -1,0 +1,56 @@
+%% SolaceAI class architecture (component diagram tied to class workflow)
+%% File: docs/diagrams/solace_ai_class_architecture.mmd
+
+graph LR
+  Client[Client / Frontend]
+  API[API Gateway]
+  Solace[SolaceAI (Orchestrator Class)]
+  PaperFinder[PaperFinder (Retriever)]
+  MultiStep[MultiStepQAPipeline]
+  LLM[CostAwareLLMCaller / LLM Provider]
+  State[StateMgr (LocalStateMgrClient / Redis)]
+  Vector[Vector DB / ANN Index]
+  Knowledge[KnowledgeStore / Document Store]
+  TableGen[TableGenerator]
+  EventTrace[EventTrace / Traces]
+  Tracing[Tracing & Metrics]
+  DB[SQL / Metadata DB]
+
+  Client -->|POST query| API
+  API --> Solace
+
+  subgraph "SolaceAI internals"
+    Solace --> PaperFinder
+    Solace --> MultiStep
+    Solace --> LLM
+    Solace --> State
+    Solace --> TableGen
+    Solace --> EventTrace
+  end
+
+  PaperFinder --> Vector
+  PaperFinder --> Knowledge
+  MultiStep --> LLM
+  LLM --> Tracing
+  EventTrace --> Tracing
+  State --> DB
+  Solace --> Tracing
+
+  style Solace fill:#b3e6ff,stroke:#333,stroke-width:2px
+  style PaperFinder fill:#fff2b3,stroke:#333
+  style MultiStep fill:#ffd6d6,stroke:#333
+  style LLM fill:#ffe6f0,stroke:#333
+  style State fill:#e6ffe6,stroke:#333
+  style Vector fill:#f2f2f2,stroke:#333
+  style Knowledge fill:#f2f2f2,stroke:#333
+  style TableGen fill:#e6f7ff,stroke:#333
+  style EventTrace fill:#f7f0e6,stroke:#333
+  style Tracing fill:#efefef,stroke:#333
+  style API fill:#f0f0ff,stroke:#333
+  style Client fill:#ffffff,stroke:#333
+
+  %% Notes
+  classDef note fill:#fff,stroke:#333,stroke-dasharray: 5 5
+  Note1["Note: SolaceAI orchestrates preprocess -> retrieval -> rerank -> quote extraction -> clustering -> summary generation -> postprocess"]
+  Note1:::note
+  Solace --- Note1
