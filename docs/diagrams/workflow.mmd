@@ -1,0 +1,57 @@
+%% Solace-AI typical workflow (sequence diagram)
+%% File: docs/diagrams/workflow.mmd
+
+sequenceDiagram
+  participant User as User (Client)
+  participant API as API Gateway
+  participant Core as SolaceAI Orchestrator
+  participant Manager as QueryRefinementManager
+  participant Worker as Worker Pool
+  participant LLM as LLM Provider
+  participant Embed as Embedding Service
+  participant Retriever as Retriever
+  participant Vector as Vector DB
+  participant Store as Document Store
+  participant Session as SessionStore
+  participant Tracing as Tracing
+
+  User->>API: POST /start { query, schema_id, user_id }
+  API->>Core: Validate & Auth
+  Core->>Manager: initialize(session, query, schema_id)
+  Manager->>Session: save(session)
+  Manager->>Tracing: span("session.init")
+  Manager-->>API: 200 { session_id, first_question }
+
+  loop interaction
+    User->>API: POST /answer { session_id, answer }
+    API->>Manager: process_user_response(session_id, answer)
+    Manager->>Tracing: span("process.step")
+    opt use embeddings
+      Manager->>Embed: embed(answer)
+      Embed-->>Vector: upsert(embedding)
+    end
+    opt analyzer
+      Manager->>Worker: analyze(answer)
+      Worker->>LLM: call(prompt)
+      LLM-->>Worker: response
+      Worker-->>Manager: normalized_answer
+    end
+    Manager->>Session: save(session)
+    Manager-->>API: { next_question | status }
+  end
+
+  API->>Core: request_finalize(session_id)
+  Core->>Manager: get_refined_query(session_id)
+  Manager->>Retriever: retrieve(refined_query)
+  Retriever->>Vector: search(query_vec)
+  Vector-->>Retriever: hits
+  Retriever->>Store: fetch(docs)
+  Retriever-->>Manager: evidence
+  Manager->>LLM: generate_answer(refined_query, evidence)
+  LLM-->>Manager: final_answer
+  Manager->>Session: save(final_result)
+  Manager->>Tracing: span("session.finalize")
+  Manager-->>API: { final_answer, evidence_refs }
+  API-->>User: 200 { final_answer }
+
+  note over Manager,LLM: Emit metrics (model latency, tokens)
