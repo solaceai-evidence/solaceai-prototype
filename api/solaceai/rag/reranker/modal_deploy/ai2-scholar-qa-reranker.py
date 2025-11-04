@@ -1,6 +1,7 @@
 # ## Setup
 
 import os
+import threading
 import time
 from typing import List
 
@@ -10,7 +11,8 @@ MODEL_NAME = "mixedbread-ai/mxbai-rerank-large-v1"
 MODEL_DIR = f"/root/models/{MODEL_NAME}"
 GPU_CONFIG = "L4:1"  # previously: modal.gpu.L4(count=1)
 
-APP_NAME = "<modal_app_name>"
+# TODO: Set your Modal app name here (must match your Modal dashboard)
+APP_NAME = "solaceai-reranker"  # Change this to your actual Modal app name
 APP_LABEL = APP_NAME.lower()
 
 
@@ -143,24 +145,43 @@ class Model:
 
     @modal.method()
     def get_scores(
-        self, query: str, passages: List[str], batch_size: int
+        self,
+        query: str,
+        passages: List[str],
+        batch_size: int,
+        top_k: int = None,
+        return_documents: bool = False,
+        show_progress_bar: bool = True,
+        convert_to_tensor: bool = True,
     ) -> List[float]:
+        """
+        Rerank passages based on relevance to query.
+
+        Args:
+            query: The search query
+            passages: List of passages to rerank
+            batch_size: Batch size for processing
+            top_k: Return only top K results (None = return all)
+            return_documents: If True, return (score, passage) tuples instead of just scores
+            show_progress_bar: Show progress during reranking
+            convert_to_tensor: Use tensor operations (faster on GPU)
+        """
         sentence_pairs = [[query, passage] for passage in passages]
         try:
             if self.compiled_flag:
                 print("reranking with compiled model")
                 scores = self.reranker_compiled.predict(
                     sentence_pairs,
-                    convert_to_tensor=True,
-                    show_progress_bar=True,
+                    convert_to_tensor=convert_to_tensor,
+                    show_progress_bar=show_progress_bar,
                     batch_size=batch_size,
                 ).tolist()
             else:
                 print("reranking with torch model")
                 scores = self.reranker_torch.predict(
                     sentence_pairs,
-                    convert_to_tensor=True,
-                    show_progress_bar=True,
+                    convert_to_tensor=convert_to_tensor,
+                    show_progress_bar=show_progress_bar,
                     batch_size=16,
                 ).tolist()
                 if self.compiling_thread is None:
@@ -172,11 +193,30 @@ class Model:
             print(e)
             scores = self.reranker_torch.predict(
                 sentence_pairs,
-                convert_to_tensor=True,
-                show_progress_bar=True,
+                convert_to_tensor=convert_to_tensor,
+                show_progress_bar=show_progress_bar,
                 batch_size=batch_size,
             ).tolist()
-        return [float(s) for s in scores]
+
+        scores = [float(s) for s in scores]
+
+        # Apply top_k filtering if requested
+        if top_k is not None and top_k < len(scores):
+            # Get indices of top K scores
+            indexed_scores = list(enumerate(scores))
+            indexed_scores.sort(key=lambda x: x[1], reverse=True)
+            top_indices = [idx for idx, _ in indexed_scores[:top_k]]
+            top_indices.sort()  # Maintain original order
+
+            if return_documents:
+                return [(scores[i], passages[i]) for i in top_indices]
+            else:
+                return [scores[i] for i in top_indices]
+
+        if return_documents:
+            return list(zip(scores, passages, strict=False))
+
+        return scores
 
 
 # ## Coupling a frontend web application
@@ -194,10 +234,28 @@ api_image = modal.Image.debian_slim(python_version="3.11")
 )
 @modal.concurrent(max_inputs=20)
 async def inference_api(
-    query: str, passages: List[str], batch_size: int = 512
+    query: str,
+    passages: List[str],
+    batch_size: int = 512,
+    top_k: int = None,
+    return_documents: bool = False,
+    show_progress_bar: bool = True,
+    convert_to_tensor: bool = True,
 ) -> List[float]:
+    """
+    Rerank passages via FastAPI endpoint.
+    All parameters are passed through to Model.get_scores().
+    """
     model = Model()
-    return model.get_scores.remote(query, passages, batch_size)
+    return model.get_scores.remote(
+        query,
+        passages,
+        batch_size,
+        top_k=top_k,
+        return_documents=return_documents,
+        show_progress_bar=show_progress_bar,
+        convert_to_tensor=convert_to_tensor,
+    )
 
 
 @app.local_entrypoint()
