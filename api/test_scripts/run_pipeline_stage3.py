@@ -22,15 +22,22 @@ project_root = str(Path(api_dir).parent)
 if api_dir not in sys.path:
     sys.path.append(api_dir)
 
-try:
-    from dotenv import load_dotenv
+# Load environment variables from .env file (no external dependencies needed)
+env_file = Path(project_root) / ".env"
+if env_file.exists():
+    with open(env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                os.environ[key.strip()] = value.strip().strip('"').strip("'")
 
-    load_dotenv(Path(project_root) / ".env")
-except ImportError:
-    print("Warning: python-dotenv not available, skipping .env file loading")
-
+# Check for required environment variables
 if not os.getenv("S2_API_KEY"):
-    print("Error: Missing S2_API_KEY in environment variables")
+    print("\nError: Missing S2_API_KEY environment variable")
+    print("Create a .env file in project root with:")
+    print("  S2_API_KEY=your_key")
+    print("  ANTHROPIC_API_KEY=your_key")
     sys.exit(1)
 
 from solaceai.llms.constants import CLAUDE_4_SONNET
@@ -45,14 +52,21 @@ def run_reranking_stage3(query: Optional[str] = None, max_results: int = 3):
 
     # Input handling
     if not query:
-        query = input("\nEnter query for reranking testing: ").strip()
+        print("\nEnter query for reranking testing:")
+        print("(Press Enter without typing to use default query)")
+        query = input("Query: ").strip()
     if not query:
-        print("Error: No query provided. Exiting.")
-        return
+        # Use default query if none provided
+        query = "how can we improve mental health outcomes and reduce substance misuse among displaced communities in Ethiopia"
+        print(f"\nUsing default query: {query}")
 
     print("\nTESTING RERANKING & AGGREGATION STAGE")
     print(f"Input Query: '{query}'")
     print("=" * 70)
+
+    print("\nNOTE: Stage 3 uses no LLM prompts")
+    print("   This stage performs pure algorithmic reranking and aggregation")
+    print("   LLM was only used in Stage 1 (QUERY_DECOMPOSER_PROMPT)")
 
     try:
         # PREREQUISITE: Run retrieval stages first
@@ -173,6 +187,41 @@ def run_reranking_stage3(query: Optional[str] = None, max_results: int = 3):
             print("   Data Types:")
             for col, dtype in aggregated_df.dtypes.items():
                 print(f"      {col}: {dtype}")
+
+        # Explain key aggregated fields
+        print("\nAGGREGATED FIELD DESCRIPTIONS")
+        print("=" * 70)
+        print("Understanding the aggregated data (paper-level view):\n")
+
+        field_descriptions = {
+            "corpus_id": "Unique identifier for the paper",
+            "title": "Full title of the research paper",
+            "relevance_judgement": (
+                "Aggregated relevance score (0-1) based on all retrieved passages from this paper"
+            ),
+            "sentences": "List of all retrieved passages/snippets from this paper",
+            "reference_string": (
+                "Formatted citation string for this paper [ID | Authors | Year | Citations]"
+            ),
+            "relevance_judgment_input_expanded": (
+                "Formatted content combining title, abstract, and retrieved passages for LLM processing"
+            ),
+            "year": "Publication year",
+            "authors": "List of paper authors with metadata",
+            "citation_count": "Number of times this paper has been cited",
+            "influential_citation_count": "Number of highly influential citations",
+            "venue": "Publication venue (journal/conference name)",
+            "abstract": "Paper abstract text",
+            "isOpenAccess": "Whether the paper is freely available",
+        }
+
+        for field, description in field_descriptions.items():
+            print(f"  {field:35} → {description}")
+
+        print(f"\n{'='*70}")
+        print("KEY CONCEPT: Aggregation combines multiple passages from the same paper")
+        print("into a single paper-level record with an aggregated relevance score.")
+        print(f"{'='*70}")
 
         # Show top aggregated papers with ALL metadata
         print(f"\nTOP AGGREGATED PAPERS (Top {min(max_results, len(aggregated_df))})")

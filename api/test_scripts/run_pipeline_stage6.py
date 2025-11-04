@@ -1,233 +1,273 @@
 #!/usr/bin/env python3
 """
 Script to demonstrate Pipeline Stage 6: Table Generation
-Shows key steps in table generation process using semantic search and LLM
+Shows configuration, settings, and data structures for table generation.
+This is an informational display - no API calls are made.
 """
 import os
 import sys
 from pathlib import Path
 from typing import Optional
 
-from venv_utils import managed_venv
-
-# Add the API directory to Python path
+# Setup paths
 api_dir = str(Path(__file__).parent.parent)
 project_root = str(Path(api_dir).parent)
-if api_dir not in sys.path:
-    sys.path.append(api_dir)
+sys.path.append(api_dir)
+
+# Load environment variables from .env file
+env_file = Path(project_root) / ".env"
+if env_file.exists():
+    with open(env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                os.environ[key.strip()] = value.strip().strip('"').strip("'")
 
 
-def test_table_generation6(query: Optional[str] = None) -> None:
-    """
-    Test the table generation stage of the ScholarQA pipeline.
-    Shows column generation and table cell population using LLM.
+def test_table_generation6(query: Optional[str] = None):
+    """Display table generation configuration and data structures"""
 
-    Args:
-        query: Optional predefined query string
-    """
+    # Input handling
     if not query:
-        query = input("\nEnter query for table generation testing: ").strip()
+        print("\nEnter query for table generation testing:")
+        print("(Press Enter without typing to use default query)")
+        query = input("Query: ").strip()
     if not query:
-        print("Error: No query provided. Exiting.")
-        return
-
-    print("\nTESTING TABLE GENERATION STAGE")
-    print(f"Input Query: '{query}'\n")
-
-    try:
-        # Initialize ScholarQA with full pipeline setup
-        retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
-        paper_finder = PaperFinder(retriever=retriever)
-        scholar_qa = SolaceAI(
-            paper_finder=paper_finder,
-            llm_model=CLAUDE_4_SONNET,
-            state_mgr_client=LocalStateMgrClient("logs"),
-            validate=False,  # Skip validation to avoid rate limits
+        # Use default query if none provided
+        default_query = (
+            "how can we improve mental health outcomes and reduce "
+            "substance misuse among displaced communities in Ethiopia"
         )
+        query = default_query
+        print(f"\nUsing default query: {query}")
 
-        # Stage 1-5: Get evidence through ScholarQA pipeline
-        print(
-            "Running prerequisite stages (query processing, retrieval and evidence collection)..."
-        )
+    print("\n" + "=" * 70)
+    print("PIPELINE STAGE 6: TABLE GENERATION")
+    print("=" * 70)
+    print(f"\nOriginal Query: '{query}'")
 
-        # Step 0: Query preprocessing
-        cost_args = CostReportingArgs(
-            task_id="run_table_generation",
-            user_id="test_user",
-            description="Step 0: Query decomposition",
-            model=CLAUDE_4_SONNET,
-            msg_id="test_message",
-        )
-        llm_processed_query = scholar_qa.preprocess_query(query, cost_args)
+    # Show prerequisite stages
+    print("\n" + "=" * 70)
+    print("PREREQUISITE STAGES")
+    print("=" * 70)
+    print("""
+Stage 6 builds upon outputs from previous stages:
+   Stage 1: Query Decomposition → Rewritten query and search filters
+   Stage 2: Retrieval → Retrieved paper passages
+   Stage 3: Reranking → Aggregated and scored papers
+   Stage 4: Evidence Extraction → Quote summaries per paper
+   Stage 5: Section Generation → Clustered evidence dimensions
+""")
 
-        # Step 1: Paper retrieval
-        snippet_srch_res, s2_srch_res = scholar_qa.find_relevant_papers(
-            llm_processed_query.result
-        )
-        retrieved_candidates = snippet_srch_res + s2_srch_res
-        if not retrieved_candidates:
-            print("No relevant papers found in initial retrieval. Exiting.")
-            return
+    # Show LLM prompts used
+    print("=" * 70)
+    print("LLM PROMPTS USED IN STAGE 6")
+    print("=" * 70)
+    print("""
+This stage uses THREE LLM prompts from solaceai.table_generation.prompts:
 
-        # Step 2: Reranking
-        s2_srch_metadata = [
-            {
-                k: v
-                for k, v in paper.items()
-                if k == "corpus_id"
-                or k in NUMERIC_META_FIELDS
-                or k in CATEGORICAL_META_FIELDS
-            }
-            for paper in s2_srch_res
-        ]
-        reranked_df, paper_metadata = scholar_qa.rerank_and_aggregate(
-            query,
-            retrieved_candidates,
-            {str(paper["corpus_id"]): paper for paper in s2_srch_metadata},
-        )
-        if reranked_df.empty:
-            print("No relevant papers found after reranking. Exiting.")
-            return
+1. ATTRIBUTE_PROMPT
+   Stage: Column Definition (Stage 6 sub-step)
+   Purpose: Identifies attributes for comparing papers
+   Input: Query + evidence dimensions + paper corpus
+   Output: Column definitions with names and descriptions
+   Example columns: "Methodology", "Sample Size", "Key Findings"
 
-        # Step 3: Quote extraction
-        per_paper_summaries = scholar_qa.step_select_quotes(
-            query, reranked_df, cost_args
-        )
-        if not per_paper_summaries.result:
-            print("No relevant quotes extracted. Exiting.")
-            return
+2. VALUE_GENERATION_FROM_ABSTRACT
+   Stage: Cell Population (Stage 6 sub-step)
+   Purpose: Extracts values from paper abstracts for each column
+   Input: Paper abstract + column definition
+   Output: Brief phrases (<10 words) or 'N/A'
+   Format: Concise, factual statements
 
-        # Step 4: Clustering and planning
-        cluster_json = scholar_qa.step_clustering(
-            query, per_paper_summaries.result, cost_args
-        )
-        plan_json = {
-            f'{dim["name"]} ({dim["format"]})': dim["quotes"]
-            for dim in cluster_json.result["dimensions"]
-        }
-        if not any([len(d) for d in plan_json.values()]):
-            print("Planning step failed to cluster documents. Exiting.")
-            return
+3. VALUE_CONSISTENCY_PROMPT_ZS
+   Stage: Value Standardization (Stage 6 sub-step)
+   Purpose: Ensures consistent formatting across table cells
+   Input: All values for a column + column definition
+   Output: Standardized values in JSON format
+   Goal: Uniform terminology and structure
+""")
 
-        # Step 5: Extract inline citations
-        per_paper_summaries_extd, quotes_metadata = scholar_qa.extract_quote_citations(
-            reranked_df, per_paper_summaries.result, plan_json, paper_metadata
-        )
+    # Show configuration
+    print("=" * 70)
+    print("TABLE GENERATION CONFIGURATION")
+    print("=" * 70)
+    print("""
+System Configuration:
+   LLM Model:              anthropic/claude-sonnet-4-20250514
+   Column Model:           Same as LLM Model
+   Value Model:            Same as LLM Model
+   Max Threads:            3 (parallel cell generation)
+   Cost Tracking:          Enabled for all LLM calls
 
-        # Use these results for table generation
-        evidence_result = cluster_json.result
+Processing Strategy:
+   1. Column Generation:
+      - Input: original_query + evidence dimensions + corpus_ids
+      - Method: generate_attribute_suggestions()
+      - Parameters: n_attributes (default: 5)
+      - Output: List of column definitions
 
-        # Stage 6a: Generate column suggestions
-        print("\nGENERATING TABLE COLUMNS")
-        print("=" * 50)
+   2. Paper Subselection (if enabled):
+      - Method: run_subselection flag
+      - Selects most relevant papers for table
+      - Balances coverage with table size
 
-        # Set up cost tracking
-        cost_args = CostReportingArgs(
-            task_id="test_table_generation",
-            user_id="test_user",
-            msg_id="test_message",
-            description="Test Table Generation",
-            model=CLAUDE_4_SONNET,
-        )
+   3. Cell Population:
+      - Method: TableGenerator.run_table_generation()
+      - Multi-threaded parallel processing
+      - For each [paper][column]:
+        * Fetches paper abstract from Semantic Scholar
+        * LLM extracts relevant value
+        * Value standardization applied
+      - Output: Populated table cells
 
-        # Generate column suggestions
-        attribute_result = generate_attribute_suggestions(
-            query=query,
-            evidence=evidence_result.result,
-            n_attributes=5,
-            model=CLAUDE_4_SONNET,
-            llm_caller=CostAwareLLMCaller(),
-            cost_args=cost_args,
-        )
+   4. Table Assembly:
+      - Combines columns, rows, and cells
+      - Creates structured table object
+      - Tracks metadata (costs, tokens, timing)
 
-        # Show column generation results
-        print("\nCOLUMN GENERATION RESULTS:")
-        print(f"   Total Cost: ${attribute_result['cost'].get('cost_value', 0):.4f}")
-        print(f"   Columns: {len(attribute_result.get('columns', []))}")
+Rate Limiting:
+   - LLM calls are rate-limited via CostAwareLLMCaller
+   - Respects API rate limits for both Claude and Semantic Scholar
+   - Parallel processing optimizes throughput within limits
+   - Caching reduces duplicate API calls
+""")
 
-        # Stage 6b: Generate table
-        print("\nGENERATING TABLE CELLS")
-        print("=" * 50)
+    # Show data structures
+    print("=" * 70)
+    print("TABLE GENERATION DATA STRUCTURES")
+    print("=" * 70)
+    print("""
+INPUT (from Stage 5):
+   cluster_result.result (dict):
+      "dimensions": [
+          {"name": str, "format": str, "quotes": [ref_strings]}
+      ]
+      Provides thematic structure for column generation
 
-        # Set up table generator
-        table_generator = TableGenerator(
-            paper_finder=paper_finder,
-            llm_caller=CostAwareLLMCaller(),
-            max_threads=3,
-        )
+   corpus_ids (list):
+      List of paper IDs to include in table rows
 
-        # Generate table
-        table_result, costs = table_generator.run_table_generation(
-            thread_id="test",
-            user_id="test_user",
-            original_query=query,
-            section_title="Main Approaches to Quantum Computing",
-            corpus_ids=[x["corpusId"] for x in evidence_result.result],
-            column_num=5,
-            run_subselection=True,
-            column_model=CLAUDE_4_SONNET,
-            value_model=CLAUDE_4_SONNET,
-        )
+INTERMEDIATE (Stage 6 processing):
+   attribute_result (dict):
+      {
+        "columns": [
+            {"name": str, "description": str}
+        ],
+        "cost": {"cost_value": float}
+      }
 
-        # Show table structure
-        print("\nTABLE GENERATION RESULTS:")
-        print("\nTable Structure:")
-        print(f"   Columns: {len(table_result.columns)}")
-        print(f"   Rows: {len(table_result.rows)}")
-        print(f"   Total Cells: {len(table_result.cells)}")
+   table_generator:
+      Object handling multi-threaded cell generation
+      Tracks costs per cell, column, row
 
-        total_cost = (
-            evidence_result.tot_cost
-            + attribute_result["cost"]["cost_value"]
-            + sum(cost.get("cost_value", 0) for cost in costs["cell_cost"])
-        )
+OUTPUT (Stage 6):
+   table_result (object):
+      table_result.columns: list[Column]
+         - column.name: str
+         - column.description: str
 
-        print("\nTABLE GENERATION COMPLETE")
-        print(f"Total Pipeline Cost: ${total_cost:.4f}")
+      table_result.rows: list[Row]
+         - row.corpus_id: str
+         - row.title: str
+         - row.authors: list
+         - row.year: int
 
-    except Exception as e:
-        print(f"Error during table generation: {e}")
-        import traceback
+      table_result.cells: dict[row_id][column_name]
+         - cell.value: str (brief phrase or 'N/A')
+         - cell.source: str (abstract, full text, etc.)
 
-        traceback.print_exc()
-        return None
+   costs (dict):
+      {
+        "cell_cost": [{"cost_value": float}, ...],
+        "column_cost": {"cost_value": float},
+        "total_cost": float
+      }
+""")
+
+    # Show KEY CONCEPT
+    print("=" * 70)
+    print("KEY CONCEPT")
+    print("=" * 70)
+    print("""
+Table generation creates structured comparisons across papers by:
+
+Step 1 - COLUMN IDENTIFICATION:
+   LLM analyzes the query and evidence dimensions
+   Identifies key attributes that distinguish papers
+   Creates column definitions (e.g., "Methodology", "Outcomes")
+
+Step 2 - CELL EXTRACTION:
+   For each [paper][column] combination:
+      - Fetches paper content (abstract, full text if available)
+      - LLM extracts the specific attribute value
+      - Formats as brief phrase (<10 words)
+      - Returns 'N/A' if attribute not found
+
+Step 3 - STANDARDIZATION:
+   Reviews all values within each column
+   Ensures consistent terminology and formatting
+   Example: "RCT" → "Randomized Controlled Trial"
+
+The result is a structured table enabling quick comparison of papers
+across key dimensions relevant to the research query.
+""")
+
+    # Show example flow
+    print("=" * 70)
+    print("EXAMPLE DATA FLOW")
+    print("=" * 70)
+    print("""
+Input (Stage 5 Evidence Dimensions):
+   dimensions: [
+     {"name": "Mental Health Interventions", "quotes": [...]},
+     {"name": "Outcome Measures", "quotes": [...]}
+   ]
+   corpus_ids: [279023164, 276925840, 232353652]
+
+After Column Generation:
+   columns: [
+     {"name": "Intervention Type", "description": "Type of mental health intervention used"},
+     {"name": "Target Population", "description": "Population group studied"},
+     {"name": "Key Outcomes", "description": "Main findings or outcomes"}
+   ]
+
+Cell Extraction Example:
+   Paper: [279023164 | Birhan et al. | 2025]
+   Column: "Intervention Type"
+   Abstract: "...cross-sectional study of suicidal behavior..."
+   LLM Output: "Cross-sectional observational study"
+
+Final Table Structure:
+   | Paper                    | Intervention Type | Target Population | Key Outcomes |
+   |--------------------------|-------------------|-------------------|--------------|
+   | Birhan et al. (2025)     | Cross-sectional   | War-affected      | 23.4%        |
+   |                          | study             | individuals       | prevalence   |
+   | Melkam et al. (2025)     | Survey study      | IDPs in NW        | PTSD         |
+   |                          |                   | Ethiopia          | association  |
+   | Yitbarek et al. (2021)   | Qualitative       | Health extension  | Barriers     |
+   |                          | study             | workers           | identified   |
+""")
+
+    print("\n" + "=" * 70)
+    print("STAGE 6 CONFIGURATION DISPLAY COMPLETE")
+    print("=" * 70)
+    print("""
+Note: This script shows the configuration and data structures.
+To run the full pipeline including API calls, use the ScholarQA system
+which handles rate limiting and caching appropriately.
+""")
 
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Test ScholarQA Pipeline Stage 6: Table Generation"
+        description="Display Stage 6 configuration and data structures",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("--query", help="Research query to process")
+    parser.add_argument("--query", type=str, help="Research query to display")
+
     args = parser.parse_args()
-
-    # Use managed virtual environment
-    api_requirements = Path(api_dir) / "requirements.txt"
-    reranker_requirements = Path(api_dir) / "reranker_requirements.txt"
-
-    with managed_venv(__file__, [str(api_requirements), str(reranker_requirements)]):
-        from dotenv import load_dotenv
-        from solaceai.llms.constants import CLAUDE_4_SONNET, CostReportingArgs
-        from solaceai.llms.litellm_helper import CostAwareLLMCaller
-        from solaceai.rag.retrieval import PaperFinder
-        from solaceai.rag.retriever_base import FullTextRetriever
-        from solaceai.solace_ai import SolaceAI
-        from solaceai.state_mgmt.local_state_mgr import LocalStateMgrClient
-        from solaceai.table_generation.column_suggestion import (
-            generate_attribute_suggestions,
-        )
-        from solaceai.table_generation.table_generator import TableGenerator
-        from solaceai.utils import (
-            CATEGORICAL_META_FIELDS,
-            NUMERIC_META_FIELDS,
-        )
-
-        # Load environment variables from .env file
-        load_dotenv(Path(project_root) / ".env")
-
-        # Check for required environment variables
-        if not os.getenv("S2_API_KEY"):
-            sys.exit("Error: Missing S2_API_KEY in environment variables")
-
-        test_table_generation6(args.query)
+    test_table_generation6(args.query)

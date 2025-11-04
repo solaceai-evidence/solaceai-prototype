@@ -19,15 +19,22 @@ project_root = str(Path(api_dir).parent)
 if api_dir not in sys.path:
     sys.path.append(api_dir)
 
-try:
-    from dotenv import load_dotenv
+# Load environment variables from .env file (no external dependencies needed)
+env_file = Path(project_root) / ".env"
+if env_file.exists():
+    with open(env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                os.environ[key.strip()] = value.strip().strip('"').strip("'")
 
-    load_dotenv(Path(project_root) / ".env")
-except ImportError:
-    print("Warning: python-dotenv not available, skipping .env file loading")
-
+# Check for required environment variables
 if not os.getenv("S2_API_KEY"):
-    print("Error: Missing S2_API_KEY in environment variables")
+    print("\nError: Missing S2_API_KEY environment variable")
+    print("Create a .env file in project root with:")
+    print("  S2_API_KEY=your_key")
+    print("  ANTHROPIC_API_KEY=your_key")
     sys.exit(1)
 
 from solaceai.llms.constants import CLAUDE_4_SONNET
@@ -56,10 +63,13 @@ def test_evidence_extraction_stage4(
 
     # Input handling
     if not query:
-        query = input("\nEnter query for evidence extraction testing: ").strip()
+        print("\nEnter query for evidence extraction testing:")
+        print("(Press Enter without typing to use default query)")
+        query = input("Query: ").strip()
     if not query:
-        print("Error: No query provided. Exiting.")
-        return
+        # Use default query if none provided
+        query = "how can we improve mental health outcomes and reduce substance misuse among displaced communities in Ethiopia"
+        print(f"\nUsing default query: {query}")
 
     print("\nTESTING EVIDENCE EXTRACTION STAGE")
     print(f"Input Query: '{query}'")
@@ -166,8 +176,11 @@ def test_evidence_extraction_stage4(
         # Show evidence extraction parameters
         print("\nSTEP 4B: EVIDENCE EXTRACTION PARAMETERS")
         print(f"   LLM Model: {CLAUDE_4_SONNET}")
-        print("   System Prompt: Quote Per Paper (SYSTEM_PROMPT_QUOTE_PER_PAPER)")
-        print(f"   Extraction Query: '{query}'")
+        print("\n   LLM PROMPTS USED:")
+        print("      SYSTEM_PROMPT_QUOTE_PER_PAPER (from solaceai.llms.prompts)")
+        print("      Purpose: Extracts relevant evidence quotes from each paper")
+        print("      Outputs: Direct text excerpts that answer the query")
+        print(f"\n   Extraction Query: '{query}'")
         print("   Batch Processing: Multi-threaded LLM calls")
 
         # Extract quotes/evidence
@@ -215,6 +228,42 @@ def test_evidence_extraction_stage4(
         # RESULTS: Exhaustive display of evidence extraction stage output
         print("\nEXHAUSTIVE EVIDENCE EXTRACTION RESULTS")
         print("=" * 70)
+
+        # Explain the extracted evidence data structure
+        print("\nEXTRACTED EVIDENCE DATA STRUCTURE")
+        print("=" * 70)
+        print("Understanding the evidence extraction output:\n")
+
+        evidence_fields = {
+            "per_paper_summaries.result": (
+                "Dictionary mapping reference strings to extracted quotes"
+            ),
+            "reference_string": (
+                "Citation key in format [corpus_id | authors | year | citations: count]"
+            ),
+            "quote": "Extracted text excerpt that directly answers the query",
+            "quote segments": (
+                "Portions of text separated by '...' indicating gaps in original"
+            ),
+            "per_paper_summaries.tokens": (
+                "Token usage statistics (input, output, total)"
+            ),
+            "per_paper_summaries.tot_cost": (
+                "Total API cost for all LLM calls in this stage"
+            ),
+            "per_paper_summaries.models": (
+                "List of model responses for each paper processed"
+            ),
+        }
+
+        for field, description in evidence_fields.items():
+            print(f"  {field:35} → {description}")
+
+        print(f"\n{'='*70}")
+        print("KEY CONCEPT: Evidence extraction uses LLM to read paper content and")
+        print("extract exact text passages that answer the user's query. Quotes must")
+        print("be verbatim from the source, with '...' marking omitted text.")
+        print(f"{'='*70}")
 
         # Show extraction statistics
         print("\nEXTRACTION STATISTICS")
