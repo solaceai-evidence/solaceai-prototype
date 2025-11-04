@@ -7,11 +7,11 @@ const SolaceLogoHeader = (
     src="/solace-logo.svg"
     alt="Solace-AI Logo"
     sx={{
-  height: '64px',
-  width: 'auto',
-  backgroundColor: 'transparent',
-  borderRadius: '6px',
-  padding: '4px 8px',
+      height: '32px',
+      width: 'auto',
+      backgroundColor: '#ef529b', // Same pink background as Home page
+      borderRadius: '6px',
+      padding: '4px 8px',
     }}
   />
 );

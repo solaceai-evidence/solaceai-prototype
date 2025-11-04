@@ -12,13 +12,10 @@
       "n_retrieval": 256,
       "n_keyword_srch": 20
     },
-    "reranker_service": "modal",
+    "reranker_service": "remote",
     "reranker_args": {
-      "app_name": "ai2-scholar-qa",
-      "api_name": "inference_api",
-      "batch_size": 256,
-      "gen_options": {}
-
+      "model_name_or_path": "mixedbread-ai/mxbai-rerank-large-v1",
+      "batch_size": 32
     },
     "paper_finder_args": {
       "n_rerank": 50,

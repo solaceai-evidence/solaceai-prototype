@@ -130,14 +130,13 @@ export const Home: React.FC<Props> = (props) => {
 };
 
 const SuggestedPrompt = styled('button')`
-  border: 1px solid ${({ theme }) => alpha(theme.palette.grey[100], 0.1)};
+  border: 1px solid ${({ theme }) => alpha(theme.color['off-white'].hex, 0.1)};
   border-radius: 6px;
   background: transparent;
-  color: ${({ theme }) => theme.palette.text.primary};
+  color: ${({ theme }) => theme.color.N1.hex};
   cursor: pointer;
   display: flex;
-  font-size: 1.0rem;
-  font-family: 'Inter', Arial, sans-serif;
+  font-size: ${({ theme }) => theme.font.size.md};
   gap: ${({ theme }) => theme.spacing(1)};
   line-height: ${({ theme }) => theme.spacing(3)};
   margin-bottom: ${({ theme }) => theme.spacing(0.5)};
@@ -145,12 +144,12 @@ const SuggestedPrompt = styled('button')`
   text-decoration: none !important;
 
   :hover {
-    color: ${({ theme }) => theme.palette.text.secondary};
-    background: ${({ theme }) => alpha(theme.palette.grey[100], 0.05)};
+    color: ${({ theme }) => theme.color.N5.hex};
+    background: ${({ theme }) => alpha(theme.color['off-white'].hex, 0.05)};
   }
 
   & .MuiSvgIcon-root {
-    color: ${({ theme }) => theme.palette.success.light};
+    color: ${({ theme }) => theme.color['green-100'].hex};
   }
 `;
 
