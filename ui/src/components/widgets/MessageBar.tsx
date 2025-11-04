@@ -127,34 +127,33 @@ const MessageBar = ({
 
 export default MessageBar;
 
-const Textarea = styled(TextareaAutosize)`
-  border: none;
-  resize: none;
-  color: #ffffff;
-  background: none;
-  font-family: 'manrope', arial, sans-serif;
-  font-size: 16px;
-
-  &:focus {
-    border: none;
-  }
-
-  // firefox
-  &:focus-visible {
-    outline: 0;
-  }
-`;
+const Textarea = styled(TextareaAutosize)(({ theme }) => ({
+  border: 'none',
+  resize: 'none',
+  color: theme.palette.text.primary,
+  background: theme.palette.background.paper,
+  fontFamily: theme.typography.fontFamily,
+  fontSize: theme.typography.fontSize,
+  '&:focus': {
+    border: 'none',
+  },
+  '&:focus-visible': {
+    outline: 0,
+  },
+}));
 
 // Fix after theme test bug has been fixed
 // border-radius: ${({ theme }) => `${theme.spacing(1.5)}`}
 // padding: ${({ theme }) => `${theme.spacing(1.5)}`}
-const StyledBox = styled(Box)`
-  border-radius: 12px;
-  padding: 12px;
-  display: flex;
-  background-color: #08232b;
-  color: #ffffff;
-`;
+const StyledBox = styled(Box)(({ theme }) => ({
+  borderRadius: theme.shape.borderRadius,
+  padding: theme.spacing(1.5),
+  display: 'flex',
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  border: `2px solid ${theme.palette.divider}`,
+  boxShadow: theme.shadows[1],
+}));
 
 const Form = styled('form')`
   display: flex;

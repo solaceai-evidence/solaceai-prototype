@@ -20,8 +20,8 @@ enum RoutesEnum {
 }
 
 const DarkBackground = styled('div')`
-  color: ${({ theme }) => theme.palette.text.reversed};
-  background-color: ${({ theme }) => theme.palette.background.reversed};
+  color: ${({ theme }) => theme.palette.text.primary};
+  background-color: ${({ theme }) => theme.palette.background.default};
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -122,7 +122,7 @@ export const App = () => {
                   href={RoutesEnum.ABOUT}
                   underline="hover"
                   variant="body2"
-                  sx={{ lineHeight: '24px', color: '#26EFAC' }}
+                  sx={{ lineHeight: '24px' }}
                 >
                   About
                 </Link>
