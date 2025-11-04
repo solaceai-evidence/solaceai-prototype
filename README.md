@@ -8,6 +8,12 @@ The Solace-AI system is built on top of the open-source Ai2 Scholar QA architect
 
 ## Supported Architectures
 
+The system supports three deployment architectures. Choose based on your use case:
+
+- **Hybrid Architecture**: Local development with flexible reranker backend (recommended for development)
+- **Modal Cloud Architecture**: Production deployment with serverless GPU infrastructure
+- **HTTP Microservice Architecture**: Full containerized deployment with dedicated services
+
 ### 1. Hybrid Architecture (Local Development with GPU Optimization)
 
 The hybrid architecture combines containerized API services with a native reranker service to leverage GPU acceleration for optimal local development performance.
@@ -47,7 +53,7 @@ The hybrid architecture combines containerized API services with a native rerank
    OPENAI_API_KEY=your_openai_api_key
 
    # Modal cloud platform credentials - required when using Modal for remote model deployment
-   MODAL_TOKEN=your_modal_token
+   MODAL_TOKEN_ID=your_modal_token_id
    MODAL_TOKEN_SECRET=your_modal_secret
 
    # Remote reranker service configuration
@@ -79,16 +85,31 @@ The hybrid architecture combines containerized API services with a native rerank
    - Timeout values accommodate complex queries including table generation
    - All settings can be adjusted based on your hardware capabilities and API quotas
 
-2. **Install Native Dependencies (Reranker Service Only):**
+2. **Python Environment Setup:**
 
-   The API dependencies are automatically installed via Docker. You only need to install dependencies for the native reranker service:
+   The API dependencies are automatically installed via Docker. The startup script handles reranker dependencies automatically, but you need a Python environment:
 
    ```bash
-   # Create conda environment
+   # Create conda environment (recommended)
    conda create -n solaceai python=3.11
    conda activate solaceai
+   ```
 
-   # Install PyTorch with appropriate GPU support
+   Or use venv:
+
+   ```bash
+   # Create virtual environment
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+   **Note:** The startup script (`start_hybrid.sh`) automatically installs:
+   - Modal SDK when `reranker_service` is "modal"
+   - PyTorch and reranker dependencies when `reranker_service` is "remote"
+
+   For manual installation of local reranker dependencies:
+
+   ```bash
    # For NVIDIA GPUs:
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
@@ -97,7 +118,6 @@ The hybrid architecture combines containerized API services with a native rerank
 
    # For CPU-only:
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-
    ```
 
 3. **Start Hybrid Architecture:**
@@ -106,6 +126,13 @@ The hybrid architecture combines containerized API services with a native rerank
    ./start_hybrid.sh
    ```
 
+   The startup script automatically:
+   - Detects and configures the appropriate Python environment (conda or venv)
+   - Reads `api/run_configs/default.json` to determine reranker configuration
+   - Installs Modal SDK if `reranker_service` is set to "modal"
+   - Installs PyTorch and reranker dependencies if using local reranker
+   - Starts only the required services based on configuration
+
 **Device Detection:**
 The system automatically detects and uses the best available device:
 
@@ -113,48 +140,133 @@ The system automatically detects and uses the best available device:
 - Apple Silicon MPS (Apple M1/M2/M3)
 - CPU (fallback)
 
-**Configuration:**
-The configuration can be modified by tuning the .env file. Below are the default parameters.
+**Service Endpoints:**
 
 - **Web Application**: `http://localhost:8080` (Nginx Proxy - Main Entry Point)
 - Main API: `http://localhost:8000`
-- Native Reranker: `http://0.0.0.0:10001`
+- Native Reranker: `http://0.0.0.0:10001` (only when `reranker_service` is "remote")
 - Web UI: `http://localhost:3000` (Direct UI access)
 
-The hybrid approach provides:
+**Advantages:**
 
 - GPU acceleration for reranking operations
 - Reduced latency through native service communication
+- Flexible reranker backend (local native, Modal cloud, or HTTP microservice)
+- Automatic dependency installation based on configuration
 
 ### 2. Modal Cloud Architecture
 
-Deploy the system using Modal's serverless GPU infrastructure for production-scale workloads.
+Deploy the system using Modal's serverless GPU infrastructure for production-scale workloads. Modal AI allows you to run the computationally expensive crossencoder model remotely on cloud GPUs, reducing the load on your local machine and improving performance.
 
-**Setup:**
+**Prerequisites:**
+
+1. Modal AI account (sign up at https://modal.com/)
+2. Modal CLI installed: `pip install modal`
+3. Modal authentication: `modal token new`
+
+**Environment Configuration:**
+
+Add Modal credentials to your `.env` file:
 
 ```bash
-# Install Modal CLI
-pip install modal-client
-
-# Deploy reranker service
-modal deploy api/solaceai/rag/reranker/modal_deploy/ai2-scholar-qa-reranker.py
-
-# Configure for Modal
-cp api/run_configs/modal.json api/run_configs/default.json
+# Modal cloud platform credentials
+MODAL_TOKEN_ID=your_modal_token_id_here
+MODAL_TOKEN_SECRET=your_modal_secret_here
 ```
 
-**Configuration:**
+Credentials can be found in your Modal dashboard under Settings → API Keys, or in `~/.modal.toml` after authentication.
 
-```json
-{
-  "reranker_service": "modal",
-  "reranker_args": {
-    "app_name": "ai2-scholar-qa",
-    "api_name": "inference_api",
-    "batch_size": 256
-  }
-}
+**Deployment Steps:**
+
+1. **Configure Application Name**
+
+   Edit `api/solaceai/rag/reranker/modal_deploy/ai2-scholar-qa-reranker.py` and set your desired app name:
+
+   ```python
+   APP_NAME = "solaceai-reranker"  # or any unique name
+   ```
+
+2. **Deploy to Modal**
+
+   ```bash
+   cd api/solaceai/rag/reranker/modal_deploy
+   modal deploy ai2-scholar-qa-reranker.py
+   ```
+
+   Initial deployment takes approximately 10-15 minutes as it downloads model weights (mixedbread-ai/mxbai-rerank-large-v1) and builds the container image.
+
+3. **Verify Deployment**
+
+   ```bash
+   modal run ai2-scholar-qa-reranker.py
+   ```
+
+   This executes a test query against your deployed reranker to verify functionality.
+
+4. **Configure System for Modal**
+
+   Update `api/run_configs/default.json`:
+
+   ```json
+   {
+     "reranker_service": "modal",
+     "reranker_args": {
+       "app_name": "solaceai-reranker",
+       "api_name": "inference_api",
+       "batch_size": 256
+     }
+   }
+   ```
+
+**Configuration Parameters:**
+
+- `app_name`: Must match APP_NAME in deployment script
+- `api_name`: Modal function name (default: "inference_api")
+- `batch_size`: Passages processed in parallel (32-512, default: 256)
+
+**Architecture Components:**
+
+- **Model Class**: Loads crossencoder on NVIDIA L4 GPU with torch.compile() optimization
+- **Inference API**: FastAPI-style endpoint handling concurrent requests (max: 20)
+- **Cold Start Optimization**: Model weights baked into container image (~3GB)
+- **High Availability**: Minimum 2 containers maintained for reduced cold starts
+
+**Performance:**
+
+- First request: ~500ms (uncompiled model + background compilation starts)
+- Subsequent requests: ~200ms (compiled model)
+- Cold start time: ~30 seconds
+
+**Monitoring:**
+
+```bash
+# View real-time logs
+modal app logs solaceai-reranker
+
+# Check deployment status
+modal app list
+
+# View function details
+modal function get solaceai-reranker::inference_api
 ```
+
+**Cost Considerations:**
+
+Modal charges for GPU time (L4: ~$0.60/hour), CPU time, memory, and data egress.
+
+Typical costs:
+
+- 1000 reranking requests: $0.05-0.10
+- Always-on (2 minimum containers): ~$1.20/hour
+
+Configure `scaledown_window` to reduce costs during idle periods.
+
+**Troubleshooting:**
+
+- **Authentication errors**: Verify `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` in `.env`, run `modal token new` to re-authenticate
+- **App not found**: Confirm deployment succeeded with `modal app list`, verify `app_name` matches deployment script
+- **Out of memory**: Reduce `batch_size` in configuration or use different GPU tier
+- **Cold start timeout**: Increase timeout in deployment script, verify model download succeeded
 
 ### 3. HTTP Microservice Architecture
 
@@ -201,10 +313,14 @@ The system supports multiple reranker backends through configuration:
 
 **Reranker Options:**
 
-- `remote`: Native service with GPU acceleration (hybrid architecture). Currently used as native during laptop development.
-- `modal`: Modal cloud deployment
+- `remote`: Native service with GPU acceleration (hybrid architecture, recommended for local development)
+- `modal`: Modal cloud deployment with serverless GPU infrastructure (see Modal Cloud Architecture section)
 - `http`: Containerized microservice
 - `crossencoder`: Local in-process reranker
+
+**Switching Between Reranker Modes:**
+
+To switch reranker backends, update `api/run_configs/default.json` and restart the system with `./start_hybrid.sh`. The startup script automatically installs the appropriate dependencies based on your configuration.
 
 **Environment Variables:**
 
@@ -261,9 +377,11 @@ The system automatically loads configuration from the `.env` file on startup. Ra
 
 ### Testing Reranker Service
 
+**Local Native Reranker (when `reranker_service` is "remote"):**
+
 ```bash
 # Health check
-curl http://localhost:8001/health
+curl http://localhost:10001/health
 
 # Test reranking
 curl -X POST "http://localhost:10001/rerank" \
@@ -273,6 +391,16 @@ curl -X POST "http://localhost:10001/rerank" \
     "passages": ["Deep learning networks", "Weather forecast"],
     "batch_size": 64
   }'
+```
+
+**Modal Reranker:**
+
+```bash
+# View deployment status
+modal app list
+
+# Test via deployed function
+modal run api/solaceai/rag/reranker/modal_deploy/ai2-scholar-qa-reranker.py
 ```
 
 ### Platform-Specific Commands
@@ -334,7 +462,7 @@ bash start_hybrid.sh
 
 - Monitor system resources during reranking
 - Adjust `batch_size` based on available memory
-- Consider switching to Modal for high-throughput requirements
+- Consider switching to Modal cloud deployment for high-throughput requirements (see Modal Cloud Architecture section)
 
 **Platform-Specific Issues:**
 
