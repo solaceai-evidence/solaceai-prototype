@@ -1,5 +1,6 @@
 transformers==4.44.1
-sentencepiece
+sentencepiece==0.2.0
 hf-transfer==0.1.6
 huggingface_hub==0.23.4
 sentence-transformers==3.0.1
+psutil==6.1.0
