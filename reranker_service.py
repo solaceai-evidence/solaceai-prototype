@@ -184,7 +184,7 @@ def get_reranker(reranker_type: str, model_name_or_path: str, batch_size: int = 
                     if hasattr(reranker.model, "to"):
                         reranker.model = reranker.model.to("mps")
                         reranker.device = "mps"
-                        logger.info(f"Moved model to MPS device")
+                        logger.info("Moved model to MPS device")
                 except Exception as e:
                     logger.warning(f"Could not move model to MPS: {e}")
 
@@ -462,7 +462,7 @@ async def manual_cleanup():
 async def root():
     """Root endpoint"""
     return {
-        "message": "Solace-AI Remote Reranker Service",
+        "message": "Solace-AI Local Reranker Service",
         "version": "1.1.0",
         "docs": "/docs",
         "health": "/health",
@@ -470,7 +470,7 @@ async def root():
 
 
 if __name__ == "__main__":
-    logger.info(f"Starting Solace-AI Remote Reranker Service on {host}:{port}...")
+    logger.info(f"Starting Solace-AI Local Reranker Service on {host}:{port}...")
 
     uvicorn.run(
         app,

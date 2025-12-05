@@ -58,7 +58,7 @@ You can set up the system following these steps; alternatively, refer to the det
    MODAL_TOKEN_ID=your_modal_token_id
    MODAL_TOKEN_SECRET=your_modal_secret
 
-   # Remote reranker service configuration
+   # Local reranker service configuration
    RERANKER_HOST=0.0.0.0
    RERANKER_PORT=10001
 
@@ -107,7 +107,7 @@ You can set up the system following these steps; alternatively, refer to the det
 
    **Note:** The startup script (`start_hybrid.sh`) automatically installs:
    - Modal SDK when `reranker_service` is "modal"
-   - PyTorch and reranker dependencies when `reranker_service` is "remote"
+   - PyTorch and reranker dependencies when `reranker_service` is "local_service"
 
    For manual installation of local reranker dependencies:
 
@@ -146,7 +146,7 @@ The system automatically detects and uses the best available device:
 
 - **Web Application**: `http://localhost:8080` (Nginx Proxy - Main Entry Point)
 - Main API: `http://localhost:8000`
-- Native Reranker: `http://0.0.0.0:10001` (only when `reranker_service` is "remote")
+- Native Reranker: `http://0.0.0.0:10001` (only when `reranker_service` is "local_service")
 - Web UI: `http://localhost:3000` (Direct UI access)
 
 **Advantages:**
@@ -305,7 +305,7 @@ The system supports multiple reranker backends through configuration:
 
 ```json
 {
-  "reranker_service": "remote|modal|http|crossencoder",
+  "reranker_service": "local_service|modal|http|crossencoder",
   "reranker_args": {
     "model_name_or_path": "mixedbread-ai/mxbai-rerank-large-v1",
     "batch_size": 32
@@ -379,7 +379,7 @@ The system automatically loads configuration from the `.env` file on startup. Ra
 
 ### Testing Reranker Service
 
-**Local Native Reranker (when `reranker_service` is "remote"):**
+**Local Native Reranker (when `reranker_service` is "local_service"):**
 
 ```bash
 # Health check

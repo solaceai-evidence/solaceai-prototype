@@ -1,6 +1,6 @@
 #!/bin/bash
 # 
-# Startup script for Solace AI with Remote GPU Reranker Architecture
+# Startup script for Solace AI with Local GPU Reranker Architecture
 #
 
 # stop at first error
@@ -130,9 +130,9 @@ install_dependencies() {
 # Early check of reranker configuration (before installing dependencies)
 CONFIG_FILE="api/run_configs/default.json"
 if [ -f "$CONFIG_FILE" ]; then
-    RERANKER_SERVICE_EARLY=$(jq -r '.run_config.reranker_service // "remote"' "$CONFIG_FILE")
+    RERANKER_SERVICE_EARLY=$(jq -r '.run_config.reranker_service // "local_service"' "$CONFIG_FILE")
 else
-    RERANKER_SERVICE_EARLY="remote"
+    RERANKER_SERVICE_EARLY="local_service"
 fi
 
 # Setup Python environment
