@@ -33,6 +33,8 @@ The hybrid architecture combines containerized API services with a native rerank
 
 **Setup:**
 
+You can set up the system following these steps; alternatively, refer to the detailed instructions in `SETUP_GUIDE.md`. A minimal guide to help you through the setup process including setting different cross-encoder reranker modes adapted to your hardware and use case.
+
 1. **Environment Configuration:**
 
    ```bash
