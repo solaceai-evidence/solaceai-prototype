@@ -21,8 +21,8 @@ const SUGGESTIONS: { query: string; shortName: string }[] = [
     shortName: 'What is the best way to deal with cholera risks after flooding in South Africa?',
   },
   {
-    query: 'What is the protocol to respond to arborius outbreaks?',
-    shortName: 'What is the protocol to respond to arborius outbreaks?',
+    query: 'What is the protocol to respond to arbovirus outbreaks?',
+    shortName: 'What is the protocol to respond to arbovirus outbreaks?',
   },
   {
     query: 'How does extreme heat hit the heart, especially for vulnerable people in India?',
