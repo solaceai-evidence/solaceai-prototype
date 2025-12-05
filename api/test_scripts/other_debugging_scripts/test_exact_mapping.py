@@ -49,7 +49,7 @@ def test_exact_mapping():
     scores = reranker.get_scores(query, passages)
 
     logger.info("OUTPUT SCORES (maintaining input order):")
-    for i, (passage, score) in enumerate(zip(passages, scores)):
+    for i, (passage, score) in enumerate(zip(passages, scores, strict=False)):
         relevance = "HIGH" if score > 0.5 else "LOW"
         logger.info(f"   Index {i}: {score:.4f} ({relevance}) - '{passage}'")
     logger.info("")
@@ -64,7 +64,9 @@ def test_exact_mapping():
     # Show sorted by relevance for comparison
     logger.info("SORTED BY RELEVANCE (for reference):")
     sorted_pairs = sorted(
-        enumerate(zip(passages, scores)), key=lambda x: x[1][1], reverse=True
+        enumerate(zip(passages, scores, strict=False)),
+        key=lambda x: x[1][1],
+        reverse=True,
     )
     for rank, (original_idx, (passage, score)) in enumerate(sorted_pairs, 1):
         logger.info(
@@ -84,7 +86,9 @@ def test_exact_mapping():
         remote_scores = remote_reranker.get_scores(query, passages)
 
         logger.info("REMOTE vs LOCAL CONSISTENCY:")
-        for i, (local_score, remote_score) in enumerate(zip(scores, remote_scores)):
+        for i, (local_score, remote_score) in enumerate(
+            zip(scores, remote_scores, strict=False)
+        ):
             diff = abs(local_score - remote_score)
             status = "MATCH" if diff < 0.0001 else f" DIFF: {diff:.6f}"
             logger.info(
@@ -93,14 +97,14 @@ def test_exact_mapping():
 
         # Check if scores are identical
         scores_identical = all(
-            abs(a - b) < 0.0001 for a, b in zip(scores, remote_scores)
+            abs(a - b) < 0.0001 for a, b in zip(scores, remote_scores, strict=False)
         )
         logger.info(
             f"   Overall consistency: {' IDENTICAL' if scores_identical else ' DIFFERENT'}"
         )
 
     except Exception as e:
-        logger.warning(f" Remote reranker test failed: {e}")
+        logger.warning(f" Local service reranker test failed: {e}")
 
 
 if __name__ == "__main__":

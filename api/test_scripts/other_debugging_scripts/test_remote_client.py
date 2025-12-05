@@ -9,19 +9,17 @@ sys.path.append(os.path.dirname(__file__))
 
 import logging
 
-from solaceai.rag.reranker.remote_reranker import RemoteRerankerClient
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def test_remote_client():
-    """Test the remote reranker client"""
-    logger.info(" Testing RemoteRerankerClient...")
+def test_local_service_client():
+    """Test the local service reranker client"""
+    logger.info(" Testing LocalServiceRerankerClient...")
 
     try:
-        # Initialize remote client
-        client = RemoteRerankerClient(
+        # Initialize local service client
+        client = LocalServiceRerankerClient(
             service_url="http://0.0.0.0:10001",
             model_name_or_path="mixedbread-ai/mxbai-rerank-large-v1",
             reranker_type="crossencoder",
@@ -64,10 +62,10 @@ def test_remote_client():
         return True
 
     except Exception as e:
-        logger.error(f" Remote client test failed: {e}")
+        logger.error(f" Local service client test failed: {e}")
         return False
 
 
 if __name__ == "__main__":
-    success = test_remote_client()
+    success = test_local_service_client()
     exit(0 if success else 1)

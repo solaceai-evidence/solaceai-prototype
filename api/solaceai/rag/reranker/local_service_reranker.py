@@ -1,5 +1,5 @@
 """
-Remote Reranker Client - integrates with existing reranker architecture
+Local Service Reranker Client - integrates with existing reranker architecture
 """
 
 import logging
@@ -13,8 +13,8 @@ from .reranker_base import AbstractReranker
 logger = logging.getLogger(__name__)
 
 
-class RemoteRerankerClient(AbstractReranker):
-    """Client for remote reranker service - maintains same interface as local rerankers"""
+class LocalServiceRerankerClient(AbstractReranker):
+    """Client for local reranker service - maintains same interface as other rerankers"""
 
     def __init__(
         self,
@@ -32,20 +32,20 @@ class RemoteRerankerClient(AbstractReranker):
         self.batch_size = batch_size
         # Use environment variable for timeout, fall back to parameter, then default
         self.timeout = timeout or float(os.getenv("RERANKER_CLIENT_TIMEOUT", "120.0"))
-        self.device = "remote"  # Indicate this is a remote service
+        self.device = "local_service"  # Indicate this is a local service
 
         logger.info(
-            f"Initialized RemoteRerankerClient: {self.service_url} with model: {model_name_or_path}, batch_size: {batch_size}"
+            f"Initialized LocalServiceRerankerClient: {self.service_url} with model: {model_name_or_path}, batch_size: {batch_size}"
         )
         self._test_connection()
 
     def _test_connection(self):
-        """Test connection to remote service"""
+        """Test connection to local service"""
         try:
             with httpx.Client(timeout=5.0) as client:
                 response = client.get(f"{self.service_url}/health")
                 if response.status_code == 200:
-                    logger.info(">> Connected to remote reranker service")
+                    logger.info(">> Connected to local reranker service")
                 else:
                     logger.warning(
                         f"Service health check failed: {response.status_code}"
@@ -57,7 +57,7 @@ class RemoteRerankerClient(AbstractReranker):
             )
 
     def get_scores(self, query: str, passages: List[str]) -> List[float]:
-        """Get scores from remote service - same interface as local rerankers"""
+        """Get scores from local service - same interface as other rerankers"""
         try:
             request_data = {
                 "query": query,
@@ -76,14 +76,16 @@ class RemoteRerankerClient(AbstractReranker):
                     )
 
                 result = response.json()
-                # Log the actual device being used by the remote service
+                # Log the actual device being used by the local service
                 if "device" in result:
-                    logger.info(f"Remote reranker using device: {result['device']}")
+                    logger.info(
+                        f"Local reranker service using device: {result['device']}"
+                    )
                 return result["scores"]
 
         except httpx.TimeoutException:
             logger.error(f"Timeout after {self.timeout}s")
-            raise Exception("Remote reranker timeout")
+            raise Exception("Local reranker service timeout")
         except Exception as e:
-            logger.error(f"Remote reranker error: {e}")
+            logger.error(f"Local reranker service error: {e}")
             raise

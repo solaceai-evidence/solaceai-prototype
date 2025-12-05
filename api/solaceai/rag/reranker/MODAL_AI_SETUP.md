@@ -309,12 +309,12 @@ To switch back to local reranking, update `default.json`:
 }
 ```
 
-Or use the remote reranker service (separate service):
+Or use the local reranker service (separate service):
 
 ```json
 {
   "run_config": {
-    "reranker_service": "remote",
+    "reranker_service": "local_service",
     "reranker_args": {
       "model_name_or_path": "mixedbread-ai/mxbai-rerank-large-v1",
       "batch_size": 32

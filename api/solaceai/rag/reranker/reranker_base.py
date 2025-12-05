@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -129,11 +129,11 @@ RERANKER_MAPPING = {
     "flag_embedding": FlagEmbeddingScores,
 }
 
-# Import and add remote reranker - conditional import to avoid dependency issues in Docker
+# Import and add local service reranker - conditional import to avoid dependency issues in Docker
 try:
-    from .remote_reranker import RemoteRerankerClient
+    from .local_service_reranker import LocalServiceRerankerClient
 
-    RERANKER_MAPPING["remote"] = RemoteRerankerClient
-except ImportError as e:
-    logger.warning(f"Remote reranker client not available: {e}")
-    # Remote reranker requires httpx which might not be in minimal Docker images
+    RERANKER_MAPPING["local_service"] = LocalServiceRerankerClient
+except Exception as e:
+    logger.warning(f"Local service reranker client not available: {e}")
+    # Local service reranker requires httpx which might not be in minimal Docker images

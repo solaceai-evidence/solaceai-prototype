@@ -51,7 +51,7 @@ def create_test_cases() -> List[Tuple[str, List[str]]]:
             "quantum computing",
             [
                 (
-                    f"Quantum computers use quantum bits for computation"
+                    "Quantum computers use quantum bits for computation"
                     if i == 0
                     else f"Random passage number {i}"
                 )
@@ -78,7 +78,7 @@ def verify_score_alignment(
     logger.info(f" Length match: {len(passages)} passages = {len(scores)} scores")
 
     # Score validation
-    for i, (passage, score) in enumerate(zip(passages, scores)):
+    for i, (passage, score) in enumerate(zip(passages, scores, strict=False)):
         if not isinstance(score, (int, float)):
             logger.error(f" Invalid score type at index {i}: {type(score)} - {score}")
             return False
@@ -89,7 +89,9 @@ def verify_score_alignment(
     # Display results for manual verification
     logger.info(" Passage-Score Alignment:")
     ranked_pairs = sorted(
-        enumerate(zip(passages, scores)), key=lambda x: x[1][1], reverse=True
+        enumerate(zip(passages, scores, strict=False)),
+        key=lambda x: x[1][1],
+        reverse=True,
     )
 
     for rank, (original_idx, (passage, score)) in enumerate(ranked_pairs, 1):
@@ -162,7 +164,7 @@ def test_reranker(reranker_name: str, test_cases: List[Tuple[str, List[str]]]) -
 
 def test_cross_reranker_consistency() -> bool:
     """Test that different rerankers produce consistent results for same input"""
-    logger.info(f"\n Testing Cross-Reranker Consistency")
+    logger.info("\n Testing Cross-Reranker Consistency")
     logger.info("=" * 50)
 
     test_query = "machine learning neural networks"
@@ -176,12 +178,12 @@ def test_cross_reranker_consistency() -> bool:
 
     # Test available rerankers
     available_rerankers = ["crossencoder", "biencoder"]
-    if "remote" in RERANKER_MAPPING:
-        available_rerankers.append("remote")
+    if "local_service" in RERANKER_MAPPING:
+        available_rerankers.append("local_service")
 
     for reranker_name in available_rerankers:
         try:
-            if reranker_name == "remote":
+            if reranker_name == "local_service":
                 reranker = RERANKER_MAPPING[reranker_name](
                     service_url="http://localhost:8001",
                     model_name_or_path="mixedbread-ai/mxbai-rerank-large-v1",
@@ -267,7 +269,7 @@ def main():
         test_cross_reranker_consistency()
 
     # Final report
-    logger.info(f"\n🏁 Final Results")
+    logger.info("\n🏁 Final Results")
     logger.info("=" * 30)
     if overall_success:
         logger.info(" All alignment tests passed!")

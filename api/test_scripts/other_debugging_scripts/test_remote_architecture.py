@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Test script for remote reranker architecture
-1. Tests remote reranker service standalone
-2. Tests main API with remote reranker client
+Test script for local service reranker architecture
+1. Tests local reranker service standalone
+2. Tests main API with local service reranker client
 """
 import asyncio
 import logging
@@ -19,9 +19,9 @@ RERANKER_SERVICE_URL = "http://localhost:8001"
 MAIN_API_URL = "http://localhost:8000"
 
 
-async def test_remote_reranker_service():
+async def test_local_reranker_service():
     """Test the standalone reranker service"""
-    logger.info(" Testing Remote Reranker Service...")
+    logger.info(" Testing Local Reranker Service...")
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -56,13 +56,13 @@ async def test_remote_reranker_service():
             return True
 
     except Exception as e:
-        logger.error(f" Remote service test failed: {e}")
+        logger.error(f" Local service test failed: {e}")
         return False
 
 
-async def test_main_api_with_remote():
-    """Test main API configured to use remote reranker"""
-    logger.info(" Testing Main API with Remote Reranker...")
+async def test_main_api_with_local_service():
+    """Test main API configured to use local service reranker"""
+    logger.info(" Testing Main API with Local Service Reranker...")
 
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
@@ -133,7 +133,7 @@ async def main():
 
             logger.info(" All tests completed!")
         else:
-            logger.error(" Remote service tests failed")
+            logger.error(" Local service tests failed")
 
     finally:
         # Cleanup
