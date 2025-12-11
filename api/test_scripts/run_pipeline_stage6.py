@@ -51,20 +51,23 @@ def test_table_generation6(query: Optional[str] = None):
     print("\n" + "=" * 70)
     print("PREREQUISITE STAGES")
     print("=" * 70)
-    print("""
+    print(
+        """
 Stage 6 builds upon outputs from previous stages:
    Stage 1: Query Decomposition → Rewritten query and search filters
    Stage 2: Retrieval → Retrieved paper passages
    Stage 3: Reranking → Aggregated and scored papers
    Stage 4: Evidence Extraction → Quote summaries per paper
    Stage 5: Section Generation → Clustered evidence dimensions
-""")
+"""
+    )
 
     # Show LLM prompts used
     print("=" * 70)
     print("LLM PROMPTS USED IN STAGE 6")
     print("=" * 70)
-    print("""
+    print(
+        """
 This stage uses THREE LLM prompts from solaceai.table_generation.prompts:
 
 1. ATTRIBUTE_PROMPT
@@ -87,15 +90,17 @@ This stage uses THREE LLM prompts from solaceai.table_generation.prompts:
    Input: All values for a column + column definition
    Output: Standardized values in JSON format
    Goal: Uniform terminology and structure
-""")
+"""
+    )
 
     # Show configuration
     print("=" * 70)
     print("TABLE GENERATION CONFIGURATION")
     print("=" * 70)
-    print("""
+    print(
+        """
 System Configuration:
-   LLM Model:              anthropic/claude-sonnet-4-20250514
+   LLM Model:              anthropic/claude-sonnet-4-5-20250929
    Column Model:           Same as LLM Model
    Value Model:            Same as LLM Model
    Max Threads:            3 (parallel cell generation)
@@ -132,13 +137,15 @@ Rate Limiting:
    - Respects API rate limits for both Claude and Semantic Scholar
    - Parallel processing optimizes throughput within limits
    - Caching reduces duplicate API calls
-""")
+"""
+    )
 
     # Show data structures
     print("=" * 70)
     print("TABLE GENERATION DATA STRUCTURES")
     print("=" * 70)
-    print("""
+    print(
+        """
 INPUT (from Stage 5):
    cluster_result.result (dict):
       "dimensions": [
@@ -184,13 +191,15 @@ OUTPUT (Stage 6):
         "column_cost": {"cost_value": float},
         "total_cost": float
       }
-""")
+"""
+    )
 
     # Show KEY CONCEPT
     print("=" * 70)
     print("KEY CONCEPT")
     print("=" * 70)
-    print("""
+    print(
+        """
 Table generation creates structured comparisons across papers by:
 
 Step 1 - COLUMN IDENTIFICATION:
@@ -212,13 +221,15 @@ Step 3 - STANDARDIZATION:
 
 The result is a structured table enabling quick comparison of papers
 across key dimensions relevant to the research query.
-""")
+"""
+    )
 
     # Show example flow
     print("=" * 70)
     print("EXAMPLE DATA FLOW")
     print("=" * 70)
-    print("""
+    print(
+        """
 Input (Stage 5 Evidence Dimensions):
    dimensions: [
      {"name": "Mental Health Interventions", "quotes": [...]},
@@ -248,16 +259,19 @@ Final Table Structure:
    |                          |                   | Ethiopia          | association  |
    | Yitbarek et al. (2021)   | Qualitative       | Health extension  | Barriers     |
    |                          | study             | workers           | identified   |
-""")
+"""
+    )
 
     print("\n" + "=" * 70)
     print("STAGE 6 CONFIGURATION DISPLAY COMPLETE")
     print("=" * 70)
-    print("""
+    print(
+        """
 Note: This script shows the configuration and data structures.
 To run the full pipeline including API calls, use the ScholarQA system
 which handles rate limiting and caching appropriately.
-""")
+"""
+    )
 
 
 if __name__ == "__main__":

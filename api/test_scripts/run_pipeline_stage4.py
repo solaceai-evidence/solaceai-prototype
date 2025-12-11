@@ -2,6 +2,11 @@
 """
 Script to demonstrate pipeline Stage 4: Evidence Extraction (Quote Selection)
 Shows all data and metadata returned by the evidence extraction stage for transparency
+
+PREREQUISITES:
+- Reranker service must be running at http://localhost:8000
+- Run: cd api && ./start.sh
+- Or use Modal reranker if configured
 """
 import logging
 import os
@@ -40,7 +45,8 @@ if not os.getenv("S2_API_KEY"):
 from solaceai.llms.constants import CLAUDE_4_SONNET
 from solaceai.llms.prompts import SYSTEM_PROMPT_QUOTE_PER_PAPER
 from solaceai.preprocess.query_preprocessor import decompose_query
-from solaceai.rag.retrieval import PaperFinder
+from solaceai.rag.reranker.local_service_reranker import LocalServiceRerankerClient
+from solaceai.rag.retrieval import PaperFinderWithReranker
 from solaceai.rag.retriever_base import FullTextRetriever
 from solaceai.solace_ai import SolaceAI
 from solaceai.state_mgmt.local_state_mgr import LocalStateMgrClient
@@ -96,9 +102,21 @@ def test_evidence_extraction_stage4(
 
         # Stage 2-3: Retrieval, Reranking & Aggregation
         retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
-        paper_finder = PaperFinder(retriever=retriever)
 
-        print("   Query decomposed and retriever configured")
+        # Initialize reranker for proper reranking
+        reranker = LocalServiceRerankerClient(
+            base_url="http://localhost:8000", batch_size=256
+        )
+
+        # Use PaperFinderWithReranker with proper thresholds
+        paper_finder = PaperFinderWithReranker(
+            retriever=retriever,
+            reranker=reranker,
+            n_rerank=50,  # Keep top 50 papers after reranking
+            context_threshold=0.5,  # Only papers with score >= 0.5 proceed to evidence extraction
+        )
+
+        print("   Query decomposed, retriever and reranker configured")
 
         # Get raw retrieval results
         snippet_results = paper_finder.retrieve_passages(
@@ -129,6 +147,9 @@ def test_evidence_extraction_stage4(
 
         print(
             f"   Retrieved and aggregated: {len(aggregated_df)} papers ready for evidence extraction"
+        )
+        print(
+            f"   Note: Only papers with relevance_judgement >= {paper_finder.context_threshold} are included"
         )
 
         # STAGE 4: EVIDENCE EXTRACTION (Quote Selection)

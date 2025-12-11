@@ -51,19 +51,22 @@ def test_section_generation_stage5(query: Optional[str] = None):
     print("\n" + "=" * 70)
     print("PREREQUISITE STAGES")
     print("=" * 70)
-    print("""
+    print(
+        """
 Stage 5 builds upon outputs from previous stages:
    Stage 1: Query Decomposition → Rewritten query and search filters
    Stage 2: Retrieval → Retrieved paper passages
    Stage 3: Reranking → Aggregated and scored papers
    Stage 4: Evidence Extraction → Quote summaries per paper
-""")
+"""
+    )
 
     # Show LLM prompts used
     print("=" * 70)
     print("LLM PROMPTS USED IN STAGE 5")
     print("=" * 70)
-    print("""
+    print(
+        """
 This stage uses THREE LLM prompts from solaceai.llms.prompts:
 
 1. SYSTEM_PROMPT_QUOTE_PER_PAPER
@@ -84,15 +87,17 @@ This stage uses THREE LLM prompts from solaceai.llms.prompts:
    Purpose: Generates narrative text for each section
    Input: Section plan + assigned quotes + paper metadata
    Output: Written section with proper citations
-""")
+"""
+    )
 
     # Show configuration
     print("=" * 70)
     print("SECTION GENERATION CONFIGURATION")
     print("=" * 70)
-    print("""
+    print(
+        """
 System Configuration:
-   LLM Model:              anthropic/claude-sonnet-4-20250514
+   LLM Model:              anthropic/claude-sonnet-4-5-20250929
    Pipeline Workers:       3 (parallel processing)
    Max Tokens per Request: 25,000
    State Management:       LocalStateMgrClient (logs/ directory)
@@ -122,13 +127,15 @@ Rate Limiting:
    - LLM calls are rate-limited via litellm_helper
    - Respects RATE_LIMIT_OTPM environment variable
    - Semantic Scholar API calls handled by retriever (not in this stage)
-""")
+"""
+    )
 
     # Show data structures
     print("=" * 70)
     print("SECTION GENERATION DATA STRUCTURES")
     print("=" * 70)
-    print("""
+    print(
+        """
 INPUT (from Stage 4):
    per_paper_summaries.result (dict):
       Key: reference_string [corpus_id | authors | year | citations]
@@ -158,13 +165,15 @@ OUTPUT (Stage 5):
       - Papers cited per section
       - Total token usage (input/output)
       - Total API cost
-""")
+"""
+    )
 
     # Show KEY CONCEPT
     print("=" * 70)
     print("KEY CONCEPT")
     print("=" * 70)
-    print("""
+    print(
+        """
 Section generation transforms extracted evidence quotes into coherent
 narrative sections using a two-step LLM process:
 
@@ -182,13 +191,15 @@ Step 2 - SYNTHESIS:
 
 The result is a structured document with multiple thematic sections,
 each synthesizing evidence from relevant papers with full citations.
-""")
+"""
+    )
 
     # Show example flow
     print("=" * 70)
     print("EXAMPLE DATA FLOW")
     print("=" * 70)
-    print("""
+    print(
+        """
 Input (Stage 4 Evidence):
    {
      "[279023164 | Birhan et al. | 2025 | Citations: 1]":
@@ -215,16 +226,19 @@ Generated Section:
      citations=["[279023164 | Birhan et al. | 2025 | Citations: 1]",
                 "[276925840 | Melkam et al. | 2025 | Citations: 0]"]
    )
-""")
+"""
+    )
 
     print("\n" + "=" * 70)
     print("STAGE 5 CONFIGURATION DISPLAY COMPLETE")
     print("=" * 70)
-    print("""
+    print(
+        """
 Note: This script shows the configuration and data structures.
 To run the full pipeline including API calls, use the ScholarQA system
 which handles rate limiting and caching appropriately.
-""")
+"""
+    )
 
 
 if __name__ == "__main__":

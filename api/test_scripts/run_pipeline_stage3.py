@@ -2,6 +2,11 @@
 """
 Test for ScholarQA Pipeline Stage 3: Reranking and Aggregation
 Shows all data and metadata returned by the reranking stage for transparency
+
+PREREQUISITES:
+- Reranker service must be running at http://localhost:8000
+- Run: cd api && ./start.sh
+- Or use Modal reranker if configured
 """
 import logging
 import os
@@ -42,7 +47,8 @@ if not os.getenv("S2_API_KEY"):
 
 from solaceai.llms.constants import CLAUDE_4_SONNET
 from solaceai.preprocess.query_preprocessor import decompose_query
-from solaceai.rag.retrieval import PaperFinder
+from solaceai.rag.reranker.local_service_reranker import LocalServiceRerankerClient
+from solaceai.rag.retrieval import PaperFinderWithReranker
 from solaceai.rag.retriever_base import FullTextRetriever
 from solaceai.utils import get_paper_metadata
 
@@ -64,9 +70,10 @@ def run_reranking_stage3(query: Optional[str] = None, max_results: int = 3):
     print(f"Input Query: '{query}'")
     print("=" * 70)
 
-    print("\nNOTE: Stage 3 uses no LLM prompts")
-    print("   This stage performs pure algorithmic reranking and aggregation")
+    print("\nNOTE: Stage 3 uses cross-encoder reranking (no LLM prompts)")
+    print("   This stage uses a neural cross-encoder model for reranking")
     print("   LLM was only used in Stage 1 (QUERY_DECOMPOSER_PROMPT)")
+    print("   Reranker produces relevance scores from 0.0 to 1.0")
 
     try:
         # PREREQUISITE: Run retrieval stages first
@@ -84,9 +91,21 @@ def run_reranking_stage3(query: Optional[str] = None, max_results: int = 3):
 
         # Stage 2: Retrieval Setup and Execution
         retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
-        paper_finder = PaperFinder(retriever=retriever)
 
-        print("   Query decomposed and retriever configured")
+        # Initialize reranker for proper reranking
+        reranker = LocalServiceRerankerClient(
+            base_url="http://localhost:8000", batch_size=256
+        )
+
+        # Use PaperFinderWithReranker with proper thresholds
+        paper_finder = PaperFinderWithReranker(
+            retriever=retriever,
+            reranker=reranker,
+            n_rerank=50,  # Keep top 50 papers after reranking
+            context_threshold=0.5,  # Only papers with score >= 0.5 are considered relevant
+        )
+
+        print("   Query decomposed, retriever and reranker configured")
 
         # Get raw retrieval results
         snippet_results = paper_finder.retrieve_passages(
