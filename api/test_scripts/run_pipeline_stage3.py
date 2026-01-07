@@ -93,9 +93,9 @@ def run_reranking_stage3(query: Optional[str] = None, max_results: int = 3):
         retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
 
         # Initialize reranker for proper reranking
-        reranker = LocalServiceRerankerClient(
-            base_url="http://localhost:8000", batch_size=256
-        )
+        # Note: Uses RERANKER_SERVICE_URL env var (default: http://localhost:10001)
+        # Max batch_size is 128 as enforced by the reranker service
+        reranker = LocalServiceRerankerClient(batch_size=128)
 
         # Use PaperFinderWithReranker with proper thresholds
         paper_finder = PaperFinderWithReranker(
@@ -191,6 +191,12 @@ def run_reranking_stage3(query: Optional[str] = None, max_results: int = 3):
                 print(
                     f"   Relevance Score Range: {min(relevance_scores):.3f} - {max(relevance_scores):.3f}"
                 )
+        
+        # DEBUG: Show top papers in the aggregated DataFrame
+        print(f"\n   Top {min(5, len(aggregated_df))} papers in aggregated_df (sorted by relevance):")
+        for i, (idx, paper) in enumerate(aggregated_df.head(5).iterrows()):
+            print(f"      {i+1}. [{paper.get('corpus_id')}] {paper.get('title', 'N/A')[:80]}...")
+            print(f"         Relevance: {paper.get('relevance_judgement', 0):.4f}, Year: {paper.get('year', 'N/A')}, Citations: {paper.get('citation_count', 'N/A')}")
 
         # RESULTS: Exhaustive display of reranking stage output
         print("\nEXHAUSTIVE RERANKING STAGE RESULTS")

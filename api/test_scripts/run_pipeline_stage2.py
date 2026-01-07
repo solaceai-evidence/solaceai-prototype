@@ -130,13 +130,24 @@ def run_retrieval_pipeline(query: str, max_results: int = 5):
             papers_by_id[corpus_id] = item
 
     unique_papers = list(papers_by_id.values())
+    
+    # Sort papers by relevance score (highest first)
+    # Snippet results have 'score', search_api_results may have 'relevance_judgement'
+    unique_papers_sorted = sorted(
+        unique_papers,
+        key=lambda x: x.get('score', x.get('relevance_judgement', 0)),
+        reverse=True
+    )
+    
     print(f"Total unique papers: {len(unique_papers)}")
+    print(f"NOTE: Results sorted by retrieval relevance score (NOT reranked)")
+    print(f"      Stage 3 will apply cross-encoder reranking which may change order")
 
     # Display comprehensive results with all available fields
-    print(f"\nTop {min(max_results, len(unique_papers))} Results:")
+    print(f"\nTop {min(max_results, len(unique_papers_sorted))} Results:")
     print("=" * 80)
 
-    for i, paper in enumerate(unique_papers[:max_results], 1):
+    for i, paper in enumerate(unique_papers_sorted[:max_results], 1):
         print(f"\nPAPER {i}")
         print("-" * 20)
 

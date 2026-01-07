@@ -104,9 +104,8 @@ def test_evidence_extraction_stage4(
         retriever = FullTextRetriever(n_retrieval=256, n_keyword_srch=20)
 
         # Initialize reranker for proper reranking
-        reranker = LocalServiceRerankerClient(
-            base_url="http://localhost:8000", batch_size=256
-        )
+        # Note: Uses RERANKER_SERVICE_URL env var (default: http://localhost:10001)
+        reranker = LocalServiceRerankerClient(batch_size=128)
 
         # Use PaperFinderWithReranker with proper thresholds
         paper_finder = PaperFinderWithReranker(
@@ -151,6 +150,12 @@ def test_evidence_extraction_stage4(
         print(
             f"   Note: Only papers with relevance_judgement >= {paper_finder.context_threshold} are included"
         )
+        
+        # DEBUG: Show top papers in the aggregated DataFrame
+        print(f"\n   Top {min(5, len(aggregated_df))} papers in aggregated_df (sorted by relevance):")
+        for i, (idx, paper) in enumerate(aggregated_df.head(5).iterrows()):
+            print(f"      {i+1}. [{paper.get('corpus_id')}] {paper.get('title', 'N/A')[:80]}...")
+            print(f"         Relevance: {paper.get('relevance_judgement', 0):.4f}, Year: {paper.get('year', 'N/A')}, Citations: {paper.get('citation_count', 'N/A')}")
 
         # STAGE 4: EVIDENCE EXTRACTION (Quote Selection)
         print("\nEVIDENCE EXTRACTION STAGE")
@@ -335,13 +340,23 @@ def test_evidence_extraction_stage4(
                 print(f"   Top Years in Extracted Quotes: {dict(year_dist)}")
 
         # Show detailed results for top papers
-        print(
-            f"\nTOP EXTRACTED EVIDENCE (Top {min(max_results, len(per_paper_summaries.result))})"
+        # Re-sort quotes by original DataFrame order (relevance) instead of alphabetically
+        ref_string_to_relevance = {
+            row['reference_string']: row['relevance_judgement'] 
+            for _, row in aggregated_df.iterrows()
+        }
+        quotes_sorted_by_relevance = sorted(
+            per_paper_summaries.result.items(),
+            key=lambda x: ref_string_to_relevance.get(x[0], -1),
+            reverse=True
         )
+        
+        print(
+            f"\nTOP EXTRACTED EVIDENCE (Top {min(max_results, len(quotes_sorted_by_relevance))})"
+        )
+        print("   (Sorted by reranking relevance score from Stage 3)\n")
 
-        for i, (ref_string, quote) in enumerate(
-            list(per_paper_summaries.result.items())[:max_results]
-        ):
+        for i, (ref_string, quote) in enumerate(quotes_sorted_by_relevance[:max_results]):
             print(f"\n   Evidence {i+1}")
             print(f"   Reference String: {ref_string}")
 

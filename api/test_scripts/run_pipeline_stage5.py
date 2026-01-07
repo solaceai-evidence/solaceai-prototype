@@ -106,8 +106,10 @@ System Configuration:
 Processing Strategy:
    1. Quote Clustering:
       - Input: per_paper_summaries (dict of reference → quote)
+      - Note: Quotes are alphabetically sorted by reference string
+            (not by relevance - this is a known pipeline behavior)
       - Method: LLM analyzes all quotes to identify themes
-      - Output: plan_json (dict of section_name → list of quotes)
+      - Output: plan_json (dict of section_name → list of quote indices)
 
    2. Citation Extraction:
       - Method: extract_quote_citations()
@@ -140,6 +142,8 @@ INPUT (from Stage 4):
    per_paper_summaries.result (dict):
       Key: reference_string [corpus_id | authors | year | citations]
       Value: quote (str) - extracted evidence text
+      Note: Dictionary is alphabetically sorted by reference_string
+            Quote indices [0], [1], [2]... follow alphabetical order
 
 INTERMEDIATE (Stage 5 processing):
    cluster_result (list):
