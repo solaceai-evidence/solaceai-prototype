@@ -878,10 +878,19 @@ class SolaceAI:
             query, per_paper_summaries.result, cost_args
         )
         # Changing to expected format in the summary generation prompt
-        plan_json = {
-            f'{dim["name"]} ({dim["format"]})': dim["quotes"]
-            for dim in cluster_json.result["dimensions"]
-        }
+        # Handle both old format (plan dict) and new format (dimensions array)
+        if "dimensions" in cluster_json.result:
+            plan_json = {
+                f'{dim["name"]} ({dim["format"]})': dim["quotes"]
+                for dim in cluster_json.result["dimensions"]
+            }
+        elif "plan" in cluster_json.result:
+            # LLM returned plan format directly - use it as-is
+            plan_json = cluster_json.result["plan"]
+        else:
+            raise KeyError(
+                f"Clustering result missing 'dimensions' or 'plan' key. Got keys: {list(cluster_json.result.keys())}"
+            )
         if not any([len(d) for d in plan_json.values()]):
             raise Exception(
                 "The planning step failed to cluster the relevant documents."
@@ -897,13 +906,26 @@ class SolaceAI:
         )
 
         # step 3: generating output as per the outline
-        section_titles = [dim["name"] for dim in cluster_json.result["dimensions"]]
+        # Extract section titles from either format
+        if "dimensions" in cluster_json.result:
+            section_titles = [dim["name"] for dim in cluster_json.result["dimensions"]]
+            section_formats = {
+                dim["name"]: dim["format"] for dim in cluster_json.result["dimensions"]
+            }
+        else:
+            # Extract from plan dict keys (format is in parentheses)
+            section_titles = [key.rsplit(" (", 1)[0] for key in plan_json.keys()]
+            section_formats = {
+                key.rsplit(" (", 1)[0]: key.rsplit(" (", 1)[1].rstrip(")")
+                for key in plan_json.keys()
+            }
+
         gen_sections_iter = self.step_gen_iterative_summary(
             query, per_paper_summaries_extd, plan_json, cost_args
         )
 
         json_summary, generated_sections, table_threads = [], [], []
-        tables = [None for _ in cluster_json.result["dimensions"]]
+        tables = [None for _ in section_titles]
         citation_ids = dict()
 
         task_estimated_time = 30 + 15 * len(plan_json)
@@ -944,9 +966,9 @@ class SolaceAI:
                     citation_ids,
                     inline_tags,
                 )[0]
-                section_json["format"] = cluster_json.result["dimensions"][idx][
-                    "format"
-                ]
+                section_json["format"] = section_formats.get(
+                    section_titles[idx], "synthesis"
+                )
 
                 json_summary.append(section_json)
                 self.postprocess_json_output(json_summary, quotes_meta=quotes_metadata)
@@ -955,14 +977,23 @@ class SolaceAI:
                     and section_json["citations"]
                     and self.run_table_generation
                 ):
-                    cluster_json.result["dimensions"][idx]["idx"] = idx
+                    # Prepare dimension metadata for table generation
+                    if "dimensions" in cluster_json.result:
+                        cluster_json.result["dimensions"][idx]["idx"] = idx
+                        dimension_metadata = cluster_json.result["dimensions"][idx]
+                    else:
+                        dimension_metadata = {
+                            "name": section_titles[idx],
+                            "format": section_formats[section_titles[idx]],
+                            "idx": idx,
+                        }
                     cit_ids = [
                         int(c["paper"]["corpus_id"]) for c in section_json["citations"]
                     ]
                     tthread = self.gen_table_thread(
                         user_id,
                         query,
-                        cluster_json.result["dimensions"][idx],
+                        dimension_metadata,
                         cit_ids,
                         tables,
                     )
