@@ -157,7 +157,7 @@ class SolaceAI:
 
     # Find relevant papers based on the processed query.
     # This method retrieves relevant paper passages from the Semantic Scholar index and additional papers using a keyword search.
-    @traceable(name="Retrieval: Find relevant paper passages for the query")
+    @traceable(name="Document Retrieval: Find relevant paper passages for the query")
     def find_relevant_papers(
         self, llm_processed_query: LLMProcessedQuery, **kwargs
     ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
@@ -174,7 +174,7 @@ class SolaceAI:
             step_estimated_time=1,
         )
         self.update_task_state(
-            "Retrieving relevant passages from the Semantic Scholar Open Research Corpus",
+            "Retrieving relevant paper passages from the Semantic Scholar Open Research Corpus",
             step_estimated_time=5,
         )
         # Get relevant paper passages from the Semantic Scholar index for the llm rewritten query
@@ -209,7 +209,7 @@ class SolaceAI:
 
     # Rerank the retrieved candidates and aggregate them at the paper level.
     # This method further refines the retrieved passages to focus on the most relevant papers.
-    @traceable(name="Retrieval: Rerank the passages and aggregate at paper level")
+    @traceable(name="Retrieval: Score and rerank the retrieved passages and aggregate at paper level")
     def rerank_and_aggregate(
         self,
         user_query: str,
@@ -218,7 +218,7 @@ class SolaceAI:
     ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
         if self.paper_finder.n_rerank > 0:
             self.update_task_state(
-                f"Further re-rank and aggregate passages to focus on up to top {self.paper_finder.n_rerank} papers",
+                f"Further rerank and aggregate passages to focus on up to top {self.paper_finder.n_rerank} papers",
                 step_estimated_time=30,
             )
         start = time()
@@ -238,7 +238,7 @@ class SolaceAI:
             reranked_candidates, paper_metadata
         )
         self.update_task_state(
-            f"Found {len(agg_df)} highly relevant papers after re-ranking and aggregating",
+            f"Found {len(agg_df)} highly relevant papers after reranking and aggregating",
             step_estimated_time=1,
         )
         logger.info("Reranking w. formatting time: %.2f", time() - start)
