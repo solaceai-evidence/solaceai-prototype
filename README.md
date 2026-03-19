@@ -6,6 +6,10 @@ The Solace-AI System provides intelligent question-answering capabilities over a
 
 The Solace-AI system is built on top of the open-source Ai2 Scholar QA architecture kindly shared at <https://github.com/allenai/ai2-scholarqa-lib>
 
+## License
+
+This repository is released under the Apache-2.0 license. See [LICENSE](LICENSE).
+
 ## Supported Architectures
 
 The system supports three deployment architectures. Choose based on your use case:
